@@ -827,8 +827,19 @@ function SplitPreview({
   onUpdate?: (partial: Partial<Form>) => void;
 }) {
   const [guides, setGuides] = useState<Guide[]>([]);
+  const [narrow, setNarrow] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const imgFileRef   = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => {
+      setNarrow(entry.contentRect.width < 400);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const accent = form.accentColor || ACCENT;
   const bullets = form.bulletsEnabled ? form.bullets.filter(Boolean) : [];
@@ -882,11 +893,14 @@ function SplitPreview({
   };
 
   return (
-    <div ref={containerRef} className="w-full h-full flex relative">
+    <div ref={containerRef} className={`w-full h-full flex relative ${narrow ? "flex-col" : "flex-row"}`}>
       {/* Left panel */}
       <div
-        className="h-full flex flex-col relative overflow-hidden shrink-0"
-        style={{ width: `${panelWidth}%`, backgroundColor: accent }}
+        className="flex flex-col relative overflow-hidden shrink-0"
+        style={narrow
+          ? { width: "100%", height: "38%", backgroundColor: accent }
+          : { width: `${panelWidth}%`, height: "100%", backgroundColor: accent }
+        }
       >
         <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle at 25% 25%, white 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
 
@@ -1081,7 +1095,7 @@ function SplitPreview({
       )}
 
       {/* ── Panel-width drag divider (interactive only) ── */}
-      {interactive && (
+      {interactive && !narrow && (
         <div
           className="absolute top-0 bottom-0 z-40 cursor-col-resize flex items-center justify-center group"
           style={{ left: `${panelWidth}%`, width: "14px", marginLeft: "-7px", touchAction: "none" }}
