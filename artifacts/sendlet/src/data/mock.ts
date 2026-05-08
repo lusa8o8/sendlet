@@ -1,6 +1,15 @@
 const STORAGE_KEY = "sendlet_magnets";
 
-type LeadMagnet = {
+type TextEl = {
+  x: number;
+  y: number;
+  w: number;
+  size: number;
+  color: string;
+  backdrop?: "none" | "glass" | "card";
+};
+
+export type LeadMagnet = {
   id: string;
   title: string;
   slug: string;
@@ -16,6 +25,16 @@ type LeadMagnet = {
   backgroundPreset: string;
   layout: string;
   createdAt: string;
+  // Full form state saved at publish time
+  bullets?: string[];
+  bulletsEnabled?: boolean;
+  ctaLabel?: string;
+  imageDataUrl?: string | null;
+  leftType?: "image" | "text";
+  leftPanelWidth?: number;
+  imagePosition?: { x: number; y: number };
+  bannerHeight?: number;
+  textElements?: Record<string, TextEl>;
 };
 
 const SEED: LeadMagnet[] = [
@@ -35,6 +54,9 @@ const SEED: LeadMagnet[] = [
     backgroundPreset: "dusk",
     layout: "simple",
     createdAt: "2026-04-15",
+    bullets: ["A clear, step-by-step process", "Templates for client communication", "Avoid common pitfalls and delays"],
+    bulletsEnabled: true,
+    ctaLabel: "Get the checklist",
   },
   {
     id: "2",
@@ -52,6 +74,9 @@ const SEED: LeadMagnet[] = [
     backgroundPreset: "aurora",
     layout: "split",
     createdAt: "2026-05-01",
+    bullets: ["Hourly vs project pricing", "Factor in taxes and expenses", "Never undersell yourself again"],
+    bulletsEnabled: true,
+    ctaLabel: "Get the calculator",
   },
   {
     id: "3",
@@ -69,6 +94,9 @@ const SEED: LeadMagnet[] = [
     backgroundPreset: "bloom",
     layout: "simple",
     createdAt: "2026-03-20",
+    bullets: ["Daily lesson structure", "Email subject line templates", "Re-engagement sequences"],
+    bulletsEnabled: true,
+    ctaLabel: "Get the outline",
   },
 ];
 

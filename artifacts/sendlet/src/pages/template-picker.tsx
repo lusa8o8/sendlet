@@ -1660,6 +1660,16 @@ export default function TemplatePicker() {
       backgroundPreset: form.gradientPreset,
       layout,
       createdAt: new Date().toISOString().split("T")[0],
+      // Full form state for public page rendering
+      bullets: form.bullets,
+      bulletsEnabled: form.bulletsEnabled,
+      ctaLabel: form.ctaLabel,
+      imageDataUrl: form.imageDataUrl,
+      leftType: form.leftType,
+      leftPanelWidth: form.leftPanelWidth,
+      imagePosition: form.imagePosition,
+      bannerHeight: form.bannerHeight,
+      textElements: form.textElements,
     };
     saveMagnet(newMagnet);
     setLocation("/dashboard");
