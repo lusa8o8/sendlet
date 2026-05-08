@@ -1660,11 +1660,11 @@ function FloatingBar({
           <label className="text-[11px] font-medium text-muted-foreground">Typography preset</label>
           <button
             onClick={onToggleLock}
-            title={locked ? "Unlock positions" : "Lock to preset"}
+            title={locked ? "Locked — click to unlock" : "Unlocked — click to lock"}
             className={`flex items-center gap-0.5 text-[9px] font-medium rounded-md px-1.5 py-0.5 transition-colors ${locked ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
           >
-            {locked ? <Unlock className="h-2.5 w-2.5" /> : <Lock className="h-2.5 w-2.5" />}
-            {locked ? "Unlock" : "Lock"}
+            {locked ? <Lock className="h-2.5 w-2.5" /> : <Unlock className="h-2.5 w-2.5" />}
+            {locked ? "Locked" : "Unlocked"}
           </button>
         </div>
         <div className="grid grid-cols-3 gap-1.5">
@@ -1758,13 +1758,13 @@ function FloatingBar({
         <div className="w-10 h-px bg-border my-0.5" />
         <button
           onClick={onToggleLock}
-          title={locked ? "Unlock positions" : "Lock to preset"}
+          title={locked ? "Locked — click to unlock" : "Unlocked — click to lock"}
           className={`w-11 h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 transition-colors ${
             locked ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-muted hover:text-foreground"
           }`}
         >
-          {locked ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
-          <span className="text-[8px] font-medium leading-none">{locked ? "Unlock" : "Lock"}</span>
+          {locked ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+          <span className="text-[8px] font-medium leading-none">{locked ? "Locked" : "Free"}</span>
         </button>
         <div className="flex-1" />
         <Button size="sm" className="w-12 h-9 text-[11px] font-semibold rounded-xl px-0" onClick={onSave}>
@@ -1811,12 +1811,12 @@ function FloatingBar({
         </button>
         <button
           onClick={onToggleLock}
-          title={locked ? "Unlock positions" : "Lock to preset"}
+          title={locked ? "Locked — click to unlock" : "Unlocked — click to lock"}
           className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
             locked ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-muted hover:text-foreground"
           }`}
         >
-          {locked ? <Unlock className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
+          {locked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
         </button>
         {sep}
         <Button variant="outline" size="sm" className="h-7 px-3 text-xs rounded-lg">Save draft</Button>

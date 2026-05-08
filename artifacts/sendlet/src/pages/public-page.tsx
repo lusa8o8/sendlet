@@ -349,6 +349,31 @@ function StackedLayout({
 }
 
 /* ── Full Image layout ──────────────────────────────────────── */
+// Default textElements matching handleStart in template-picker
+const FULLIMAGE_DEFAULT_TEL: Record<string, { x: number; y: number; w: number; size: number; color: string; backdrop: "none" | "glass" | "card" }> = {
+  headline:    { x: 5, y: 7,  w: 90, size: 15, color: "#ffffff", backdrop: "glass" },
+  description: { x: 5, y: 26, w: 90, size: 12, color: "#ffffff", backdrop: "glass" },
+  bullets:     { x: 5, y: 45, w: 90, size: 12, color: "#ffffff", backdrop: "glass" },
+  form:        { x: 5, y: 67, w: 90, size: 12, color: "#ffffff", backdrop: "glass" },
+};
+
+function backdropStyle(bd?: "none" | "glass" | "card"): React.CSSProperties {
+  if (bd === "glass") return {
+    backdropFilter: "blur(14px)",
+    WebkitBackdropFilter: "blur(14px)",
+    background: "rgba(255,255,255,0.14)",
+    border: "1px solid rgba(255,255,255,0.35)",
+    borderRadius: "12px",
+    padding: "10px 14px",
+  };
+  if (bd === "card") return {
+    background: "rgba(255,255,255,0.92)",
+    borderRadius: "12px",
+    padding: "10px 14px",
+  };
+  return { padding: "4px 0" };
+}
+
 function FullImageLayout({
   magnet,
   creatorName,
@@ -367,18 +392,20 @@ function FullImageLayout({
   setEmail: (v: string) => void;
 }) {
   const imgPos = magnet.imagePosition ?? { x: 50, y: 50 };
+  const accent = magnet.accentColor ?? "#0F766E";
 
-  const glass: React.CSSProperties = {
-    backdropFilter: "blur(14px)",
-    WebkitBackdropFilter: "blur(14px)",
-    background: "rgba(255,255,255,0.14)",
-    border: "1px solid rgba(255,255,255,0.35)",
-    borderRadius: "16px",
-  };
+  // Merge saved textElements over defaults
+  const tel = { ...FULLIMAGE_DEFAULT_TEL, ...(magnet.textElements ?? {}) } as typeof FULLIMAGE_DEFAULT_TEL;
+
+  // Scale font size from the ~520px editor canvas height to viewport
+  const fs = (size: number) => `${((size / 520) * 100).toFixed(2)}vh`;
 
   return (
-    <div
-      className="min-h-[100dvh] relative flex flex-col items-center justify-center px-4 py-12 overflow-hidden"
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4 }}
+      className="min-h-[100dvh] relative overflow-hidden"
       style={{
         backgroundColor: "#1e293b",
         ...(magnet.imageDataUrl
@@ -392,67 +419,107 @@ function FullImageLayout({
     >
       <div className="absolute inset-0 bg-black/30 pointer-events-none" />
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="relative z-10 w-full max-w-md space-y-4"
+      {/* Creator badge — pinned top-left */}
+      <div
+        className="absolute flex items-center gap-2 z-10"
+        style={{ left: "4%", top: "2%", ...backdropStyle("glass") }}
       >
-        {/* Creator badge */}
-        <div className="flex items-center gap-2.5 px-4 py-3 rounded-2xl" style={glass}>
-          <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white font-semibold text-sm ring-2 ring-white/25 shrink-0">
-            {creatorName.charAt(0)}
-          </div>
-          <p className="text-sm font-medium text-white/80">{creatorName}</p>
+        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white font-semibold text-sm ring-2 ring-white/25 shrink-0">
+          {creatorName.charAt(0)}
         </div>
+        <p className="text-sm font-medium text-white/80">{creatorName}</p>
+      </div>
 
-        {/* Headline */}
-        {!magnet.hiddenBlocks?.includes("headline") && (
-          <div style={glass} className="px-5 py-4 rounded-2xl">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white leading-tight">
-              {magnet.title}
-            </h1>
-            {magnet.description && !magnet.hiddenBlocks?.includes("description") && (
-              <p className="text-sm text-white/75 mt-2 leading-relaxed">{magnet.description}</p>
-            )}
-          </div>
-        )}
-        {!magnet.hiddenBlocks?.includes("headline") && magnet.description && magnet.hiddenBlocks?.includes("description") && (
-          <div style={glass} className="px-5 py-4 rounded-2xl">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white leading-tight">
-              {magnet.title}
-            </h1>
-          </div>
-        )}
-        {magnet.hiddenBlocks?.includes("headline") && magnet.description && !magnet.hiddenBlocks?.includes("description") && (
-          <div style={glass} className="px-5 py-4 rounded-2xl">
-            <p className="text-sm text-white/75 leading-relaxed">{magnet.description}</p>
-          </div>
-        )}
+      {/* Headline */}
+      {!magnet.hiddenBlocks?.includes("headline") && (
+        <div
+          className="absolute z-10"
+          style={{
+            left: `${tel.headline.x}%`,
+            top: `${tel.headline.y}%`,
+            width: `${tel.headline.w}%`,
+            color: tel.headline.color ?? "#ffffff",
+            ...backdropStyle(tel.headline.backdrop),
+          }}
+        >
+          <h1
+            className="font-bold tracking-tight leading-snug"
+            style={{ fontSize: fs(tel.headline.size) }}
+          >
+            {magnet.title}
+          </h1>
+        </div>
+      )}
 
-        {/* Bullets */}
-        {magnet.bulletsEnabled !== false && !magnet.hiddenBlocks?.includes("bullets") && bullets.length > 0 && (
-          <div style={glass} className="px-5 py-4 rounded-2xl">
-            <BulletList bullets={bullets} accentColor={magnet.accentColor} dark />
-          </div>
-        )}
+      {/* Description */}
+      {magnet.description && !magnet.hiddenBlocks?.includes("description") && (
+        <div
+          className="absolute z-10"
+          style={{
+            left: `${tel.description.x}%`,
+            top: `${tel.description.y}%`,
+            width: `${tel.description.w}%`,
+            color: tel.description.color ?? "#ffffff",
+            ...backdropStyle(tel.description.backdrop),
+          }}
+        >
+          <p className="leading-relaxed" style={{ fontSize: fs(tel.description.size) }}>
+            {magnet.description}
+          </p>
+        </div>
+      )}
 
-        {/* Form */}
-        {!magnet.hiddenBlocks?.includes("form") && (
-          <div style={glass} className="px-5 py-4 rounded-2xl">
-            <OptInForm
-              onSubmit={onSubmit}
-              isLoading={isLoading}
-              email={email}
-              setEmail={setEmail}
-              accentColor={magnet.accentColor}
-              ctaLabel={magnet.ctaLabel}
-              dark
-            />
-          </div>
-        )}
-      </motion.div>
-    </div>
+      {/* Bullets */}
+      {magnet.bulletsEnabled !== false && !magnet.hiddenBlocks?.includes("bullets") && bullets.length > 0 && (
+        <div
+          className="absolute z-10"
+          style={{
+            left: `${tel.bullets.x}%`,
+            top: `${tel.bullets.y}%`,
+            width: `${tel.bullets.w}%`,
+            color: tel.bullets.color ?? "#ffffff",
+            ...backdropStyle(tel.bullets.backdrop),
+          }}
+        >
+          <ul className="space-y-1.5" style={{ fontSize: fs(tel.bullets.size) }}>
+            {bullets.map((b, i) => (
+              <li key={i} className="flex items-center gap-2">
+                <div
+                  className="w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: `${accent}66` }}
+                >
+                  <Check className="h-2 w-2 text-white" />
+                </div>
+                <span>{b}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Form */}
+      {!magnet.hiddenBlocks?.includes("form") && (
+        <div
+          className="absolute z-10"
+          style={{
+            left: `${tel.form.x}%`,
+            top: `${tel.form.y}%`,
+            width: `${tel.form.w}%`,
+            ...backdropStyle(tel.form.backdrop),
+          }}
+        >
+          <OptInForm
+            onSubmit={onSubmit}
+            isLoading={isLoading}
+            email={email}
+            setEmail={setEmail}
+            accentColor={accent}
+            ctaLabel={magnet.ctaLabel}
+            dark
+          />
+        </div>
+      )}
+    </motion.div>
   );
 }
 
