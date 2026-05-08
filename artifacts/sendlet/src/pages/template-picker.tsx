@@ -16,7 +16,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { leadMagnets } from "@/data/mock";
+import { leadMagnets, saveMagnet } from "@/data/mock";
 
 /* ─── Constants ────────────────────────────────────────────── */
 
@@ -1030,7 +1030,7 @@ export default function TemplatePicker() {
       layout,
       createdAt: new Date().toISOString().split("T")[0],
     };
-    (leadMagnets as typeof leadMagnets & { push: (v: (typeof leadMagnets)[0]) => void }).push(newMagnet);
+    saveMagnet(newMagnet);
     setLocation("/dashboard");
   };
 

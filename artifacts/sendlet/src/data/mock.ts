@@ -1,4 +1,24 @@
-export const leadMagnets = [
+const STORAGE_KEY = "sendlet_magnets";
+
+type LeadMagnet = {
+  id: string;
+  title: string;
+  slug: string;
+  description: string;
+  status: "published" | "draft" | "paused";
+  visits: number;
+  weeklyVisits: number;
+  leads: number;
+  weeklyLeads: number;
+  conversionRate: number;
+  lastLead: string | null;
+  accentColor: string;
+  backgroundPreset: string;
+  layout: string;
+  createdAt: string;
+};
+
+const SEED: LeadMagnet[] = [
   {
     id: "1",
     title: "Client Onboarding Checklist",
@@ -51,6 +71,43 @@ export const leadMagnets = [
     createdAt: "2026-03-20",
   },
 ];
+
+function loadMagnets(): LeadMagnet[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw) as LeadMagnet[];
+  } catch {}
+  return JSON.parse(JSON.stringify(SEED));
+}
+
+function persistMagnets() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(leadMagnets));
+  } catch {}
+}
+
+export const leadMagnets: LeadMagnet[] = loadMagnets();
+
+export function saveMagnet(magnet: LeadMagnet) {
+  leadMagnets.push(magnet);
+  persistMagnets();
+}
+
+export function updateMagnet(id: string, updates: Partial<LeadMagnet>) {
+  const idx = leadMagnets.findIndex((m) => m.id === id);
+  if (idx !== -1) {
+    leadMagnets[idx] = { ...leadMagnets[idx], ...updates };
+    persistMagnets();
+  }
+}
+
+export function removeMagnet(id: string) {
+  const idx = leadMagnets.findIndex((m) => m.id === id);
+  if (idx !== -1) {
+    leadMagnets.splice(idx, 1);
+    persistMagnets();
+  }
+}
 
 export const leads = [
   {
