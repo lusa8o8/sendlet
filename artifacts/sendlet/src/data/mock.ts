@@ -12,6 +12,7 @@ export const leadMagnets = [
     conversionRate: 26,
     lastLead: "2026-05-06",
     accentColor: "#0F766E",
+    backgroundPreset: "dusk",
     createdAt: "2026-04-15",
   },
   {
@@ -27,6 +28,7 @@ export const leadMagnets = [
     conversionRate: 0,
     lastLead: null,
     accentColor: "#2563EB",
+    backgroundPreset: "aurora",
     createdAt: "2026-05-01",
   },
   {
@@ -42,6 +44,7 @@ export const leadMagnets = [
     conversionRate: 24,
     lastLead: "2026-04-28",
     accentColor: "#0F766E",
+    backgroundPreset: "bloom",
     createdAt: "2026-03-20",
   },
 ];

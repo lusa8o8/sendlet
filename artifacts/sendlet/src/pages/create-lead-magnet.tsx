@@ -11,6 +11,15 @@ import { ChevronRight, ArrowLeft, Upload, Link as LinkIcon, Check, Plus, X } fro
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuth } from "@/contexts/auth-context";
 
+const GRADIENT_PRESETS = [
+  { id: "none", label: "None", gradient: null },
+  { id: "dusk", label: "Dusk", gradient: "linear-gradient(135deg, #fdd5c4 0%, #fef0d0 42%, #d5e5ff 75%, #e5d5ff 100%)" },
+  { id: "aurora", label: "Aurora", gradient: "linear-gradient(135deg, #c4f0e8 0%, #d5e8ff 55%, #e8d5ff 100%)" },
+  { id: "bloom", label: "Bloom", gradient: "linear-gradient(135deg, #fdd5e8 0%, #fdd5c4 42%, #fef0d0 100%)" },
+  { id: "slate", label: "Slate", gradient: "linear-gradient(135deg, #dde5f0 0%, #d5dff0 100%)" },
+  { id: "mint", label: "Mint", gradient: "linear-gradient(135deg, #c4f0e0 0%, #c4ecff 100%)" },
+];
+
 interface FormData {
   title: string;
   description: string;
@@ -23,6 +32,7 @@ interface FormData {
   deliveryType: string;
   externalUrl: string;
   accentColor: string;
+  backgroundPreset: string;
   senderName: string;
   senderEmail: string;
   emailSubject: string;
@@ -60,6 +70,10 @@ function OptInPreview({ formData, accountName, accountAvatar }: { formData: Form
     : accountName;
   const effectiveAvatar = formData.creatorOverride ? formData.creatorAvatarUrl : accountAvatar;
   const accentColor = formData.accentColor || "#0F766E";
+  const bgPreset = GRADIENT_PRESETS.find(p => p.id === formData.backgroundPreset);
+  const bgStyle = bgPreset?.gradient
+    ? { background: bgPreset.gradient }
+    : { background: "hsl(var(--background))" };
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -68,7 +82,7 @@ function OptInPreview({ formData, accountName, accountAvatar }: { formData: Form
         Live preview
       </div>
 
-      <div className="bg-[hsl(var(--background))] rounded-lg border flex-1 overflow-hidden">
+      <div className="rounded-lg border flex-1 overflow-hidden" style={bgStyle}>
         <div className="flex flex-col items-center pt-7 pb-5 px-6">
           <div className="mb-2">
             <AvatarCircle src={effectiveAvatar} name={effectiveName} size="lg" />
@@ -150,6 +164,7 @@ export default function CreateLeadMagnet() {
     deliveryType: "upload",
     externalUrl: "",
     accentColor: "#0F766E",
+    backgroundPreset: "dusk",
     senderName: accountName,
     senderEmail: "",
     emailSubject: "",
@@ -491,6 +506,46 @@ export default function CreateLeadMagnet() {
                     data-testid="input-accent-color"
                   />
                   <span className="text-sm font-mono text-muted-foreground">{formData.accentColor.toUpperCase()}</span>
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-1">
+                <div>
+                  <Label>Background</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">A soft gradient behind your card, or leave it plain.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {GRADIENT_PRESETS.map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => updateForm("backgroundPreset", preset.id)}
+                      className={`relative flex flex-col items-center gap-1.5 group`}
+                      data-testid={`bg-preset-${preset.id}`}
+                    >
+                      <div
+                        className={`w-14 h-9 rounded-md border-2 transition-all ${
+                          formData.backgroundPreset === preset.id
+                            ? "border-primary ring-2 ring-primary ring-offset-1"
+                            : "border-border hover:border-foreground/30"
+                        } ${!preset.gradient ? "bg-background" : ""}`}
+                        style={preset.gradient ? { background: preset.gradient } : {}}
+                      >
+                        {!preset.gradient && (
+                          <div className="w-full h-full rounded flex items-center justify-center">
+                            <div className="w-4 h-px bg-muted-foreground/40" />
+                          </div>
+                        )}
+                      </div>
+                      <span className={`text-[10px] font-medium ${
+                        formData.backgroundPreset === preset.id
+                          ? "text-primary"
+                          : "text-muted-foreground"
+                      }`}>
+                        {preset.label}
+                      </span>
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
