@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   ArrowLeft,
   ArrowRight,
+  BookmarkPlus,
   Check,
   ChevronDown,
   Image,
@@ -19,8 +20,10 @@ import {
   PanelBottom,
   PanelRight,
   Plus,
+  Redo2,
   Settings,
   Type,
+  Undo2,
   Unlock,
   Upload,
   X,
@@ -139,6 +142,16 @@ const LAYOUT_PRESETS: Array<{
     },
   },
 ];
+
+/* ─── Custom presets (localStorage) ────────────────────────── */
+
+const CUSTOM_PRESETS_KEY = "sendlet_custom_presets";
+
+type CustomPreset = {
+  id: string;
+  name: string;
+  elements: Record<TextElKey, TextEl>;
+};
 
 /* ─── Form state ────────────────────────────────────────────── */
 
@@ -1525,6 +1538,14 @@ function FloatingBar({
   onToggleLock,
   onApplyPreset,
   activePreset,
+  onUndo,
+  onRedo,
+  canUndo = false,
+  canRedo = false,
+  customPresets = [],
+  onSavePreset,
+  onDeleteCustomPreset,
+  onApplyCustomPreset,
 }: {
   layout: string;
   form: Form;
@@ -1538,9 +1559,20 @@ function FloatingBar({
   onToggleLock?: () => void;
   onApplyPreset?: (p: typeof LAYOUT_PRESETS[0]) => void;
   activePreset?: string | null;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  customPresets?: CustomPreset[];
+  onSavePreset?: (name: string) => void;
+  onDeleteCustomPreset?: (id: string) => void;
+  onApplyCustomPreset?: (p: CustomPreset) => void;
 }) {
   const [panel, setPanel] = useState<string | null>(null);
+  const [savingPreset, setSavingPreset] = useState(false);
+  const [presetName, setPresetName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const presetInputRef = useRef<HTMLInputElement>(null);
   const toggle = (p: string) => setPanel((cur) => (cur === p ? null : p));
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1703,6 +1735,58 @@ function FloatingBar({
           ))}
         </div>
       </div>
+
+      {/* Custom presets */}
+      {customPresets.length > 0 && (
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-medium text-muted-foreground">Your presets</label>
+          <div className="space-y-1">
+            {customPresets.map((p) => (
+              <div key={p.id} className={`flex items-center gap-1 rounded-lg border px-2 py-1.5 transition-all ${activePreset === p.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/30 hover:bg-muted/40"}`}>
+                <button onClick={() => onApplyCustomPreset?.(p)} className="flex-1 text-left text-[11px] font-medium text-foreground truncate">
+                  {p.name}
+                </button>
+                <button onClick={() => onDeleteCustomPreset?.(p.id)} className="shrink-0 w-4 h-4 rounded flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors">
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Save current layout as preset */}
+      <div className="border-t pt-3 space-y-1.5">
+        {!savingPreset ? (
+          <button
+            onClick={() => { setSavingPreset(true); setPresetName(""); setTimeout(() => presetInputRef.current?.focus(), 50); }}
+            className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-primary transition-colors"
+          >
+            <BookmarkPlus className="h-3 w-3" />
+            Save current layout as preset
+          </button>
+        ) : (
+          <div className="flex gap-1.5">
+            <input
+              ref={presetInputRef}
+              value={presetName}
+              onChange={(e) => setPresetName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && presetName.trim()) { onSavePreset?.(presetName.trim()); setSavingPreset(false); }
+                if (e.key === "Escape") setSavingPreset(false);
+              }}
+              placeholder="Preset name…"
+              className="flex-1 h-7 text-xs rounded-md border border-border bg-background px-2 outline-none focus:border-primary focus:ring-1 focus:ring-primary/30"
+            />
+            <button
+              onClick={() => { if (presetName.trim()) { onSavePreset?.(presetName.trim()); setSavingPreset(false); } }}
+              disabled={!presetName.trim()}
+              className="h-7 px-2 text-[11px] font-medium rounded-md bg-primary text-white disabled:opacity-40 hover:bg-primary/90 transition-colors"
+            >Save</button>
+            <button onClick={() => setSavingPreset(false)} className="h-7 px-1.5 text-[11px] rounded-md border border-border text-muted-foreground hover:bg-muted transition-colors">✕</button>
+          </div>
+        )}
+      </div>
     </PopoverContent>
   );
 
@@ -1756,6 +1840,15 @@ function FloatingBar({
           {settingsPanel}
         </Popover>
         <div className="w-10 h-px bg-border my-0.5" />
+        <button onClick={onUndo} disabled={!canUndo} title="Undo (Ctrl+Z)" className="w-11 h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 transition-colors text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed">
+          <Undo2 className="h-4 w-4" />
+          <span className="text-[8px] font-medium leading-none">Undo</span>
+        </button>
+        <button onClick={onRedo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)" className="w-11 h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 transition-colors text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed">
+          <Redo2 className="h-4 w-4" />
+          <span className="text-[8px] font-medium leading-none">Redo</span>
+        </button>
+        <div className="w-10 h-px bg-border my-0.5" />
         <button
           onClick={onToggleLock}
           title={locked ? "Locked — click to unlock" : "Unlocked — click to lock"}
@@ -1805,6 +1898,13 @@ function FloatingBar({
           <PopoverTrigger asChild><span><BarBtn label="Settings" icon={Settings} active={panel === "settings"} onClick={() => toggle("settings")} /></span></PopoverTrigger>
           {settingsPanel}
         </Popover>
+        {sep}
+        <button onClick={onUndo} disabled={!canUndo} title="Undo (Ctrl+Z)" className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+          <Undo2 className="h-3.5 w-3.5" />
+        </button>
+        <button onClick={onRedo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)" className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed">
+          <Redo2 className="h-3.5 w-3.5" />
+        </button>
         {sep}
         <button onClick={onTogglePosition} title="Switch to side panel" className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
           <PanelRight className="h-3.5 w-3.5" />
@@ -1863,6 +1963,94 @@ export default function TemplatePicker() {
   const [locked, setLocked] = useState(false);
   const [activePreset, setActivePreset] = useState<string | null>(null);
 
+  // ─── Undo / redo ────────────────────────────────────────────
+  const MAX_HISTORY = 5;
+  const historyStack = useRef<Form["textElements"][]>([]);
+  const historyIndex = useRef(-1);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+  const debounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSerialized = useRef("");
+
+  useEffect(() => {
+    if (mode !== "edit") return;
+    const s = JSON.stringify(form.textElements);
+    if (s === lastSerialized.current) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      lastSerialized.current = s;
+      const stack = historyStack.current.slice(0, historyIndex.current + 1);
+      stack.push(form.textElements);
+      const capped = stack.length > MAX_HISTORY ? stack.slice(-MAX_HISTORY) : stack;
+      historyStack.current = capped;
+      historyIndex.current = capped.length - 1;
+      setCanUndo(capped.length > 1);
+      setCanRedo(false);
+    }, 350);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [form.textElements, mode]);
+
+  const handleUndo = () => {
+    if (historyIndex.current <= 0) return;
+    historyIndex.current -= 1;
+    const prev = historyStack.current[historyIndex.current];
+    lastSerialized.current = JSON.stringify(prev);
+    setForm((f) => ({ ...f, textElements: prev }));
+    setCanUndo(historyIndex.current > 0);
+    setCanRedo(true);
+  };
+
+  const handleRedo = () => {
+    if (historyIndex.current >= historyStack.current.length - 1) return;
+    historyIndex.current += 1;
+    const next = historyStack.current[historyIndex.current];
+    lastSerialized.current = JSON.stringify(next);
+    setForm((f) => ({ ...f, textElements: next }));
+    setCanUndo(true);
+    setCanRedo(historyIndex.current < historyStack.current.length - 1);
+  };
+
+  useEffect(() => {
+    if (mode !== "edit") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      if (e.key === "z" && !e.shiftKey) { e.preventDefault(); handleUndo(); }
+      if (e.key === "z" &&  e.shiftKey) { e.preventDefault(); handleRedo(); }
+      if (e.key === "y")                { e.preventDefault(); handleRedo(); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mode, canUndo, canRedo]);
+
+  // ─── Custom presets ──────────────────────────────────────────
+  const [customPresets, setCustomPresets] = useState<CustomPreset[]>(() => {
+    try { return JSON.parse(localStorage.getItem(CUSTOM_PRESETS_KEY) ?? "[]"); }
+    catch { return []; }
+  });
+
+  const handleSavePreset = (name: string) => {
+    const preset: CustomPreset = { id: `custom-${Date.now()}`, name, elements: { ...form.textElements } };
+    const next = [...customPresets, preset];
+    setCustomPresets(next);
+    localStorage.setItem(CUSTOM_PRESETS_KEY, JSON.stringify(next));
+    setActivePreset(preset.id);
+    setLocked(true);
+  };
+
+  const handleDeleteCustomPreset = (id: string) => {
+    const next = customPresets.filter((p) => p.id !== id);
+    setCustomPresets(next);
+    localStorage.setItem(CUSTOM_PRESETS_KEY, JSON.stringify(next));
+    if (activePreset === id) { setActivePreset(null); setLocked(false); }
+  };
+
+  const applyCustomPreset = (preset: CustomPreset) => {
+    setForm((f) => ({ ...f, textElements: preset.elements }));
+    setActivePreset(preset.id);
+    setLocked(true);
+  };
+
+  // ─── Built-in presets + lock ─────────────────────────────────
   const applyPreset = (preset: typeof LAYOUT_PRESETS[0]) => {
     const isDark = layout === "fullimage";
     setForm((f) => ({ ...f, textElements: isDark ? preset.dark : preset.light }));
@@ -2093,6 +2281,14 @@ export default function TemplatePicker() {
                 onToggleLock={handleToggleLock}
                 onApplyPreset={applyPreset}
                 activePreset={activePreset}
+                onUndo={handleUndo}
+                onRedo={handleRedo}
+                canUndo={canUndo}
+                canRedo={canRedo}
+                customPresets={customPresets}
+                onSavePreset={handleSavePreset}
+                onDeleteCustomPreset={handleDeleteCustomPreset}
+                onApplyCustomPreset={applyCustomPreset}
               />
             </>
           )}
