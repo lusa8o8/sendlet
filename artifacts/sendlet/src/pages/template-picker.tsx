@@ -14,12 +14,14 @@ import {
   Image,
   Layers2,
   Link,
+  Lock,
   Palette,
   PanelBottom,
   PanelRight,
   Plus,
   Settings,
   Type,
+  Unlock,
   Upload,
   X,
 } from "lucide-react";
@@ -81,6 +83,61 @@ const LAYOUTS = [
 const LEFT_TYPES = [
   { id: "image", label: "Image",    desc: "Photo or graphic",   icon: Image },
   { id: "text",  label: "Bold text", desc: "Headline on colour", icon: Type  },
+];
+
+/* ─── Typography layout presets ────────────────────────────── */
+
+type TextElPreset = Record<TextElKey, Omit<TextEl, "backdrop"> & { backdrop: "none" | "glass" | "card" }>;
+
+const LAYOUT_PRESETS: Array<{
+  id: string; label: string; desc: string;
+  light: TextElPreset; dark: TextElPreset;
+}> = [
+  {
+    id: "classic", label: "Classic", desc: "Balanced proportions",
+    light: {
+      headline:    { x: 5, y: 6,  w: 90, size: 24, color: "#0f172a", backdrop: "none" },
+      description: { x: 5, y: 26, w: 90, size: 13, color: "#475569", backdrop: "none" },
+      bullets:     { x: 5, y: 45, w: 90, size: 12, color: "#374151", backdrop: "none" },
+      form:        { x: 5, y: 66, w: 90, size: 12, color: "#0f172a", backdrop: "none" },
+    },
+    dark: {
+      headline:    { x: 5, y: 6,  w: 90, size: 24, color: "#ffffff", backdrop: "glass" },
+      description: { x: 5, y: 28, w: 90, size: 13, color: "#ffffff", backdrop: "glass" },
+      bullets:     { x: 5, y: 48, w: 90, size: 12, color: "#ffffff", backdrop: "glass" },
+      form:        { x: 5, y: 68, w: 90, size: 12, color: "#ffffff", backdrop: "glass" },
+    },
+  },
+  {
+    id: "impact", label: "Impact", desc: "Dramatic headline",
+    light: {
+      headline:    { x: 4, y: 4,  w: 92, size: 30, color: "#0f172a", backdrop: "none" },
+      description: { x: 4, y: 30, w: 88, size: 12, color: "#64748b", backdrop: "none" },
+      bullets:     { x: 4, y: 45, w: 92, size: 11, color: "#374151", backdrop: "none" },
+      form:        { x: 4, y: 66, w: 92, size: 12, color: "#0f172a", backdrop: "none" },
+    },
+    dark: {
+      headline:    { x: 4, y: 4,  w: 92, size: 30, color: "#ffffff", backdrop: "glass" },
+      description: { x: 4, y: 32, w: 88, size: 12, color: "#ffffff", backdrop: "glass" },
+      bullets:     { x: 4, y: 47, w: 92, size: 11, color: "#ffffff", backdrop: "glass" },
+      form:        { x: 4, y: 67, w: 92, size: 12, color: "#ffffff", backdrop: "glass" },
+    },
+  },
+  {
+    id: "airy", label: "Airy", desc: "Generous spacing",
+    light: {
+      headline:    { x: 6, y: 8,  w: 88, size: 20, color: "#0f172a", backdrop: "none" },
+      description: { x: 6, y: 27, w: 88, size: 15, color: "#334155", backdrop: "none" },
+      bullets:     { x: 6, y: 52, w: 88, size: 13, color: "#374151", backdrop: "none" },
+      form:        { x: 6, y: 74, w: 88, size: 12, color: "#0f172a", backdrop: "none" },
+    },
+    dark: {
+      headline:    { x: 6, y: 8,  w: 88, size: 20, color: "#ffffff", backdrop: "glass" },
+      description: { x: 6, y: 28, w: 88, size: 15, color: "#ffffff", backdrop: "glass" },
+      bullets:     { x: 6, y: 52, w: 88, size: 13, color: "#ffffff", backdrop: "glass" },
+      form:        { x: 6, y: 74, w: 88, size: 12, color: "#ffffff", backdrop: "glass" },
+    },
+  },
 ];
 
 /* ─── Form state ────────────────────────────────────────────── */
@@ -184,11 +241,13 @@ function Accordion({
 function SimplePreview({
   form,
   interactive = false,
+  locked = false,
   onUpdateTextEl,
   onUpdate,
 }: {
   form: Form;
   interactive?: boolean;
+  locked?: boolean;
   onUpdateTextEl?: (key: TextElKey, u: Partial<TextEl>) => void;
   onUpdate?: (partial: Partial<Form>) => void;
 }) {
@@ -224,17 +283,17 @@ function SimplePreview({
               </>
             )}
             {!(form.hiddenBlocks ?? []).includes("headline") && (
-              <DraggableTextBlock el={textElements.headline} onUpdate={(u) => onUpdateTextEl?.("headline", u)} fontClass="font-bold tracking-tight leading-snug" label="Headline" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "headline"] })}>
+              <DraggableTextBlock el={textElements.headline} onUpdate={(u) => onUpdateTextEl?.("headline", u)} fontClass="font-bold tracking-tight leading-snug" label="Headline" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "headline"] })} locked={locked}>
                 {form.title || "Your Resource Title"}
               </DraggableTextBlock>
             )}
             {!(form.hiddenBlocks ?? []).includes("description") && (
-              <DraggableTextBlock el={textElements.description} onUpdate={(u) => onUpdateTextEl?.("description", u)} fontClass="leading-relaxed" label="Description" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "description"] })}>
+              <DraggableTextBlock el={textElements.description} onUpdate={(u) => onUpdateTextEl?.("description", u)} fontClass="leading-relaxed" label="Description" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "description"] })} locked={locked}>
                 {form.description || "A short description of what they'll get and why it helps."}
               </DraggableTextBlock>
             )}
             {form.bulletsEnabled && (
-              <DraggableTextBlock el={textElements.bullets} onUpdate={(u) => onUpdateTextEl?.("bullets", u)} label="Benefits" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} onDelete={() => onUpdate?.({ bulletsEnabled: false })}>
+              <DraggableTextBlock el={textElements.bullets} onUpdate={(u) => onUpdateTextEl?.("bullets", u)} label="Benefits" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} onDelete={() => onUpdate?.({ bulletsEnabled: false })} locked={locked}>
                 <div className="space-y-1.5">
                   {displayBullets.slice(0, 3).map((b, i) => (
                     <div key={i} className="flex items-center gap-2">
@@ -248,7 +307,7 @@ function SimplePreview({
               </DraggableTextBlock>
             )}
             {!(form.hiddenBlocks ?? []).includes("form") && (
-              <DraggableTextBlock el={textElements.form} onUpdate={(u) => onUpdateTextEl?.("form", u)} label="Form" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "form"] })}>
+              <DraggableTextBlock el={textElements.form} onUpdate={(u) => onUpdateTextEl?.("form", u)} label="Form" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "form"] })} locked={locked}>
                 <div className="space-y-1.5">
                   <div className="h-5 rounded-md border border-slate-200 text-[9px] text-muted-foreground flex items-center px-2 bg-white">Enter your email address</div>
                   <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>{form.ctaLabel || "Get the resource"}</div>
@@ -306,6 +365,7 @@ function DraggableTextBlock({
   onBulletsChange,
   accentColor,
   onDelete,
+  locked = false,
 }: {
   el: TextEl;
   onUpdate: (u: Partial<TextEl>) => void;
@@ -321,6 +381,7 @@ function DraggableTextBlock({
   onBulletsChange?: (bs: string[]) => void;
   accentColor?: string;
   onDelete?: () => void;
+  locked?: boolean;
 }) {
   const ref        = useRef<HTMLDivElement>(null);
   const colorRef   = useRef<HTMLInputElement>(null);
@@ -442,12 +503,14 @@ function DraggableTextBlock({
         color: safeColor,
         ...backdropInlineStyle,
       }}
-      className={`group ${editing ? "cursor-text" : "cursor-move"} ${editing ? "" : "select-none"} ${fontClass} ${
-        selected
+      className={`group ${editing ? "cursor-text" : locked ? "cursor-default" : "cursor-move"} ${editing ? "" : "select-none"} ${fontClass} ${
+        selected && !locked
           ? "outline outline-[1.5px] outline-sky-400 outline-offset-1"
+          : locked
+          ? "outline outline-1 outline-transparent"
           : "outline outline-1 outline-transparent hover:outline-sky-200"
       }`}
-      onMouseDown={startDrag}
+      onMouseDown={locked ? undefined : startDrag}
       onDoubleClick={enterEdit}
     >
       {/* ── Editable content ── */}
@@ -513,8 +576,8 @@ function DraggableTextBlock({
         children
       )}
 
-      {/* Floating toolbar — visible when selected and not editing */}
-      {selected && !editing && (
+      {/* Floating toolbar — visible when selected, not editing, and not locked */}
+      {selected && !editing && !locked && (
         <div
           className="absolute -top-7 left-0 flex items-center gap-1 bg-white border border-slate-200 rounded-md shadow-md px-1.5 py-0.5 z-50 whitespace-nowrap"
           onMouseDown={(e) => e.stopPropagation()}
@@ -567,8 +630,8 @@ function DraggableTextBlock({
         </div>
       )}
 
-      {/* Bottom-right resize handle — hidden while editing */}
-      {!editing && (
+      {/* Bottom-right resize handle — hidden while editing or locked */}
+      {!editing && !locked && (
         <div
           className={`absolute -bottom-1.5 -right-1.5 w-3 h-3 rounded-sm bg-sky-400 cursor-se-resize transition-opacity ${
             selected ? "opacity-100" : "opacity-0 group-hover:opacity-60"
@@ -586,11 +649,13 @@ function DraggableTextBlock({
 function SplitPreview({
   form,
   interactive = false,
+  locked = false,
   onUpdateTextEl,
   onUpdate,
 }: {
   form: Form;
   interactive?: boolean;
+  locked?: boolean;
   onUpdateTextEl?: (key: TextElKey, u: Partial<TextEl>) => void;
   onUpdate?: (partial: Partial<Form>) => void;
 }) {
@@ -739,6 +804,7 @@ function SplitPreview({
               textValue={form.title}
               onTextChange={(v) => onUpdate?.({ title: v })}
               onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "headline"] })}
+              locked={locked}
             >
               {form.title || "Your Resource Title"}
             </DraggableTextBlock>
@@ -757,6 +823,7 @@ function SplitPreview({
               textValue={form.description}
               onTextChange={(v) => onUpdate?.({ description: v })}
               onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "description"] })}
+              locked={locked}
             >
               {form.description || "A short description of what they'll get and why it helps."}
             </DraggableTextBlock>
@@ -775,6 +842,7 @@ function SplitPreview({
               onBulletsChange={(bs) => onUpdate?.({ bullets: bs })}
               accentColor={accent}
               onDelete={() => onUpdate?.({ bulletsEnabled: false })}
+              locked={locked}
             >
               <div className="space-y-1.5">
                 {displayBullets.slice(0, 3).map((b, i) => (
@@ -798,6 +866,7 @@ function SplitPreview({
               onDragStart={() => setIsDragging(true)}
               onDragEnd={() => setIsDragging(false)}
               onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "form"] })}
+              locked={locked}
             >
               <div className="space-y-1.5">
                 <div className="h-5 rounded-md border border-slate-200 text-[9px] text-muted-foreground flex items-center px-2 bg-white">
@@ -871,11 +940,13 @@ function SplitPreview({
 function StackedPreview({
   form,
   interactive = false,
+  locked = false,
   onUpdateTextEl,
   onUpdate,
 }: {
   form: Form;
   interactive?: boolean;
+  locked?: boolean;
   onUpdateTextEl?: (key: TextElKey, u: Partial<TextEl>) => void;
   onUpdate?: (partial: Partial<Form>) => void;
 }) {
@@ -1005,17 +1076,17 @@ function StackedPreview({
             </>
           )}
           {!(form.hiddenBlocks ?? []).includes("headline") && (
-            <DraggableTextBlock el={textElements.headline} onUpdate={(u) => onUpdateTextEl?.("headline", u)} fontClass="font-bold tracking-tight leading-snug" label="Headline" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} editType="text" textValue={form.title} onTextChange={(v) => onUpdate?.({ title: v })} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "headline"] })}>
+            <DraggableTextBlock el={textElements.headline} onUpdate={(u) => onUpdateTextEl?.("headline", u)} fontClass="font-bold tracking-tight leading-snug" label="Headline" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} editType="text" textValue={form.title} onTextChange={(v) => onUpdate?.({ title: v })} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "headline"] })} locked={locked}>
               {form.title || "Your Resource Title"}
             </DraggableTextBlock>
           )}
           {!(form.hiddenBlocks ?? []).includes("description") && (
-            <DraggableTextBlock el={textElements.description} onUpdate={(u) => onUpdateTextEl?.("description", u)} fontClass="leading-relaxed" label="Description" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} editType="text" textValue={form.description} onTextChange={(v) => onUpdate?.({ description: v })} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "description"] })}>
+            <DraggableTextBlock el={textElements.description} onUpdate={(u) => onUpdateTextEl?.("description", u)} fontClass="leading-relaxed" label="Description" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} editType="text" textValue={form.description} onTextChange={(v) => onUpdate?.({ description: v })} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "description"] })} locked={locked}>
               {form.description || "A short description of what they'll get and why it helps."}
             </DraggableTextBlock>
           )}
           {form.bulletsEnabled && (
-            <DraggableTextBlock el={textElements.bullets} onUpdate={(u) => onUpdateTextEl?.("bullets", u)} label="Benefits" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} editType="bullets" bulletValues={displayBullets} onBulletsChange={(bs) => onUpdate?.({ bullets: bs })} accentColor={accent} onDelete={() => onUpdate?.({ bulletsEnabled: false })}>
+            <DraggableTextBlock el={textElements.bullets} onUpdate={(u) => onUpdateTextEl?.("bullets", u)} label="Benefits" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} editType="bullets" bulletValues={displayBullets} onBulletsChange={(bs) => onUpdate?.({ bullets: bs })} accentColor={accent} onDelete={() => onUpdate?.({ bulletsEnabled: false })} locked={locked}>
               <div className="space-y-1.5">
                 {displayBullets.slice(0, 3).map((b, i) => (
                   <div key={i} className="flex items-center gap-2">
@@ -1029,7 +1100,7 @@ function StackedPreview({
             </DraggableTextBlock>
           )}
           {!(form.hiddenBlocks ?? []).includes("form") && (
-            <DraggableTextBlock el={textElements.form} onUpdate={(u) => onUpdateTextEl?.("form", u)} label="Form" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "form"] })}>
+            <DraggableTextBlock el={textElements.form} onUpdate={(u) => onUpdateTextEl?.("form", u)} label="Form" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "form"] })} locked={locked}>
               <div className="space-y-1.5">
                 <div className="h-5 rounded-md border border-slate-200 text-[9px] text-muted-foreground flex items-center px-2 bg-white">Enter your email address</div>
                 <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>{form.ctaLabel || "Get the resource"}</div>
@@ -1074,11 +1145,13 @@ function StackedPreview({
 function FullImagePreview({
   form,
   interactive = false,
+  locked = false,
   onUpdateTextEl,
   onUpdate,
 }: {
   form: Form;
   interactive?: boolean;
+  locked?: boolean;
   onUpdateTextEl?: (key: TextElKey, u: Partial<TextEl>) => void;
   onUpdate?: (partial: Partial<Form>) => void;
 }) {
@@ -1160,6 +1233,7 @@ function FullImagePreview({
               textValue={form.title}
               onTextChange={(v) => onUpdate?.({ title: v })}
               onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "headline"] })}
+              locked={locked}
             >
               {form.title || "Your Resource Title"}
             </DraggableTextBlock>
@@ -1177,6 +1251,7 @@ function FullImagePreview({
               textValue={form.description}
               onTextChange={(v) => onUpdate?.({ description: v })}
               onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "description"] })}
+              locked={locked}
             >
               {form.description || "A short description of what they'll get and why it helps."}
             </DraggableTextBlock>
@@ -1194,6 +1269,7 @@ function FullImagePreview({
               onBulletsChange={(bs) => onUpdate?.({ bullets: bs })}
               accentColor={accent}
               onDelete={() => onUpdate?.({ bulletsEnabled: false })}
+              locked={locked}
             >
               <div className="space-y-1.5">
                 {displayBullets.slice(0, 3).map((b, i) => (
@@ -1216,6 +1292,7 @@ function FullImagePreview({
               onDragStart={() => setIsDragging(true)}
               onDragEnd={() => setIsDragging(false)}
               onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "form"] })}
+              locked={locked}
             >
               <div className="space-y-1.5">
                 <div className="h-5 rounded-md border border-white/30 text-[9px] text-white/70 flex items-center px-2 bg-white/10">
@@ -1444,6 +1521,10 @@ function FloatingBar({
   isEditing,
   barPosition = "bottom",
   onTogglePosition,
+  locked = false,
+  onToggleLock,
+  onApplyPreset,
+  activePreset,
 }: {
   layout: string;
   form: Form;
@@ -1453,6 +1534,10 @@ function FloatingBar({
   isEditing?: boolean;
   barPosition?: "bottom" | "side";
   onTogglePosition?: () => void;
+  locked?: boolean;
+  onToggleLock?: () => void;
+  onApplyPreset?: (p: typeof LAYOUT_PRESETS[0]) => void;
+  activePreset?: string | null;
 }) {
   const [panel, setPanel] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1568,6 +1653,38 @@ function FloatingBar({
   const designPanel = (
     <PopoverContent side={popSide} align="center" sideOffset={10} className="w-64 p-4 space-y-4">
       <p className="text-xs font-semibold text-foreground">Design</p>
+
+      {/* Typography presets */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <label className="text-[11px] font-medium text-muted-foreground">Typography preset</label>
+          <button
+            onClick={onToggleLock}
+            title={locked ? "Unlock positions" : "Lock to preset"}
+            className={`flex items-center gap-0.5 text-[9px] font-medium rounded-md px-1.5 py-0.5 transition-colors ${locked ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted"}`}
+          >
+            {locked ? <Unlock className="h-2.5 w-2.5" /> : <Lock className="h-2.5 w-2.5" />}
+            {locked ? "Unlock" : "Lock"}
+          </button>
+        </div>
+        <div className="grid grid-cols-3 gap-1.5">
+          {LAYOUT_PRESETS.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => onApplyPreset?.(p)}
+              className={`flex flex-col items-start gap-0.5 p-2 rounded-lg border text-left transition-all ${
+                activePreset === p.id
+                  ? "border-primary bg-primary/5 shadow-sm"
+                  : "border-border hover:border-primary/40 hover:bg-muted/50"
+              }`}
+            >
+              <span className="text-[10px] font-semibold leading-none">{p.label}</span>
+              <span className="text-[9px] text-muted-foreground leading-tight">{p.desc}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {layout === "simple" && (
         <div className="space-y-1.5">
           <label className="text-[11px] font-medium text-muted-foreground">Background</label>
@@ -1638,6 +1755,17 @@ function FloatingBar({
           <PopoverTrigger asChild><span>{iconBtn("settings", Settings, "Settings")}</span></PopoverTrigger>
           {settingsPanel}
         </Popover>
+        <div className="w-10 h-px bg-border my-0.5" />
+        <button
+          onClick={onToggleLock}
+          title={locked ? "Unlock positions" : "Lock to preset"}
+          className={`w-11 h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 transition-colors ${
+            locked ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          }`}
+        >
+          {locked ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+          <span className="text-[8px] font-medium leading-none">{locked ? "Unlock" : "Lock"}</span>
+        </button>
         <div className="flex-1" />
         <Button size="sm" className="w-12 h-9 text-[11px] font-semibold rounded-xl px-0" onClick={onSave}>
           {isEditing ? "Upd" : "Pub"}
@@ -1681,6 +1809,15 @@ function FloatingBar({
         <button onClick={onTogglePosition} title="Switch to side panel" className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
           <PanelRight className="h-3.5 w-3.5" />
         </button>
+        <button
+          onClick={onToggleLock}
+          title={locked ? "Unlock positions" : "Lock to preset"}
+          className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+            locked ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          }`}
+        >
+          {locked ? <Unlock className="h-3.5 w-3.5" /> : <Lock className="h-3.5 w-3.5" />}
+        </button>
         {sep}
         <Button variant="outline" size="sm" className="h-7 px-3 text-xs rounded-lg">Save draft</Button>
         <Button size="sm" className="h-7 px-3 text-xs rounded-lg" onClick={onSave}>{isEditing ? "Update" : "Publish"}</Button>
@@ -1723,6 +1860,23 @@ export default function TemplatePicker() {
   const [layout, setLayout] = useState(() => editingMagnet?.layout ?? "simple");
   const [form, setForm] = useState<Form>(() => editingMagnet ? magnetToForm(editingMagnet) : defaultForm);
   const [barPosition, setBarPosition] = useState<"bottom" | "side">("bottom");
+  const [locked, setLocked] = useState(false);
+  const [activePreset, setActivePreset] = useState<string | null>(null);
+
+  const applyPreset = (preset: typeof LAYOUT_PRESETS[0]) => {
+    const isDark = layout === "fullimage";
+    setForm((f) => ({ ...f, textElements: isDark ? preset.dark : preset.light }));
+    setActivePreset(preset.id);
+    setLocked(true);
+  };
+
+  const handleToggleLock = () => {
+    if (!locked && activePreset === null) {
+      applyPreset(LAYOUT_PRESETS[0]);
+    } else {
+      setLocked((l) => !l);
+    }
+  };
 
   const handleStart = () => {
     if (layout === "fullimage") {
@@ -1818,6 +1972,7 @@ export default function TemplatePicker() {
           <SimplePreview
             form={form}
             interactive={mode === "edit"}
+            locked={locked}
             onUpdateTextEl={(key, u) =>
               setForm((f) => ({
                 ...f,
@@ -1830,6 +1985,7 @@ export default function TemplatePicker() {
           <StackedPreview
             form={form}
             interactive={mode === "edit"}
+            locked={locked}
             onUpdateTextEl={(key, u) =>
               setForm((f) => ({
                 ...f,
@@ -1842,6 +1998,7 @@ export default function TemplatePicker() {
           <FullImagePreview
             form={form}
             interactive={mode === "edit"}
+            locked={locked}
             onUpdateTextEl={(key, u) =>
               setForm((f) => ({
                 ...f,
@@ -1854,6 +2011,7 @@ export default function TemplatePicker() {
           <SplitPreview
             form={form}
             interactive={mode === "edit"}
+            locked={locked}
             onUpdateTextEl={(key, u) =>
               setForm((f) => ({
                 ...f,
@@ -1931,6 +2089,10 @@ export default function TemplatePicker() {
                 isEditing={!!editingMagnet}
                 barPosition={barPosition}
                 onTogglePosition={() => setBarPosition(barPosition === "bottom" ? "side" : "bottom")}
+                locked={locked}
+                onToggleLock={handleToggleLock}
+                onApplyPreset={applyPreset}
+                activePreset={activePreset}
               />
             </>
           )}
