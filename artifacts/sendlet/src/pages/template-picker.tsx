@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import { useLocation, useParams } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/layout/app-layout";
@@ -593,6 +594,32 @@ function DraggableTextBlock({
     return () => document.removeEventListener("mousedown", handler);
   }, [selected, editing]);
 
+  const [toolbarPos, setToolbarPos] = useState<{ top: number; left: number; flipDown: boolean; flipRight: boolean } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!selected || locked || !ref.current) { setToolbarPos(null); return; }
+    const update = () => {
+      if (!ref.current) return;
+      const r = ref.current.getBoundingClientRect();
+      const TOOLBAR_H = 26;
+      const flipDown  = r.top < TOOLBAR_H + 8;
+      const flipRight = r.right > window.innerWidth - 60;
+      setToolbarPos({
+        top:       flipDown ? r.bottom + 4 : r.top - TOOLBAR_H - 4,
+        left:      flipRight ? r.right : r.left,
+        flipDown,
+        flipRight,
+      });
+    };
+    update();
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [selected, locked, el.x, el.y, el.w]);
+
   const safeColor = el.color || "#0f172a";
   const ac = accentColor || ACCENT;
   const bdMode = el.backdrop ?? "none";
@@ -708,10 +735,17 @@ function DraggableTextBlock({
         children
       )}
 
-      {/* Floating toolbar — visible while selected (including during editing) */}
-      {selected && !locked && (
+      {/* Floating toolbar rendered via portal — escapes overflow:hidden parents */}
+      {selected && !locked && toolbarPos && createPortal(
         <div
-          className="absolute -top-7 left-0 flex items-center gap-1 bg-white border border-slate-200 rounded-md shadow-md px-1.5 py-0.5 z-50 whitespace-nowrap"
+          style={{
+            position: "fixed",
+            top:       toolbarPos.top,
+            left:      toolbarPos.flipRight ? undefined : toolbarPos.left,
+            right:     toolbarPos.flipRight ? window.innerWidth - toolbarPos.left : undefined,
+            zIndex:    9999,
+          }}
+          className="flex items-center gap-1 bg-white border border-slate-200 rounded-md shadow-md px-1.5 py-0.5 whitespace-nowrap pointer-events-auto"
           onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
         >
           <span className="text-[7px] text-slate-400 font-medium pr-1 border-r border-slate-200">{label}</span>
@@ -733,7 +767,6 @@ function DraggableTextBlock({
             <span className="text-[8px] font-mono text-slate-600 w-5 text-center">{el.size}</span>
             <button className="text-[9px] font-semibold text-slate-500 hover:text-slate-800 leading-none px-0.5" onClick={() => onUpdate({ size: Math.min(72, el.size + 1) })}>A+</button>
           </div>
-          {/* Backdrop style toggle */}
           <button
             onClick={() => onUpdate({ backdrop: nextBackdrop })}
             className={`flex items-center gap-0.5 border-l border-slate-200 pl-1 text-[7px] font-medium transition-colors ${
@@ -744,19 +777,11 @@ function DraggableTextBlock({
             <Layers2 className="h-2.5 w-2.5" />
             <span>{backdropLabel}</span>
           </button>
-
           {editType && (
             editing ? (
-              <button
-                onClick={exitEdit}
-                className="text-[7px] text-emerald-600 hover:text-emerald-800 border-l border-slate-200 pl-1 font-medium"
-              >✓ done</button>
+              <button onClick={exitEdit} className="text-[7px] text-emerald-600 hover:text-emerald-800 border-l border-slate-200 pl-1 font-medium">✓ done</button>
             ) : (
-              <button
-                onClick={enterEdit as unknown as React.MouseEventHandler<HTMLButtonElement>}
-                className="text-[7px] text-sky-500 hover:text-sky-700 border-l border-slate-200 pl-1 font-medium"
-                title="Double-click to edit text"
-              >✎ edit</button>
+              <button onClick={enterEdit as unknown as React.MouseEventHandler<HTMLButtonElement>} className="text-[7px] text-sky-500 hover:text-sky-700 border-l border-slate-200 pl-1 font-medium" title="Double-click to edit text">✎ edit</button>
             )
           )}
           {onDelete && (
@@ -766,7 +791,8 @@ function DraggableTextBlock({
               title="Hide block"
             >✕ hide</button>
           )}
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Bottom-right resize handle — hidden while editing or locked */}
