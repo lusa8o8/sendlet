@@ -3,9 +3,8 @@ import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion } from "framer-motion";
-import { Send } from "lucide-react";
+import { Send, Check } from "lucide-react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -17,6 +16,12 @@ const signInSchema = z.object({
 
 type SignInFormValues = z.infer<typeof signInSchema>;
 
+const features = [
+  "Publish a gated resource page in minutes",
+  "Collect leads without a full email platform",
+  "Send the resource automatically on opt-in",
+];
+
 export default function SignIn() {
   const [, setLocation] = useLocation();
   const { signIn } = useAuth();
@@ -25,15 +30,12 @@ export default function SignIn() {
 
   const form = useForm<SignInFormValues>({
     resolver: zodResolver(signInSchema),
-    defaultValues: {
-      email: "",
-    },
+    defaultValues: { email: "" },
   });
 
   function onSubmit(data: SignInFormValues) {
     setSubmittedEmail(data.email);
     setIsSubmitted(true);
-    // Simulate sending email, then sign in
     setTimeout(() => {
       signIn(data.email);
       setLocation("/dashboard");
@@ -41,38 +43,74 @@ export default function SignIn() {
   }
 
   return (
-    <div className="min-h-[100dvh] flex items-center justify-center bg-background p-4">
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className="w-full max-w-sm"
-      >
-        <div className="flex justify-center mb-8">
-          <div className="flex items-center gap-2">
-            <Send className="h-6 w-6 text-primary" />
-            <span className="font-semibold text-xl">Sendlet</span>
-          </div>
+    <div className="min-h-[100dvh] flex">
+      {/* Left — brand panel */}
+      <div className="hidden md:flex flex-col justify-between w-[44%] shrink-0 bg-[#0C4A44] text-white p-12 lg:p-16">
+        <div className="flex items-center gap-2.5">
+          <Send className="h-5 w-5 text-white/80" />
+          <span className="font-semibold text-base tracking-tight">Sendlet</span>
         </div>
 
-        <Card className="border-border shadow-sm">
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">Sign in to Sendlet</CardTitle>
-            <CardDescription className="text-center">
-              {isSubmitted ? "Check your email" : "Enter your email and we'll send a sign-in link."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isSubmitted ? (
-              <div className="text-center text-sm space-y-4">
-                <p className="text-muted-foreground">
-                  We sent a sign-in link to <span className="font-medium text-foreground">{submittedEmail}</span>.
-                </p>
-                <p className="text-muted-foreground">Redirecting...</p>
+        <div className="space-y-8">
+          <div className="space-y-3">
+            <p className="text-[11px] font-medium tracking-widest uppercase text-white/40">
+              What you get
+            </p>
+            <h2 className="text-2xl lg:text-3xl font-semibold leading-snug text-white">
+              Publish your resource.<br />Collect the lead.<br />That's it.
+            </h2>
+          </div>
+
+          <ul className="space-y-3">
+            {features.map((f) => (
+              <li key={f} className="flex items-start gap-3 text-sm text-white/70 leading-relaxed">
+                <Check className="h-4 w-4 text-white/40 mt-0.5 shrink-0" />
+                {f}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <p className="text-xs text-white/30">No credit card. No complex setup.</p>
+      </div>
+
+      {/* Right — form */}
+      <div className="flex-1 flex items-center justify-center bg-background px-6 py-12">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="w-full max-w-sm"
+        >
+          {/* Mobile logo */}
+          <div className="flex items-center gap-2 mb-10 md:hidden">
+            <Send className="h-5 w-5 text-primary" />
+            <span className="font-semibold text-base">Sendlet</span>
+          </div>
+
+          {isSubmitted ? (
+            <div className="space-y-4">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                <Send className="h-5 w-5 text-primary" />
               </div>
-            ) : (
+              <h1 className="text-xl font-semibold">Check your inbox</h1>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                We sent a sign-in link to{" "}
+                <span className="font-medium text-foreground">{submittedEmail}</span>.
+                Click it to sign in — redirecting shortly.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="space-y-1.5">
+                <h1 className="text-2xl font-semibold tracking-tight">Welcome back.</h1>
+                <p className="text-sm text-muted-foreground">
+                  Enter your email and we'll send a sign-in link.
+                </p>
+              </div>
+
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
                   <FormField
                     control={form.control}
                     name="email"
@@ -83,6 +121,7 @@ export default function SignIn() {
                             placeholder="name@example.com"
                             type="email"
                             data-testid="input-email"
+                            className="h-10"
                             {...field}
                           />
                         </FormControl>
@@ -90,15 +129,19 @@ export default function SignIn() {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" className="w-full" data-testid="button-submit">
+                  <Button type="submit" className="w-full h-10" data-testid="button-submit">
                     Send magic link
                   </Button>
                 </form>
               </Form>
-            )}
-          </CardContent>
-        </Card>
-      </motion.div>
+
+              <p className="text-xs text-muted-foreground">
+                No password needed. No spam — ever.
+              </p>
+            </div>
+          )}
+        </motion.div>
+      </div>
     </div>
   );
 }

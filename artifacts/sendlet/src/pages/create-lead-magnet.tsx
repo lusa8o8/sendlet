@@ -608,7 +608,7 @@ export default function CreateLeadMagnet() {
       </Button>
       {step < totalSteps ? (
         <Button onClick={nextStep} data-testid="button-next">
-          Next
+          {step === 3 ? "Next: Publish" : `Next: ${["Design", "Email", "Publish"][step - 1]}`}
           <ChevronRight className="ml-2 h-4 w-4" />
         </Button>
       ) : (
@@ -637,15 +637,37 @@ export default function CreateLeadMagnet() {
             </div>
           </div>
 
-          <div className="flex gap-2 mt-6">
-            {Array.from({ length: totalSteps }).map((_, i) => (
-              <div
-                key={i}
-                className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${
-                  i < step ? "bg-primary" : "bg-secondary"
-                }`}
-              />
-            ))}
+          <div className="mt-6 space-y-2.5">
+            <div className="flex gap-2">
+              {Array.from({ length: totalSteps }).map((_, i) => (
+                <div
+                  key={i}
+                  className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
+                    i < step ? "bg-primary" : "bg-secondary"
+                  }`}
+                />
+              ))}
+            </div>
+            <div className="hidden sm:flex justify-between">
+              {["Content", "Design", "Email", "Publish"].map((label, i) => (
+                <span
+                  key={label}
+                  className={`text-xs transition-colors ${
+                    i + 1 === step
+                      ? "text-primary font-medium"
+                      : i + 1 < step
+                      ? "text-muted-foreground"
+                      : "text-muted-foreground/50"
+                  }`}
+                  style={{ width: "25%", textAlign: i === 0 ? "left" : i === 3 ? "right" : "center" }}
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
+            <p className="text-xs text-primary font-medium sm:hidden">
+              {["Content", "Design", "Email", "Publish"][step - 1]}
+            </p>
           </div>
         </div>
 
