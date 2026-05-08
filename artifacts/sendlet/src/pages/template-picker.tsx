@@ -45,9 +45,10 @@ const ACCENT_COLORS = [
 ];
 
 const LAYOUTS = [
-  { id: "simple",  label: "Simple",       desc: "Centered opt-in card on a gradient." },
-  { id: "split",   label: "Visual Split", desc: "Full-bleed panel left, form right."  },
-  { id: "stacked", label: "Stacked",      desc: "Image banner on top, form below."    },
+  { id: "simple",    label: "Simple",       desc: "Centered opt-in card on a gradient." },
+  { id: "split",     label: "Visual Split", desc: "Full-bleed panel left, form right."  },
+  { id: "stacked",   label: "Stacked",      desc: "Image banner on top, form below."    },
+  { id: "fullimage", label: "Full Image",   desc: "Full-bleed photo with floating glass panels." },
 ];
 
 const LEFT_TYPES = [
@@ -1008,6 +1009,214 @@ function StackedPreview({
   );
 }
 
+/* ─── Live preview: Full Image layout ───────────────────────── */
+
+function FullImagePreview({
+  form,
+  interactive = false,
+  onUpdateTextEl,
+  onUpdate,
+}: {
+  form: Form;
+  interactive?: boolean;
+  onUpdateTextEl?: (key: TextElKey, u: Partial<TextEl>) => void;
+  onUpdate?: (partial: Partial<Form>) => void;
+}) {
+  const [isDragging, setIsDragging] = useState(false);
+  const imgFileRef = useRef<HTMLInputElement>(null);
+  const accent = form.accentColor || ACCENT;
+  const bullets = form.bulletsEnabled ? form.bullets.filter(Boolean) : [];
+  const displayBullets = bullets.length ? bullets : ["Key benefit one", "Key benefit two", "Key benefit three"];
+  const textElements: Record<TextElKey, TextEl> = {
+    ...defaultForm.textElements,
+    ...(form.textElements ?? {}),
+  };
+
+  const bgStyle: React.CSSProperties = form.imageDataUrl
+    ? {
+        backgroundImage: `url(${form.imageDataUrl})`,
+        backgroundSize: "cover",
+        backgroundPosition: `${form.imagePosition?.x ?? 50}% ${form.imagePosition?.y ?? 50}%`,
+      }
+    : { background: "linear-gradient(135deg,#1e293b 0%,#0f4c44 50%,#1e293b 100%)" };
+
+  const glassPanel: React.CSSProperties = {
+    backdropFilter: "blur(14px)",
+    WebkitBackdropFilter: "blur(14px)",
+    background: "rgba(255,255,255,0.16)",
+    border: "1px solid rgba(255,255,255,0.38)",
+    borderRadius: "10px",
+    padding: "8px 12px",
+  };
+
+  return (
+    <div className="w-full h-full relative overflow-hidden" style={bgStyle}>
+      {/* Subtle dark veil for contrast */}
+      <div className="absolute inset-0 bg-black/25 pointer-events-none z-0" />
+
+      {interactive ? (
+        <div className="absolute inset-0">
+          {/* Upload / Replace button */}
+          <button
+            className="absolute top-3 right-3 z-20 flex items-center gap-1.5 bg-black/40 hover:bg-black/60 rounded-lg px-2.5 py-1.5 transition-colors"
+            onClick={() => imgFileRef.current?.click()}
+          >
+            <Upload className="h-3 w-3 text-white" />
+            <span className="text-[10px] text-white font-medium">
+              {form.imageDataUrl ? "Replace" : "Upload image"}
+            </span>
+          </button>
+          <input
+            ref={imgFileRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = (ev) => {
+                if (typeof ev.target?.result === "string")
+                  onUpdate?.({ imageDataUrl: ev.target.result });
+              };
+              reader.readAsDataURL(file);
+              e.target.value = "";
+            }}
+          />
+
+          {/* Guide lines */}
+          {isDragging && (
+            <>
+              <div className="absolute inset-y-0 pointer-events-none z-30" style={{ left: "50%", width: "1px", background: "repeating-linear-gradient(to bottom,rgba(14,165,233,0.6) 0 4px,transparent 4px 8px)" }} />
+              <div className="absolute inset-x-0 pointer-events-none z-30" style={{ top: "50%", height: "1px", background: "repeating-linear-gradient(to right,rgba(14,165,233,0.6) 0 4px,transparent 4px 8px)" }} />
+            </>
+          )}
+
+          {/* Draggable blocks */}
+          <DraggableTextBlock
+            el={textElements.headline}
+            onUpdate={(u) => onUpdateTextEl?.("headline", u)}
+            fontClass="font-bold tracking-tight leading-snug"
+            label="Headline"
+            onDragStart={() => setIsDragging(true)}
+            onDragEnd={() => setIsDragging(false)}
+            editType="text"
+            textValue={form.title}
+            onTextChange={(v) => onUpdate?.({ title: v })}
+          >
+            {form.title || "Your Resource Title"}
+          </DraggableTextBlock>
+
+          <DraggableTextBlock
+            el={textElements.description}
+            onUpdate={(u) => onUpdateTextEl?.("description", u)}
+            fontClass="leading-relaxed"
+            label="Description"
+            onDragStart={() => setIsDragging(true)}
+            onDragEnd={() => setIsDragging(false)}
+            editType="text"
+            textValue={form.description}
+            onTextChange={(v) => onUpdate?.({ description: v })}
+          >
+            {form.description || "A short description of what they'll get and why it helps."}
+          </DraggableTextBlock>
+
+          {form.bulletsEnabled && (
+            <DraggableTextBlock
+              el={textElements.bullets}
+              onUpdate={(u) => onUpdateTextEl?.("bullets", u)}
+              label="Benefits"
+              onDragStart={() => setIsDragging(true)}
+              onDragEnd={() => setIsDragging(false)}
+              editType="bullets"
+              bulletValues={displayBullets}
+              onBulletsChange={(bs) => onUpdate?.({ bullets: bs })}
+              accentColor={accent}
+            >
+              <div className="space-y-1.5">
+                {displayBullets.slice(0, 3).map((b, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <div className="w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${accent}55` }}>
+                      <Check className="h-2 w-2 text-white" />
+                    </div>
+                    <span>{b}</span>
+                  </div>
+                ))}
+              </div>
+            </DraggableTextBlock>
+          )}
+
+          <DraggableTextBlock
+            el={textElements.form}
+            onUpdate={(u) => onUpdateTextEl?.("form", u)}
+            label="Form"
+            onDragStart={() => setIsDragging(true)}
+            onDragEnd={() => setIsDragging(false)}
+          >
+            <div className="space-y-1.5">
+              <div className="h-5 rounded-md border border-white/30 text-[9px] text-white/70 flex items-center px-2 bg-white/10">
+                Enter your email address
+              </div>
+              <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>
+                {form.ctaLabel || "Get the resource"}
+              </div>
+              <p className="text-center text-[8px] text-white/60">No spam. Unsubscribe anytime.</p>
+            </div>
+          </DraggableTextBlock>
+        </div>
+      ) : (
+        /* ── Static pick mode — glass panels preview ── */
+        <div className="w-full h-full relative z-10">
+          <div className="absolute" style={{ left: "5%", top: "8%", width: "90%" }}>
+            <div style={glassPanel}>
+              <p className="text-sm font-bold text-white leading-snug">
+                {form.title || "Your Resource Title"}
+              </p>
+            </div>
+          </div>
+
+          <div className="absolute" style={{ left: "5%", top: "26%", width: "90%" }}>
+            <div style={glassPanel}>
+              <p className="text-[11px] text-white/85 leading-relaxed">
+                {form.description || "A short description of what they'll get and why it helps."}
+              </p>
+            </div>
+          </div>
+
+          {form.bulletsEnabled && (
+            <div className="absolute" style={{ left: "5%", top: "44%", width: "90%" }}>
+              <div style={glassPanel}>
+                <div className="space-y-1.5">
+                  {displayBullets.slice(0, 3).map((b, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <div className="w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${accent}55` }}>
+                        <Check className="h-2 w-2 text-white" />
+                      </div>
+                      <span className="text-[10px] text-white/90">{b}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="absolute" style={{ left: "5%", top: form.bulletsEnabled ? "67%" : "50%", width: "90%" }}>
+            <div style={{ ...glassPanel, padding: "8px 12px" }} className="space-y-1.5">
+              <div className="h-5 rounded-md border border-white/30 text-[9px] text-white/70 flex items-center px-2 bg-white/10">
+                Enter your email address
+              </div>
+              <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>
+                {form.ctaLabel || "Get the resource"}
+              </div>
+              <p className="text-center text-[8px] text-white/60">No spam. Unsubscribe anytime.</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── Picker panel (left, mode === 'pick') ──────────────────── */
 
 function PickerPanel({
@@ -1415,6 +1624,17 @@ export default function TemplatePicker() {
   const [form, setForm] = useState<Form>(defaultForm);
 
   const handleStart = () => {
+    if (layout === "fullimage") {
+      setForm((f) => ({
+        ...f,
+        textElements: {
+          headline:    { ...f.textElements.headline,    backdrop: "glass", color: "#ffffff", x: 5, y: 7,  w: 90, size: 15 },
+          description: { ...f.textElements.description, backdrop: "glass", color: "#f1f5f9", x: 5, y: 26, w: 90 },
+          bullets:     { ...f.textElements.bullets,     backdrop: "glass", color: "#f1f5f9", x: 5, y: 45, w: 90 },
+          form:        { ...f.textElements.form,        backdrop: "glass", color: "#ffffff", x: 5, y: 67, w: 90 },
+        },
+      }));
+    }
     setMode("edit");
   };
 
@@ -1450,6 +1670,8 @@ export default function TemplatePicker() {
       ? "Simple layout — centered opt-in card on a gradient"
       : layout === "stacked"
       ? "Stacked layout — image banner on top, form below"
+      : layout === "fullimage"
+      ? "Full Image — full-bleed photo with floating glass panels"
       : `Visual Split — ${form.leftType === "image" ? "photo" : "bold text"} left · form right`;
 
   const previewBlock = (
@@ -1476,6 +1698,18 @@ export default function TemplatePicker() {
           />
         ) : layout === "stacked" ? (
           <StackedPreview
+            form={form}
+            interactive={mode === "edit"}
+            onUpdateTextEl={(key, u) =>
+              setForm((f) => ({
+                ...f,
+                textElements: { ...f.textElements, [key]: { ...f.textElements[key], ...u } },
+              }))
+            }
+            onUpdate={(partial) => setForm((f) => ({ ...f, ...partial }))}
+          />
+        ) : layout === "fullimage" ? (
+          <FullImagePreview
             form={form}
             interactive={mode === "edit"}
             onUpdateTextEl={(key, u) =>
