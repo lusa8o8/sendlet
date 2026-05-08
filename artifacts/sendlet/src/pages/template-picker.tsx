@@ -652,7 +652,7 @@ function DraggableTextBlock({
           value={textValue ?? ""}
           placeholder={label}
           onChange={(e) => { onTextChange?.(e.target.value); autoSize(e.target); }}
-          onBlur={exitEdit}
+          onBlur={(e) => { if (ref.current?.contains(e.relatedTarget as Node)) return; exitEdit(); }}
           onKeyDown={(e) => { if (e.key === "Escape") { exitEdit(); } }}
           rows={1}
           className="w-full bg-transparent border-none outline-none resize-none overflow-hidden p-0 m-0 block leading-inherit"
@@ -708,11 +708,11 @@ function DraggableTextBlock({
         children
       )}
 
-      {/* Floating toolbar — visible when selected, not editing, and not locked */}
-      {selected && !editing && !locked && (
+      {/* Floating toolbar — visible while selected (including during editing) */}
+      {selected && !locked && (
         <div
           className="absolute -top-7 left-0 flex items-center gap-1 bg-white border border-slate-200 rounded-md shadow-md px-1.5 py-0.5 z-50 whitespace-nowrap"
-          onMouseDown={(e) => e.stopPropagation()}
+          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
         >
           <span className="text-[7px] text-slate-400 font-medium pr-1 border-r border-slate-200">{label}</span>
           <button
@@ -746,11 +746,18 @@ function DraggableTextBlock({
           </button>
 
           {editType && (
-            <button
-              onClick={enterEdit as unknown as React.MouseEventHandler<HTMLButtonElement>}
-              className="text-[7px] text-sky-500 hover:text-sky-700 border-l border-slate-200 pl-1 font-medium"
-              title="Double-click to edit text"
-            >✎ edit</button>
+            editing ? (
+              <button
+                onClick={exitEdit}
+                className="text-[7px] text-emerald-600 hover:text-emerald-800 border-l border-slate-200 pl-1 font-medium"
+              >✓ done</button>
+            ) : (
+              <button
+                onClick={enterEdit as unknown as React.MouseEventHandler<HTMLButtonElement>}
+                className="text-[7px] text-sky-500 hover:text-sky-700 border-l border-slate-200 pl-1 font-medium"
+                title="Double-click to edit text"
+              >✎ edit</button>
+            )
           )}
           {onDelete && (
             <button
