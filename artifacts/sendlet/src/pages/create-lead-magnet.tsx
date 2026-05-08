@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/layout/app-layout";
@@ -19,6 +19,7 @@ interface FormData {
   ctaLabel: string;
   creatorOverride: boolean;
   creatorName: string;
+  creatorAvatarUrl: string;
   deliveryType: string;
   externalUrl: string;
   accentColor: string;
@@ -29,7 +30,23 @@ interface FormData {
   slug: string;
 }
 
-function OptInPreview({ formData, accountName }: { formData: FormData; accountName: string }) {
+function AvatarCircle({ src, name, size = "lg" }: { src?: string; name: string; size?: "sm" | "lg" }) {
+  const sizeClass = size === "lg" ? "w-14 h-14 text-base" : "w-8 h-8 text-xs";
+  if (src) {
+    return (
+      <div className={`${sizeClass} rounded-full overflow-hidden bg-secondary shrink-0`}>
+        <img src={src} alt={name} className="w-full h-full object-cover" />
+      </div>
+    );
+  }
+  return (
+    <div className={`${sizeClass} rounded-full bg-secondary flex items-center justify-center font-semibold text-foreground shrink-0`}>
+      {name.charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
+function OptInPreview({ formData, accountName, accountAvatar }: { formData: FormData; accountName: string; accountAvatar: string }) {
   const title = formData.title || "Your resource title";
   const description = formData.description || "A short description of what they'll get.";
   const activeBullets = formData.bulletsEnabled ? formData.bullets.filter(Boolean) : [];
@@ -41,6 +58,7 @@ function OptInPreview({ formData, accountName }: { formData: FormData; accountNa
   const effectiveName = formData.creatorOverride && formData.creatorName.trim()
     ? formData.creatorName.trim()
     : accountName;
+  const effectiveAvatar = formData.creatorOverride ? formData.creatorAvatarUrl : accountAvatar;
   const accentColor = formData.accentColor || "#0F766E";
 
   return (
@@ -52,8 +70,8 @@ function OptInPreview({ formData, accountName }: { formData: FormData; accountNa
 
       <div className="bg-[hsl(var(--background))] rounded-lg border flex-1 overflow-hidden">
         <div className="flex flex-col items-center pt-7 pb-5 px-6">
-          <div className="w-14 h-14 rounded-full bg-secondary flex items-center justify-center text-base font-semibold text-foreground mb-2">
-            {effectiveName.charAt(0).toUpperCase()}
+          <div className="mb-2">
+            <AvatarCircle src={effectiveAvatar} name={effectiveName} size="lg" />
           </div>
           <p className="text-sm text-muted-foreground font-medium">{effectiveName}</p>
         </div>
@@ -115,8 +133,9 @@ function OptInPreview({ formData, accountName }: { formData: FormData; accountNa
 
 export default function CreateLeadMagnet() {
   const [, setLocation] = useLocation();
-  const { name: accountName } = useAuth();
+  const { name: accountName, avatar: accountAvatar } = useAuth();
   const [step, setStep] = useState(1);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   const totalSteps = 4;
 
   const [formData, setFormData] = useState<FormData>({
@@ -127,6 +146,7 @@ export default function CreateLeadMagnet() {
     ctaLabel: "Get the resource",
     creatorOverride: false,
     creatorName: "",
+    creatorAvatarUrl: "",
     deliveryType: "upload",
     externalUrl: "",
     accentColor: "#0F766E",
@@ -319,9 +339,7 @@ export default function CreateLeadMagnet() {
 
                 {!formData.creatorOverride ? (
                   <div className="flex items-center gap-3 px-3 py-2.5 rounded-md bg-muted/60 border">
-                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-xs font-semibold shrink-0">
-                      {accountName.charAt(0).toUpperCase()}
-                    </div>
+                    <AvatarCircle src={accountAvatar} name={accountName} size="sm" />
                     <div>
                       <p className="text-sm font-medium leading-tight">{accountName}</p>
                       <p className="text-xs text-muted-foreground">From your account profile</p>
@@ -332,17 +350,65 @@ export default function CreateLeadMagnet() {
                     initial={{ opacity: 0, y: -4 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.15 }}
-                    className="space-y-2"
+                    className="space-y-3"
                   >
-                    <Input
-                      placeholder={accountName}
-                      value={formData.creatorName}
-                      onChange={(e) => updateForm("creatorName", e.target.value)}
-                      data-testid="input-creator-name"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Leave blank to fall back to your account name.
-                    </p>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Display name</Label>
+                      <Input
+                        placeholder={accountName}
+                        value={formData.creatorName}
+                        onChange={(e) => updateForm("creatorName", e.target.value)}
+                        data-testid="input-creator-name"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Leave blank to use your account name.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Photo</Label>
+                      <div className="flex items-center gap-3">
+                        <AvatarCircle src={formData.creatorAvatarUrl} name={formData.creatorName || accountName} size="sm" />
+                        <div className="flex gap-2">
+                          <input
+                            ref={avatarInputRef}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            data-testid="input-avatar-file"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              const reader = new FileReader();
+                              reader.onload = (ev) => {
+                                updateForm("creatorAvatarUrl", ev.target?.result as string);
+                              };
+                              reader.readAsDataURL(file);
+                            }}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="text-xs"
+                            onClick={() => avatarInputRef.current?.click()}
+                          >
+                            {formData.creatorAvatarUrl ? "Change photo" : "Upload photo"}
+                          </Button>
+                          {formData.creatorAvatarUrl && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs text-muted-foreground"
+                              onClick={() => updateForm("creatorAvatarUrl", "")}
+                            >
+                              Remove
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </motion.div>
                 )}
               </div>
@@ -590,7 +656,7 @@ export default function CreateLeadMagnet() {
               {stepNav}
             </div>
             <div className="lg:sticky lg:top-6">
-              <OptInPreview formData={formData} accountName={accountName} />
+              <OptInPreview formData={formData} accountName={accountName} accountAvatar={accountAvatar} />
             </div>
           </div>
         ) : (

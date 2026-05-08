@@ -4,6 +4,7 @@ interface AuthContextType {
   isSignedIn: boolean;
   email: string | null;
   name: string;
+  avatar: string;
   signIn: (email: string) => void;
   signOut: () => void;
 }
@@ -14,6 +15,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isSignedIn, setIsSignedIn] = useState(true);
   const [email, setEmail] = useState<string | null>("sarah@example.com");
   const name = "Sarah Chen";
+  const avatar = "";
 
   const signIn = (newEmail: string) => {
     setEmail(newEmail);
@@ -26,7 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isSignedIn, email, name, signIn, signOut }}>
+    <AuthContext.Provider value={{ isSignedIn, email, name, avatar, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );
