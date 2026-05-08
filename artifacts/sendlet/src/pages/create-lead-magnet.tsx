@@ -84,14 +84,13 @@ function OptInPreview({ formData, accountName, accountAvatar }: { formData: Form
 
       <div className="rounded-lg border flex-1 overflow-hidden" style={bgStyle}>
         <div className="flex flex-col items-center pt-7 pb-5 px-6">
-          <div className="mb-2">
+          <div className="mb-2 ring-4 ring-white/50 rounded-full shadow-md">
             <AvatarCircle src={effectiveAvatar} name={effectiveName} size="lg" />
           </div>
           <p className="text-sm text-muted-foreground font-medium">{effectiveName}</p>
         </div>
 
         <div className="bg-card border-t mx-5 rounded-t-lg overflow-hidden shadow-sm">
-          <div className="h-2.5 w-full" style={{ backgroundColor: accentColor }} />
           <div className="p-6">
             <h2 className="text-lg font-bold leading-snug text-foreground mb-2">{title}</h2>
             <p className="text-sm text-muted-foreground leading-relaxed mb-5">{description}</p>

@@ -62,15 +62,14 @@ export default function PublicPage() {
       >
         {/* Creator identity */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-white/70 backdrop-blur-sm border border-white/40 text-foreground font-semibold mb-3 shadow-sm">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-white font-semibold text-lg text-foreground mb-3 shadow-md ring-4 ring-white/50">
             {creatorName.charAt(0)}
           </div>
           <p className="text-sm font-medium text-foreground/70">{creatorName}</p>
         </div>
 
-        {/* Card — completely isolated from the background */}
-        <div className="bg-card border shadow-sm rounded-xl overflow-hidden">
-          <div className="h-2 w-full" style={{ backgroundColor: magnet.accentColor }} />
+        {/* Card */}
+        <div className="bg-card border shadow-md rounded-2xl overflow-hidden">
 
           <div className="p-6 sm:p-8">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-3 text-foreground">

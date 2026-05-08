@@ -66,7 +66,7 @@ function MiniOptInPreview({ magnet }: { magnet: typeof leadMagnets[0] }) {
       {/* Creator identity */}
       <div className="flex flex-col items-center pt-5 pb-4 px-4">
         <div
-          className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold text-white mb-1.5"
+          className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-semibold text-white mb-1.5 ring-4 ring-white/60 shadow-md"
           style={{ backgroundColor: magnet.accentColor }}
         >
           S
@@ -74,8 +74,7 @@ function MiniOptInPreview({ magnet }: { magnet: typeof leadMagnets[0] }) {
         <p className="text-xs text-muted-foreground">Sarah Chen</p>
       </div>
       {/* Card */}
-      <div className="mx-3 mb-3 bg-card border rounded-lg overflow-hidden shadow-sm">
-        <div className="h-1.5 w-full" style={{ backgroundColor: magnet.accentColor }} />
+      <div className="mx-3 mb-3 bg-card border rounded-xl overflow-hidden shadow-sm">
         <div className="p-4 space-y-3">
           <div>
             <p className="text-sm font-semibold leading-tight">{magnet.title}</p>
