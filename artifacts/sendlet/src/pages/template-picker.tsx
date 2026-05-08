@@ -259,6 +259,12 @@ function DraggableTextBlock({
   label,
   onDragStart,
   onDragEnd,
+  editType,
+  textValue,
+  onTextChange,
+  bulletValues,
+  onBulletsChange,
+  accentColor,
 }: {
   el: TextEl;
   onUpdate: (u: Partial<TextEl>) => void;
@@ -267,14 +273,23 @@ function DraggableTextBlock({
   label: string;
   onDragStart?: () => void;
   onDragEnd?: () => void;
+  editType?: "text" | "bullets";
+  textValue?: string;
+  onTextChange?: (v: string) => void;
+  bulletValues?: string[];
+  onBulletsChange?: (bs: string[]) => void;
+  accentColor?: string;
 }) {
-  const ref       = useRef<HTMLDivElement>(null);
-  const colorRef  = useRef<HTMLInputElement>(null);
+  const ref        = useRef<HTMLDivElement>(null);
+  const colorRef   = useRef<HTMLInputElement>(null);
+  const taRef      = useRef<HTMLTextAreaElement>(null);
   const [selected, setSelected] = useState(false);
-  const dragRef   = useRef<{ mx: number; my: number; x0: number; y0: number } | null>(null);
-  const resizeRef = useRef<{ mx: number; w0: number } | null>(null);
+  const [editing,  setEditing]  = useState(false);
+  const dragRef    = useRef<{ mx: number; my: number; x0: number; y0: number } | null>(null);
+  const resizeRef  = useRef<{ mx: number; w0: number } | null>(null);
 
   const startDrag = (e: React.MouseEvent) => {
+    if (editing) return;
     e.preventDefault(); e.stopPropagation();
     setSelected(true);
     onDragStart?.();
@@ -313,16 +328,41 @@ function DraggableTextBlock({
     document.addEventListener("mouseup", onUp);
   };
 
+  const enterEdit = (e: React.MouseEvent) => {
+    if (!editType) return;
+    e.stopPropagation();
+    setSelected(true);
+    setEditing(true);
+  };
+
+  const exitEdit = () => setEditing(false);
+
+  const autoSize = (ta: HTMLTextAreaElement) => {
+    ta.style.height = "auto";
+    ta.style.height = ta.scrollHeight + "px";
+  };
+
   useEffect(() => {
-    if (!selected) return;
+    if (editing && taRef.current) {
+      taRef.current.focus();
+      autoSize(taRef.current);
+    }
+  }, [editing]);
+
+  useEffect(() => {
+    if (!selected && !editing) return;
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setSelected(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setSelected(false);
+        setEditing(false);
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [selected]);
+  }, [selected, editing]);
 
   const safeColor = el.color || "#0f172a";
+  const ac = accentColor || ACCENT;
 
   return (
     <div
@@ -335,25 +375,84 @@ function DraggableTextBlock({
         fontSize: `${el.size}px`,
         color: safeColor,
       }}
-      className={`group cursor-move select-none ${fontClass} ${
+      className={`group ${editing ? "cursor-text" : "cursor-move"} ${editing ? "" : "select-none"} ${fontClass} ${
         selected
           ? "outline outline-[1.5px] outline-sky-400 outline-offset-1"
           : "outline outline-1 outline-transparent hover:outline-sky-200"
       }`}
       onMouseDown={startDrag}
+      onDoubleClick={enterEdit}
     >
-      {children}
+      {/* ── Editable content ── */}
+      {editing && editType === "text" ? (
+        <textarea
+          ref={taRef}
+          value={textValue ?? ""}
+          placeholder={label}
+          onChange={(e) => { onTextChange?.(e.target.value); autoSize(e.target); }}
+          onBlur={exitEdit}
+          onKeyDown={(e) => { if (e.key === "Escape") { exitEdit(); } }}
+          rows={1}
+          className="w-full bg-transparent border-none outline-none resize-none overflow-hidden p-0 m-0 block leading-inherit"
+          style={{
+            fontFamily: "inherit",
+            fontSize: "inherit",
+            fontWeight: "inherit",
+            lineHeight: "inherit",
+            letterSpacing: "inherit",
+            color: "inherit",
+          }}
+        />
+      ) : editing && editType === "bullets" ? (
+        <div className="space-y-1.5" onClick={(e) => e.stopPropagation()}>
+          {(bulletValues ?? []).map((b, i) => (
+            <div key={i} className="flex items-center gap-2 group/bullet">
+              <div className="w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${ac}22` }}>
+                <Check className="h-2 w-2" style={{ color: ac }} />
+              </div>
+              <span
+                contentEditable
+                suppressContentEditableWarning
+                onBlur={(ev) => {
+                  const next = [...(bulletValues ?? [])];
+                  next[i] = ev.currentTarget.textContent ?? "";
+                  onBulletsChange?.(next);
+                }}
+                onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault(); }}
+                className="outline-none min-w-[30px] flex-1"
+              >{b}</span>
+              {(bulletValues?.length ?? 0) > 1 && (
+                <button
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); onBulletsChange?.((bulletValues ?? []).filter((_, idx) => idx !== i)); }}
+                  className="opacity-0 group-hover/bullet:opacity-100 transition-opacity text-red-400 hover:text-red-600 shrink-0"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              )}
+            </div>
+          ))}
+          {(bulletValues?.length ?? 0) < 5 && (
+            <button
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); onBulletsChange?.([...(bulletValues ?? []), "New benefit"]); }}
+              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors mt-0.5"
+            >
+              <Plus className="h-2.5 w-2.5" /> Add benefit
+            </button>
+          )}
+        </div>
+      ) : (
+        children
+      )}
 
-      {/* Floating toolbar — visible when selected */}
-      {selected && (
+      {/* Floating toolbar — visible when selected and not editing */}
+      {selected && !editing && (
         <div
           className="absolute -top-7 left-0 flex items-center gap-1 bg-white border border-slate-200 rounded-md shadow-md px-1.5 py-0.5 z-50 whitespace-nowrap"
           onMouseDown={(e) => e.stopPropagation()}
         >
-          {/* Label */}
           <span className="text-[7px] text-slate-400 font-medium pr-1 border-r border-slate-200">{label}</span>
-
-          {/* Color swatch → native color picker */}
           <button
             className="w-3.5 h-3.5 rounded-sm border border-slate-300 shrink-0 cursor-pointer"
             style={{ backgroundColor: safeColor }}
@@ -367,33 +466,32 @@ function DraggableTextBlock({
             onChange={(e) => onUpdate({ color: e.target.value })}
             className="sr-only"
           />
-
-          {/* Font size */}
           <div className="flex items-center gap-0.5 border-l border-slate-200 pl-1">
-            <button
-              className="text-[9px] font-semibold text-slate-500 hover:text-slate-800 leading-none px-0.5"
-              onClick={() => onUpdate({ size: Math.max(8, el.size - 1) })}
-            >A−</button>
+            <button className="text-[9px] font-semibold text-slate-500 hover:text-slate-800 leading-none px-0.5" onClick={() => onUpdate({ size: Math.max(8, el.size - 1) })}>A−</button>
             <span className="text-[8px] font-mono text-slate-600 w-5 text-center">{el.size}</span>
-            <button
-              className="text-[9px] font-semibold text-slate-500 hover:text-slate-800 leading-none px-0.5"
-              onClick={() => onUpdate({ size: Math.min(72, el.size + 1) })}
-            >A+</button>
+            <button className="text-[9px] font-semibold text-slate-500 hover:text-slate-800 leading-none px-0.5" onClick={() => onUpdate({ size: Math.min(72, el.size + 1) })}>A+</button>
           </div>
-
-          {/* Width resize hint */}
-          <span className="text-[7px] text-slate-300 border-l border-slate-200 pl-1">⊞ corner</span>
+          {editType && (
+            <button
+              onClick={enterEdit as unknown as React.MouseEventHandler<HTMLButtonElement>}
+              className="text-[7px] text-sky-500 hover:text-sky-700 border-l border-slate-200 pl-1 font-medium"
+              title="Double-click to edit text"
+            >✎ edit</button>
+          )}
+          {!editType && <span className="text-[7px] text-slate-300 border-l border-slate-200 pl-1">⊞ corner</span>}
         </div>
       )}
 
-      {/* Bottom-right resize handle */}
-      <div
-        className={`absolute -bottom-1.5 -right-1.5 w-3 h-3 rounded-sm bg-sky-400 cursor-se-resize transition-opacity ${
-          selected ? "opacity-100" : "opacity-0 group-hover:opacity-60"
-        }`}
-        onMouseDown={startResize}
-        title="Drag to resize width"
-      />
+      {/* Bottom-right resize handle — hidden while editing */}
+      {!editing && (
+        <div
+          className={`absolute -bottom-1.5 -right-1.5 w-3 h-3 rounded-sm bg-sky-400 cursor-se-resize transition-opacity ${
+            selected ? "opacity-100" : "opacity-0 group-hover:opacity-60"
+          }`}
+          onMouseDown={startResize}
+          title="Drag to resize width"
+        />
+      )}
     </div>
   );
 }
@@ -552,6 +650,9 @@ function SplitPreview({
             label="Headline"
             onDragStart={() => setIsDragging(true)}
             onDragEnd={() => setIsDragging(false)}
+            editType="text"
+            textValue={form.title}
+            onTextChange={(v) => onUpdate?.({ title: v })}
           >
             {form.title || "Your Resource Title"}
           </DraggableTextBlock>
@@ -564,6 +665,9 @@ function SplitPreview({
             label="Description"
             onDragStart={() => setIsDragging(true)}
             onDragEnd={() => setIsDragging(false)}
+            editType="text"
+            textValue={form.description}
+            onTextChange={(v) => onUpdate?.({ description: v })}
           >
             {form.description || "A short description of what they'll get and why it helps."}
           </DraggableTextBlock>
@@ -576,6 +680,10 @@ function SplitPreview({
               label="Benefits"
               onDragStart={() => setIsDragging(true)}
               onDragEnd={() => setIsDragging(false)}
+              editType="bullets"
+              bulletValues={displayBullets}
+              onBulletsChange={(bs) => onUpdate?.({ bullets: bs })}
+              accentColor={accent}
             >
               <div className="space-y-1.5">
                 {displayBullets.slice(0, 3).map((b, i) => (
@@ -803,14 +911,14 @@ function StackedPreview({
               <div className="absolute inset-x-0 pointer-events-none z-30" style={{ top: "5%", height: "1px", background: "repeating-linear-gradient(to right, rgba(148,163,184,0.45) 0 4px, transparent 4px 8px)" }} />
             </>
           )}
-          <DraggableTextBlock el={textElements.headline} onUpdate={(u) => onUpdateTextEl?.("headline", u)} fontClass="font-bold tracking-tight leading-snug" label="Headline" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)}>
+          <DraggableTextBlock el={textElements.headline} onUpdate={(u) => onUpdateTextEl?.("headline", u)} fontClass="font-bold tracking-tight leading-snug" label="Headline" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} editType="text" textValue={form.title} onTextChange={(v) => onUpdate?.({ title: v })}>
             {form.title || "Your Resource Title"}
           </DraggableTextBlock>
-          <DraggableTextBlock el={textElements.description} onUpdate={(u) => onUpdateTextEl?.("description", u)} fontClass="leading-relaxed" label="Description" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)}>
+          <DraggableTextBlock el={textElements.description} onUpdate={(u) => onUpdateTextEl?.("description", u)} fontClass="leading-relaxed" label="Description" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} editType="text" textValue={form.description} onTextChange={(v) => onUpdate?.({ description: v })}>
             {form.description || "A short description of what they'll get and why it helps."}
           </DraggableTextBlock>
           {form.bulletsEnabled && (
-            <DraggableTextBlock el={textElements.bullets} onUpdate={(u) => onUpdateTextEl?.("bullets", u)} label="Benefits" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)}>
+            <DraggableTextBlock el={textElements.bullets} onUpdate={(u) => onUpdateTextEl?.("bullets", u)} label="Benefits" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} editType="bullets" bulletValues={displayBullets} onBulletsChange={(bs) => onUpdate?.({ bullets: bs })} accentColor={accent}>
               <div className="space-y-1.5">
                 {displayBullets.slice(0, 3).map((b, i) => (
                   <div key={i} className="flex items-center gap-2">
