@@ -185,6 +185,84 @@ function removeDragListeners(
   document.removeEventListener("touchcancel", onUp);
 }
 
+/* ─── Smart snap guides ──────────────────────────────────────── */
+
+type Guide = { axis: "h" | "v"; pct: number };
+
+const SNAP_T = 2.5; // snap threshold in %
+
+function computeSnap(
+  rawX: number,
+  rawY: number,
+  w: number,
+  others: Array<{ x: number; y: number; w: number }>,
+): { x: number; y: number; guides: Guide[] } {
+  const guides: Guide[] = [];
+
+  // Candidates for left-edge snapping (vertical guide lines)
+  const vLeft   = [0, 50, ...others.map((o) => o.x)];
+  // Candidates for center snapping
+  const vCenter = [50, ...others.map((o) => o.x + o.w / 2)];
+  // Candidates for right-edge snapping
+  const vRight  = [100, ...others.map((o) => o.x + o.w)];
+  // Candidates for top-edge snapping (horizontal guide lines)
+  const hTop    = [0, 25, 50, 75, ...others.map((o) => o.y)];
+
+  let snappedX = rawX;
+
+  // Left edge
+  for (const v of vLeft) {
+    if (Math.abs(rawX - v) < SNAP_T) { snappedX = v; guides.push({ axis: "v", pct: v }); break; }
+  }
+  // Center
+  if (snappedX === rawX) {
+    const cx = rawX + w / 2;
+    for (const v of vCenter) {
+      if (Math.abs(cx - v) < SNAP_T) { snappedX = v - w / 2; guides.push({ axis: "v", pct: v }); break; }
+    }
+  }
+  // Right edge
+  if (snappedX === rawX) {
+    const rx = rawX + w;
+    for (const v of vRight) {
+      if (Math.abs(rx - v) < SNAP_T) { snappedX = v - w; guides.push({ axis: "v", pct: v }); break; }
+    }
+  }
+
+  let snappedY = rawY;
+  for (const h of hTop) {
+    if (Math.abs(rawY - h) < SNAP_T) { snappedY = h; guides.push({ axis: "h", pct: h }); break; }
+  }
+
+  return {
+    x: Math.max(0, Math.min(85, snappedX)),
+    y: Math.max(0, Math.min(80, snappedY)),
+    guides,
+  };
+}
+
+function GuideLines({ guides }: { guides: Guide[] }) {
+  return (
+    <>
+      {guides.map((g, i) =>
+        g.axis === "v" ? (
+          <div
+            key={i}
+            className="absolute inset-y-0 pointer-events-none z-40"
+            style={{ left: `${g.pct}%`, width: "1px", background: "rgba(14,165,233,0.85)", boxShadow: "0 0 6px rgba(14,165,233,0.5)" }}
+          />
+        ) : (
+          <div
+            key={i}
+            className="absolute inset-x-0 pointer-events-none z-40"
+            style={{ top: `${g.pct}%`, height: "1px", background: "rgba(14,165,233,0.85)", boxShadow: "0 0 6px rgba(14,165,233,0.5)" }}
+          />
+        )
+      )}
+    </>
+  );
+}
+
 /* ─── Form state ────────────────────────────────────────────── */
 
 interface TextEl {
@@ -296,7 +374,7 @@ function SimplePreview({
   onUpdateTextEl?: (key: TextElKey, u: Partial<TextEl>) => void;
   onUpdate?: (partial: Partial<Form>) => void;
 }) {
-  const [isDragging, setIsDragging] = useState(false);
+  const [guides, setGuides] = useState<Guide[]>([]);
   const gradient = GRADIENT_PRESETS.find((g) => g.id === form.gradientPreset)?.value
     ?? GRADIENT_PRESETS[0].value;
   const accent = form.accentColor || ACCENT;
@@ -305,6 +383,14 @@ function SimplePreview({
   const textElements: Record<TextElKey, TextEl> = {
     ...defaultForm.textElements,
     ...(form.textElements ?? {}),
+  };
+  const makeSnapMove = (dragKey: TextElKey) => (rawX: number, rawY: number, w: number) => {
+    const others = (Object.entries(textElements) as [TextElKey, TextEl][])
+      .filter(([k]) => k !== dragKey && !(form.hiddenBlocks ?? []).includes(k) && !(k === "bullets" && !form.bulletsEnabled))
+      .map(([, o]) => ({ x: o.x, y: o.y, w: o.w }));
+    const result = computeSnap(rawX, rawY, w, others);
+    setGuides(result.guides);
+    return result;
   };
 
   return (
@@ -319,26 +405,19 @@ function SimplePreview({
       <div className="w-full max-w-[280px] bg-white rounded-2xl shadow-md overflow-hidden">
         {interactive ? (
           <div className="relative" style={{ height: "290px" }}>
-            {isDragging && (
-              <>
-                <div className="absolute inset-y-0 pointer-events-none z-30" style={{ left: "50%", width: "1px", background: "repeating-linear-gradient(to bottom, rgba(14,165,233,0.55) 0 4px, transparent 4px 8px)" }} />
-                <div className="absolute inset-x-0 pointer-events-none z-30" style={{ top: "50%", height: "1px", background: "repeating-linear-gradient(to right, rgba(14,165,233,0.55) 0 4px, transparent 4px 8px)" }} />
-                <div className="absolute inset-y-0 pointer-events-none z-30" style={{ left: "4%", width: "1px", background: "repeating-linear-gradient(to bottom, rgba(148,163,184,0.45) 0 4px, transparent 4px 8px)" }} />
-                <div className="absolute inset-y-0 pointer-events-none z-30" style={{ right: "4%", width: "1px", background: "repeating-linear-gradient(to bottom, rgba(148,163,184,0.45) 0 4px, transparent 4px 8px)" }} />
-              </>
-            )}
+            <GuideLines guides={guides} />
             {!(form.hiddenBlocks ?? []).includes("headline") && (
-              <DraggableTextBlock el={textElements.headline} onUpdate={(u) => onUpdateTextEl?.("headline", u)} fontClass="font-bold tracking-tight leading-snug" label="Headline" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "headline"] })} locked={locked}>
+              <DraggableTextBlock el={textElements.headline} onUpdate={(u) => onUpdateTextEl?.("headline", u)} fontClass="font-bold tracking-tight leading-snug" label="Headline" onSnapMove={makeSnapMove("headline")} onDragEnd={() => setGuides([])} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "headline"] })} locked={locked}>
                 {form.title || "Your Resource Title"}
               </DraggableTextBlock>
             )}
             {!(form.hiddenBlocks ?? []).includes("description") && (
-              <DraggableTextBlock el={textElements.description} onUpdate={(u) => onUpdateTextEl?.("description", u)} fontClass="leading-relaxed" label="Description" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "description"] })} locked={locked}>
+              <DraggableTextBlock el={textElements.description} onUpdate={(u) => onUpdateTextEl?.("description", u)} fontClass="leading-relaxed" label="Description" onSnapMove={makeSnapMove("description")} onDragEnd={() => setGuides([])} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "description"] })} locked={locked}>
                 {form.description || "A short description of what they'll get and why it helps."}
               </DraggableTextBlock>
             )}
             {form.bulletsEnabled && (
-              <DraggableTextBlock el={textElements.bullets} onUpdate={(u) => onUpdateTextEl?.("bullets", u)} label="Benefits" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} onDelete={() => onUpdate?.({ bulletsEnabled: false })} locked={locked}>
+              <DraggableTextBlock el={textElements.bullets} onUpdate={(u) => onUpdateTextEl?.("bullets", u)} label="Benefits" onSnapMove={makeSnapMove("bullets")} onDragEnd={() => setGuides([])} onDelete={() => onUpdate?.({ bulletsEnabled: false })} locked={locked}>
                 <div className="space-y-1.5">
                   {displayBullets.slice(0, 3).map((b, i) => (
                     <div key={i} className="flex items-center gap-2">
@@ -352,7 +431,7 @@ function SimplePreview({
               </DraggableTextBlock>
             )}
             {!(form.hiddenBlocks ?? []).includes("form") && (
-              <DraggableTextBlock el={textElements.form} onUpdate={(u) => onUpdateTextEl?.("form", u)} label="Form" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "form"] })} locked={locked}>
+              <DraggableTextBlock el={textElements.form} onUpdate={(u) => onUpdateTextEl?.("form", u)} label="Form" onSnapMove={makeSnapMove("form")} onDragEnd={() => setGuides([])} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "form"] })} locked={locked}>
                 <div className="space-y-1.5">
                   <div className="h-5 rounded-md border border-slate-200 text-[9px] text-muted-foreground flex items-center px-2 bg-white">Enter your email address</div>
                   <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>{form.ctaLabel || "Get the resource"}</div>
@@ -401,6 +480,7 @@ function DraggableTextBlock({
   children,
   fontClass = "",
   label,
+  onSnapMove,
   onDragStart,
   onDragEnd,
   editType,
@@ -417,6 +497,7 @@ function DraggableTextBlock({
   children: React.ReactNode;
   fontClass?: string;
   label: string;
+  onSnapMove?: (rawX: number, rawY: number, w: number) => { x: number; y: number; guides: Guide[] };
   onDragStart?: () => void;
   onDragEnd?: () => void;
   editType?: "text" | "bullets";
@@ -447,10 +528,14 @@ function DraggableTextBlock({
       const r = ref.current.parentElement!.getBoundingClientRect();
       const dx = ((x - dragRef.current.mx) / r.width)  * 100;
       const dy = ((y - dragRef.current.my) / r.height) * 100;
-      onUpdate({
-        x: Math.max(0, Math.min(85, dragRef.current.x0 + dx)),
-        y: Math.max(0, Math.min(80, dragRef.current.y0 + dy)),
-      });
+      const rawX = Math.max(0, Math.min(85, dragRef.current.x0 + dx));
+      const rawY = Math.max(0, Math.min(80, dragRef.current.y0 + dy));
+      if (onSnapMove) {
+        const { x: sx, y: sy } = onSnapMove(rawX, rawY, el.w);
+        onUpdate({ x: sx, y: sy });
+      } else {
+        onUpdate({ x: rawX, y: rawY });
+      }
     };
     const onUp = () => {
       dragRef.current = null;
@@ -708,7 +793,7 @@ function SplitPreview({
   onUpdateTextEl?: (key: TextElKey, u: Partial<TextEl>) => void;
   onUpdate?: (partial: Partial<Form>) => void;
 }) {
-  const [isDragging, setIsDragging] = useState(false);
+  const [guides, setGuides] = useState<Guide[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const imgFileRef   = useRef<HTMLInputElement>(null);
 
@@ -718,6 +803,14 @@ function SplitPreview({
   const textElements: Record<TextElKey, TextEl> = {
     ...defaultForm.textElements,
     ...(form.textElements ?? {}),
+  };
+  const makeSnapMove = (dragKey: TextElKey) => (rawX: number, rawY: number, w: number) => {
+    const others = (Object.entries(textElements) as [TextElKey, TextEl][])
+      .filter(([k]) => k !== dragKey && !(form.hiddenBlocks ?? []).includes(k) && !(k === "bullets" && !form.bulletsEnabled))
+      .map(([, o]) => ({ x: o.x, y: o.y, w: o.w }));
+    const result = computeSnap(rawX, rawY, w, others);
+    setGuides(result.guides);
+    return result;
   };
   const panelWidth = form.leftPanelWidth ?? 48;
   const imgPos     = form.imagePosition  ?? { x: 50, y: 50 };
@@ -825,21 +918,7 @@ function SplitPreview({
         /* ── Interactive edit mode: all four blocks draggable ── */
         <div className="flex-1 bg-white relative overflow-hidden">
 
-          {/* ── Alignment guides (visible while any block is dragged) ── */}
-          {isDragging && (
-            <>
-              {/* Vertical centre */}
-              <div className="absolute inset-y-0 pointer-events-none z-30" style={{ left: "50%", width: "1px", background: "repeating-linear-gradient(to bottom, rgba(14,165,233,0.55) 0 4px, transparent 4px 8px)" }} />
-              {/* Horizontal centre */}
-              <div className="absolute inset-x-0 pointer-events-none z-30" style={{ top: "50%", height: "1px", background: "repeating-linear-gradient(to right, rgba(14,165,233,0.55) 0 4px, transparent 4px 8px)" }} />
-              {/* Left margin */}
-              <div className="absolute inset-y-0 pointer-events-none z-30" style={{ left: "4%", width: "1px", background: "repeating-linear-gradient(to bottom, rgba(148,163,184,0.45) 0 4px, transparent 4px 8px)" }} />
-              {/* Right margin */}
-              <div className="absolute inset-y-0 pointer-events-none z-30" style={{ right: "4%", width: "1px", background: "repeating-linear-gradient(to bottom, rgba(148,163,184,0.45) 0 4px, transparent 4px 8px)" }} />
-              {/* Top margin */}
-              <div className="absolute inset-x-0 pointer-events-none z-30" style={{ top: "5%", height: "1px", background: "repeating-linear-gradient(to right, rgba(148,163,184,0.45) 0 4px, transparent 4px 8px)" }} />
-            </>
-          )}
+          <GuideLines guides={guides} />
 
           {/* Headline */}
           {!(form.hiddenBlocks ?? []).includes("headline") && (
@@ -848,8 +927,8 @@ function SplitPreview({
               onUpdate={(u) => onUpdateTextEl?.("headline", u)}
               fontClass="font-bold tracking-tight leading-snug"
               label="Headline"
-              onDragStart={() => setIsDragging(true)}
-              onDragEnd={() => setIsDragging(false)}
+              onSnapMove={makeSnapMove("headline")}
+              onDragEnd={() => setGuides([])}
               editType="text"
               textValue={form.title}
               onTextChange={(v) => onUpdate?.({ title: v })}
@@ -867,8 +946,8 @@ function SplitPreview({
               onUpdate={(u) => onUpdateTextEl?.("description", u)}
               fontClass="leading-relaxed"
               label="Description"
-              onDragStart={() => setIsDragging(true)}
-              onDragEnd={() => setIsDragging(false)}
+              onSnapMove={makeSnapMove("description")}
+              onDragEnd={() => setGuides([])}
               editType="text"
               textValue={form.description}
               onTextChange={(v) => onUpdate?.({ description: v })}
@@ -885,8 +964,8 @@ function SplitPreview({
               el={textElements.bullets}
               onUpdate={(u) => onUpdateTextEl?.("bullets", u)}
               label="Benefits"
-              onDragStart={() => setIsDragging(true)}
-              onDragEnd={() => setIsDragging(false)}
+              onSnapMove={makeSnapMove("bullets")}
+              onDragEnd={() => setGuides([])}
               editType="bullets"
               bulletValues={displayBullets}
               onBulletsChange={(bs) => onUpdate?.({ bullets: bs })}
@@ -913,8 +992,8 @@ function SplitPreview({
               el={textElements.form}
               onUpdate={(u) => onUpdateTextEl?.("form", u)}
               label="Form"
-              onDragStart={() => setIsDragging(true)}
-              onDragEnd={() => setIsDragging(false)}
+              onSnapMove={makeSnapMove("form")}
+              onDragEnd={() => setGuides([])}
               onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "form"] })}
               locked={locked}
             >
@@ -1001,7 +1080,7 @@ function StackedPreview({
   onUpdateTextEl?: (key: TextElKey, u: Partial<TextEl>) => void;
   onUpdate?: (partial: Partial<Form>) => void;
 }) {
-  const [isDragging, setIsDragging] = useState(false);
+  const [guides, setGuides] = useState<Guide[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const imgFileRef   = useRef<HTMLInputElement>(null);
 
@@ -1011,6 +1090,14 @@ function StackedPreview({
   const textElements: Record<TextElKey, TextEl> = {
     ...defaultForm.textElements,
     ...(form.textElements ?? {}),
+  };
+  const makeSnapMove = (dragKey: TextElKey) => (rawX: number, rawY: number, w: number) => {
+    const others = (Object.entries(textElements) as [TextElKey, TextEl][])
+      .filter(([k]) => k !== dragKey && !(form.hiddenBlocks ?? []).includes(k) && !(k === "bullets" && !form.bulletsEnabled))
+      .map(([, o]) => ({ x: o.x, y: o.y, w: o.w }));
+    const result = computeSnap(rawX, rawY, w, others);
+    setGuides(result.guides);
+    return result;
   };
   const bannerH = form.bannerHeight ?? 44;
   const imgPos  = form.imagePosition ?? { x: 50, y: 50 };
@@ -1119,27 +1206,19 @@ function StackedPreview({
       {/* Bottom: drag surface in edit mode, static otherwise */}
       {interactive ? (
         <div className="flex-1 relative overflow-hidden bg-white">
-          {isDragging && (
-            <>
-              <div className="absolute inset-y-0 pointer-events-none z-30" style={{ left: "50%", width: "1px", background: "repeating-linear-gradient(to bottom, rgba(14,165,233,0.55) 0 4px, transparent 4px 8px)" }} />
-              <div className="absolute inset-x-0 pointer-events-none z-30" style={{ top: "50%", height: "1px", background: "repeating-linear-gradient(to right, rgba(14,165,233,0.55) 0 4px, transparent 4px 8px)" }} />
-              <div className="absolute inset-y-0 pointer-events-none z-30" style={{ left: "4%", width: "1px", background: "repeating-linear-gradient(to bottom, rgba(148,163,184,0.45) 0 4px, transparent 4px 8px)" }} />
-              <div className="absolute inset-y-0 pointer-events-none z-30" style={{ right: "4%", width: "1px", background: "repeating-linear-gradient(to bottom, rgba(148,163,184,0.45) 0 4px, transparent 4px 8px)" }} />
-              <div className="absolute inset-x-0 pointer-events-none z-30" style={{ top: "5%", height: "1px", background: "repeating-linear-gradient(to right, rgba(148,163,184,0.45) 0 4px, transparent 4px 8px)" }} />
-            </>
-          )}
+          <GuideLines guides={guides} />
           {!(form.hiddenBlocks ?? []).includes("headline") && (
-            <DraggableTextBlock el={textElements.headline} onUpdate={(u) => onUpdateTextEl?.("headline", u)} fontClass="font-bold tracking-tight leading-snug" label="Headline" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} editType="text" textValue={form.title} onTextChange={(v) => onUpdate?.({ title: v })} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "headline"] })} locked={locked}>
+            <DraggableTextBlock el={textElements.headline} onUpdate={(u) => onUpdateTextEl?.("headline", u)} fontClass="font-bold tracking-tight leading-snug" label="Headline" onSnapMove={makeSnapMove("headline")} onDragEnd={() => setGuides([])} editType="text" textValue={form.title} onTextChange={(v) => onUpdate?.({ title: v })} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "headline"] })} locked={locked}>
               {form.title || "Your Resource Title"}
             </DraggableTextBlock>
           )}
           {!(form.hiddenBlocks ?? []).includes("description") && (
-            <DraggableTextBlock el={textElements.description} onUpdate={(u) => onUpdateTextEl?.("description", u)} fontClass="leading-relaxed" label="Description" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} editType="text" textValue={form.description} onTextChange={(v) => onUpdate?.({ description: v })} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "description"] })} locked={locked}>
+            <DraggableTextBlock el={textElements.description} onUpdate={(u) => onUpdateTextEl?.("description", u)} fontClass="leading-relaxed" label="Description" onSnapMove={makeSnapMove("description")} onDragEnd={() => setGuides([])} editType="text" textValue={form.description} onTextChange={(v) => onUpdate?.({ description: v })} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "description"] })} locked={locked}>
               {form.description || "A short description of what they'll get and why it helps."}
             </DraggableTextBlock>
           )}
           {form.bulletsEnabled && (
-            <DraggableTextBlock el={textElements.bullets} onUpdate={(u) => onUpdateTextEl?.("bullets", u)} label="Benefits" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} editType="bullets" bulletValues={displayBullets} onBulletsChange={(bs) => onUpdate?.({ bullets: bs })} accentColor={accent} onDelete={() => onUpdate?.({ bulletsEnabled: false })} locked={locked}>
+            <DraggableTextBlock el={textElements.bullets} onUpdate={(u) => onUpdateTextEl?.("bullets", u)} label="Benefits" onSnapMove={makeSnapMove("bullets")} onDragEnd={() => setGuides([])} editType="bullets" bulletValues={displayBullets} onBulletsChange={(bs) => onUpdate?.({ bullets: bs })} accentColor={accent} onDelete={() => onUpdate?.({ bulletsEnabled: false })} locked={locked}>
               <div className="space-y-1.5">
                 {displayBullets.slice(0, 3).map((b, i) => (
                   <div key={i} className="flex items-center gap-2">
@@ -1153,7 +1232,7 @@ function StackedPreview({
             </DraggableTextBlock>
           )}
           {!(form.hiddenBlocks ?? []).includes("form") && (
-            <DraggableTextBlock el={textElements.form} onUpdate={(u) => onUpdateTextEl?.("form", u)} label="Form" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "form"] })} locked={locked}>
+            <DraggableTextBlock el={textElements.form} onUpdate={(u) => onUpdateTextEl?.("form", u)} label="Form" onSnapMove={makeSnapMove("form")} onDragEnd={() => setGuides([])} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "form"] })} locked={locked}>
               <div className="space-y-1.5">
                 <div className="h-5 rounded-md border border-slate-200 text-[9px] text-muted-foreground flex items-center px-2 bg-white">Enter your email address</div>
                 <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>{form.ctaLabel || "Get the resource"}</div>
@@ -1208,7 +1287,7 @@ function FullImagePreview({
   onUpdateTextEl?: (key: TextElKey, u: Partial<TextEl>) => void;
   onUpdate?: (partial: Partial<Form>) => void;
 }) {
-  const [isDragging, setIsDragging] = useState(false);
+  const [guides, setGuides] = useState<Guide[]>([]);
   const imgFileRef = useRef<HTMLInputElement>(null);
   const accent = form.accentColor || ACCENT;
   const bullets = form.bulletsEnabled ? form.bullets.filter(Boolean) : [];
@@ -1216,6 +1295,14 @@ function FullImagePreview({
   const textElements: Record<TextElKey, TextEl> = {
     ...defaultForm.textElements,
     ...(form.textElements ?? {}),
+  };
+  const makeSnapMove = (dragKey: TextElKey) => (rawX: number, rawY: number, w: number) => {
+    const others = (Object.entries(textElements) as [TextElKey, TextEl][])
+      .filter(([k]) => k !== dragKey && !(form.hiddenBlocks ?? []).includes(k) && !(k === "bullets" && !form.bulletsEnabled))
+      .map(([, o]) => ({ x: o.x, y: o.y, w: o.w }));
+    const result = computeSnap(rawX, rawY, w, others);
+    setGuides(result.guides);
+    return result;
   };
 
   const bgStyle: React.CSSProperties = form.imageDataUrl
@@ -1265,13 +1352,7 @@ function FullImagePreview({
             }}
           />
 
-          {/* Guide lines */}
-          {isDragging && (
-            <>
-              <div className="absolute inset-y-0 pointer-events-none z-30" style={{ left: "50%", width: "1px", background: "repeating-linear-gradient(to bottom,rgba(14,165,233,0.6) 0 4px,transparent 4px 8px)" }} />
-              <div className="absolute inset-x-0 pointer-events-none z-30" style={{ top: "50%", height: "1px", background: "repeating-linear-gradient(to right,rgba(14,165,233,0.6) 0 4px,transparent 4px 8px)" }} />
-            </>
-          )}
+          <GuideLines guides={guides} />
 
           {/* Draggable blocks */}
           {!(form.hiddenBlocks ?? []).includes("headline") && (
@@ -1280,8 +1361,8 @@ function FullImagePreview({
               onUpdate={(u) => onUpdateTextEl?.("headline", u)}
               fontClass="font-bold tracking-tight leading-snug"
               label="Headline"
-              onDragStart={() => setIsDragging(true)}
-              onDragEnd={() => setIsDragging(false)}
+              onSnapMove={makeSnapMove("headline")}
+              onDragEnd={() => setGuides([])}
               editType="text"
               textValue={form.title}
               onTextChange={(v) => onUpdate?.({ title: v })}
@@ -1298,8 +1379,8 @@ function FullImagePreview({
               onUpdate={(u) => onUpdateTextEl?.("description", u)}
               fontClass="leading-relaxed"
               label="Description"
-              onDragStart={() => setIsDragging(true)}
-              onDragEnd={() => setIsDragging(false)}
+              onSnapMove={makeSnapMove("description")}
+              onDragEnd={() => setGuides([])}
               editType="text"
               textValue={form.description}
               onTextChange={(v) => onUpdate?.({ description: v })}
@@ -1315,8 +1396,8 @@ function FullImagePreview({
               el={textElements.bullets}
               onUpdate={(u) => onUpdateTextEl?.("bullets", u)}
               label="Benefits"
-              onDragStart={() => setIsDragging(true)}
-              onDragEnd={() => setIsDragging(false)}
+              onSnapMove={makeSnapMove("bullets")}
+              onDragEnd={() => setGuides([])}
               editType="bullets"
               bulletValues={displayBullets}
               onBulletsChange={(bs) => onUpdate?.({ bullets: bs })}
@@ -1342,8 +1423,8 @@ function FullImagePreview({
               el={textElements.form}
               onUpdate={(u) => onUpdateTextEl?.("form", u)}
               label="Form"
-              onDragStart={() => setIsDragging(true)}
-              onDragEnd={() => setIsDragging(false)}
+              onSnapMove={makeSnapMove("form")}
+              onDragEnd={() => setGuides([])}
               onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "form"] })}
               locked={locked}
             >
