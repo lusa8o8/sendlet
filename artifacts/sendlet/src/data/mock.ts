@@ -35,6 +35,7 @@ export type LeadMagnet = {
   imagePosition?: { x: number; y: number };
   bannerHeight?: number;
   textElements?: Record<string, TextEl>;
+  hiddenBlocks?: string[];
 };
 
 const SEED: LeadMagnet[] = [

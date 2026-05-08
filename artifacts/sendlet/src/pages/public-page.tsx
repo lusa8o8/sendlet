@@ -131,25 +131,29 @@ function SimpleLayout({
 
         <div className="bg-card border shadow-md rounded-2xl overflow-hidden">
           <div className="p-6 sm:p-8">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-3 text-foreground">
-              {magnet.title}
-            </h1>
-            {magnet.description && (
+            {!magnet.hiddenBlocks?.includes("headline") && (
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-3 text-foreground">
+                {magnet.title}
+              </h1>
+            )}
+            {magnet.description && !magnet.hiddenBlocks?.includes("description") && (
               <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
                 {magnet.description}
               </p>
             )}
-            {magnet.bulletsEnabled !== false && bullets.length > 0 && (
+            {magnet.bulletsEnabled !== false && !magnet.hiddenBlocks?.includes("bullets") && bullets.length > 0 && (
               <BulletList bullets={bullets} accentColor={magnet.accentColor} />
             )}
-            <OptInForm
-              onSubmit={onSubmit}
-              isLoading={isLoading}
-              email={email}
-              setEmail={setEmail}
-              accentColor={magnet.accentColor}
-              ctaLabel={magnet.ctaLabel}
-            />
+            {!magnet.hiddenBlocks?.includes("form") && (
+              <OptInForm
+                onSubmit={onSubmit}
+                isLoading={isLoading}
+                email={email}
+                setEmail={setEmail}
+                accentColor={magnet.accentColor}
+                ctaLabel={magnet.ctaLabel}
+              />
+            )}
           </div>
         </div>
       </motion.div>
@@ -228,25 +232,29 @@ function SplitLayout({
         className="flex-1 bg-background flex items-center"
       >
         <div className="w-full max-w-md mx-auto px-8 py-12 lg:py-16">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-3 text-foreground">
-            {magnet.title}
-          </h1>
-          {magnet.description && (
+          {!magnet.hiddenBlocks?.includes("headline") && (
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-3 text-foreground">
+              {magnet.title}
+            </h1>
+          )}
+          {magnet.description && !magnet.hiddenBlocks?.includes("description") && (
             <p className="text-base text-muted-foreground mb-8 leading-relaxed">
               {magnet.description}
             </p>
           )}
-          {magnet.bulletsEnabled !== false && bullets.length > 0 && (
+          {magnet.bulletsEnabled !== false && !magnet.hiddenBlocks?.includes("bullets") && bullets.length > 0 && (
             <BulletList bullets={bullets} accentColor={magnet.accentColor} />
           )}
-          <OptInForm
-            onSubmit={onSubmit}
-            isLoading={isLoading}
-            email={email}
-            setEmail={setEmail}
-            accentColor={magnet.accentColor}
-            ctaLabel={magnet.ctaLabel}
-          />
+          {!magnet.hiddenBlocks?.includes("form") && (
+            <OptInForm
+              onSubmit={onSubmit}
+              isLoading={isLoading}
+              email={email}
+              setEmail={setEmail}
+              accentColor={magnet.accentColor}
+              ctaLabel={magnet.ctaLabel}
+            />
+          )}
         </div>
       </motion.div>
     </div>
@@ -311,25 +319,29 @@ function StackedLayout({
       {/* Content below banner */}
       <div className="flex-1 bg-background flex items-start justify-center">
         <div className="w-full max-w-lg px-6 py-10">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-3 text-foreground">
-            {magnet.title}
-          </h1>
-          {magnet.description && (
+          {!magnet.hiddenBlocks?.includes("headline") && (
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-3 text-foreground">
+              {magnet.title}
+            </h1>
+          )}
+          {magnet.description && !magnet.hiddenBlocks?.includes("description") && (
             <p className="text-base text-muted-foreground mb-8 leading-relaxed">
               {magnet.description}
             </p>
           )}
-          {magnet.bulletsEnabled !== false && bullets.length > 0 && (
+          {magnet.bulletsEnabled !== false && !magnet.hiddenBlocks?.includes("bullets") && bullets.length > 0 && (
             <BulletList bullets={bullets} accentColor={magnet.accentColor} />
           )}
-          <OptInForm
-            onSubmit={onSubmit}
-            isLoading={isLoading}
-            email={email}
-            setEmail={setEmail}
-            accentColor={magnet.accentColor}
-            ctaLabel={magnet.ctaLabel}
-          />
+          {!magnet.hiddenBlocks?.includes("form") && (
+            <OptInForm
+              onSubmit={onSubmit}
+              isLoading={isLoading}
+              email={email}
+              setEmail={setEmail}
+              accentColor={magnet.accentColor}
+              ctaLabel={magnet.ctaLabel}
+            />
+          )}
         </div>
       </div>
     </div>
@@ -395,34 +407,50 @@ function FullImageLayout({
         </div>
 
         {/* Headline */}
-        <div style={glass} className="px-5 py-4 rounded-2xl">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white leading-tight">
-            {magnet.title}
-          </h1>
-          {magnet.description && (
-            <p className="text-sm text-white/75 mt-2 leading-relaxed">{magnet.description}</p>
-          )}
-        </div>
+        {!magnet.hiddenBlocks?.includes("headline") && (
+          <div style={glass} className="px-5 py-4 rounded-2xl">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white leading-tight">
+              {magnet.title}
+            </h1>
+            {magnet.description && !magnet.hiddenBlocks?.includes("description") && (
+              <p className="text-sm text-white/75 mt-2 leading-relaxed">{magnet.description}</p>
+            )}
+          </div>
+        )}
+        {!magnet.hiddenBlocks?.includes("headline") && magnet.description && magnet.hiddenBlocks?.includes("description") && (
+          <div style={glass} className="px-5 py-4 rounded-2xl">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white leading-tight">
+              {magnet.title}
+            </h1>
+          </div>
+        )}
+        {magnet.hiddenBlocks?.includes("headline") && magnet.description && !magnet.hiddenBlocks?.includes("description") && (
+          <div style={glass} className="px-5 py-4 rounded-2xl">
+            <p className="text-sm text-white/75 leading-relaxed">{magnet.description}</p>
+          </div>
+        )}
 
         {/* Bullets */}
-        {magnet.bulletsEnabled !== false && bullets.length > 0 && (
+        {magnet.bulletsEnabled !== false && !magnet.hiddenBlocks?.includes("bullets") && bullets.length > 0 && (
           <div style={glass} className="px-5 py-4 rounded-2xl">
             <BulletList bullets={bullets} accentColor={magnet.accentColor} dark />
           </div>
         )}
 
         {/* Form */}
-        <div style={glass} className="px-5 py-4 rounded-2xl">
-          <OptInForm
-            onSubmit={onSubmit}
-            isLoading={isLoading}
-            email={email}
-            setEmail={setEmail}
-            accentColor={magnet.accentColor}
-            ctaLabel={magnet.ctaLabel}
-            dark
-          />
-        </div>
+        {!magnet.hiddenBlocks?.includes("form") && (
+          <div style={glass} className="px-5 py-4 rounded-2xl">
+            <OptInForm
+              onSubmit={onSubmit}
+              isLoading={isLoading}
+              email={email}
+              setEmail={setEmail}
+              accentColor={magnet.accentColor}
+              ctaLabel={magnet.ctaLabel}
+              dark
+            />
+          </div>
+        )}
       </motion.div>
     </div>
   );

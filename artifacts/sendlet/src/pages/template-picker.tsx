@@ -15,6 +15,8 @@ import {
   Layers2,
   Link,
   Palette,
+  PanelBottom,
+  PanelRight,
   Plus,
   Settings,
   Type,
@@ -109,6 +111,7 @@ interface Form {
   leftPanelWidth: number;
   imagePosition:  { x: number; y: number };
   bannerHeight:   number;
+  hiddenBlocks:   TextElKey[];
 }
 
 const defaultForm: Form = {
@@ -125,6 +128,7 @@ const defaultForm: Form = {
   leftPanelWidth: 48,
   imagePosition:  { x: 50, y: 50 },
   bannerHeight:   44,
+  hiddenBlocks:   [],
   textElements: {
     headline:    { x: 4, y: 5,  w: 92, size: 14, color: "#0f172a", backdrop: "none" },
     description: { x: 4, y: 27, w: 92, size: 11, color: "#64748b", backdrop: "none" },
@@ -181,10 +185,12 @@ function SimplePreview({
   form,
   interactive = false,
   onUpdateTextEl,
+  onUpdate,
 }: {
   form: Form;
   interactive?: boolean;
   onUpdateTextEl?: (key: TextElKey, u: Partial<TextEl>) => void;
+  onUpdate?: (partial: Partial<Form>) => void;
 }) {
   const [isDragging, setIsDragging] = useState(false);
   const gradient = GRADIENT_PRESETS.find((g) => g.id === form.gradientPreset)?.value
@@ -217,14 +223,18 @@ function SimplePreview({
                 <div className="absolute inset-y-0 pointer-events-none z-30" style={{ right: "4%", width: "1px", background: "repeating-linear-gradient(to bottom, rgba(148,163,184,0.45) 0 4px, transparent 4px 8px)" }} />
               </>
             )}
-            <DraggableTextBlock el={textElements.headline} onUpdate={(u) => onUpdateTextEl?.("headline", u)} fontClass="font-bold tracking-tight leading-snug" label="Headline" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)}>
-              {form.title || "Your Resource Title"}
-            </DraggableTextBlock>
-            <DraggableTextBlock el={textElements.description} onUpdate={(u) => onUpdateTextEl?.("description", u)} fontClass="leading-relaxed" label="Description" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)}>
-              {form.description || "A short description of what they'll get and why it helps."}
-            </DraggableTextBlock>
+            {!(form.hiddenBlocks ?? []).includes("headline") && (
+              <DraggableTextBlock el={textElements.headline} onUpdate={(u) => onUpdateTextEl?.("headline", u)} fontClass="font-bold tracking-tight leading-snug" label="Headline" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "headline"] })}>
+                {form.title || "Your Resource Title"}
+              </DraggableTextBlock>
+            )}
+            {!(form.hiddenBlocks ?? []).includes("description") && (
+              <DraggableTextBlock el={textElements.description} onUpdate={(u) => onUpdateTextEl?.("description", u)} fontClass="leading-relaxed" label="Description" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "description"] })}>
+                {form.description || "A short description of what they'll get and why it helps."}
+              </DraggableTextBlock>
+            )}
             {form.bulletsEnabled && (
-              <DraggableTextBlock el={textElements.bullets} onUpdate={(u) => onUpdateTextEl?.("bullets", u)} label="Benefits" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)}>
+              <DraggableTextBlock el={textElements.bullets} onUpdate={(u) => onUpdateTextEl?.("bullets", u)} label="Benefits" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} onDelete={() => onUpdate?.({ bulletsEnabled: false })}>
                 <div className="space-y-1.5">
                   {displayBullets.slice(0, 3).map((b, i) => (
                     <div key={i} className="flex items-center gap-2">
@@ -237,13 +247,15 @@ function SimplePreview({
                 </div>
               </DraggableTextBlock>
             )}
-            <DraggableTextBlock el={textElements.form} onUpdate={(u) => onUpdateTextEl?.("form", u)} label="Form" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)}>
-              <div className="space-y-1.5">
-                <div className="h-5 rounded-md border border-slate-200 text-[9px] text-muted-foreground flex items-center px-2 bg-white">Enter your email address</div>
-                <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>{form.ctaLabel || "Get the resource"}</div>
-                <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
-              </div>
-            </DraggableTextBlock>
+            {!(form.hiddenBlocks ?? []).includes("form") && (
+              <DraggableTextBlock el={textElements.form} onUpdate={(u) => onUpdateTextEl?.("form", u)} label="Form" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "form"] })}>
+                <div className="space-y-1.5">
+                  <div className="h-5 rounded-md border border-slate-200 text-[9px] text-muted-foreground flex items-center px-2 bg-white">Enter your email address</div>
+                  <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>{form.ctaLabel || "Get the resource"}</div>
+                  <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
+                </div>
+              </DraggableTextBlock>
+            )}
           </div>
         ) : (
           <div className="p-5">
@@ -293,6 +305,7 @@ function DraggableTextBlock({
   bulletValues,
   onBulletsChange,
   accentColor,
+  onDelete,
 }: {
   el: TextEl;
   onUpdate: (u: Partial<TextEl>) => void;
@@ -307,6 +320,7 @@ function DraggableTextBlock({
   bulletValues?: string[];
   onBulletsChange?: (bs: string[]) => void;
   accentColor?: string;
+  onDelete?: () => void;
 }) {
   const ref        = useRef<HTMLDivElement>(null);
   const colorRef   = useRef<HTMLInputElement>(null);
@@ -543,6 +557,13 @@ function DraggableTextBlock({
               title="Double-click to edit text"
             >✎ edit</button>
           )}
+          {onDelete && (
+            <button
+              onClick={() => { setSelected(false); onDelete(); }}
+              className="text-[7px] text-rose-400 hover:text-rose-600 border-l border-slate-200 pl-1 font-medium"
+              title="Hide block"
+            >✕ hide</button>
+          )}
         </div>
       )}
 
@@ -706,34 +727,40 @@ function SplitPreview({
           )}
 
           {/* Headline */}
-          <DraggableTextBlock
-            el={textElements.headline}
-            onUpdate={(u) => onUpdateTextEl?.("headline", u)}
-            fontClass="font-bold tracking-tight leading-snug"
-            label="Headline"
-            onDragStart={() => setIsDragging(true)}
-            onDragEnd={() => setIsDragging(false)}
-            editType="text"
-            textValue={form.title}
-            onTextChange={(v) => onUpdate?.({ title: v })}
-          >
-            {form.title || "Your Resource Title"}
-          </DraggableTextBlock>
+          {!(form.hiddenBlocks ?? []).includes("headline") && (
+            <DraggableTextBlock
+              el={textElements.headline}
+              onUpdate={(u) => onUpdateTextEl?.("headline", u)}
+              fontClass="font-bold tracking-tight leading-snug"
+              label="Headline"
+              onDragStart={() => setIsDragging(true)}
+              onDragEnd={() => setIsDragging(false)}
+              editType="text"
+              textValue={form.title}
+              onTextChange={(v) => onUpdate?.({ title: v })}
+              onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "headline"] })}
+            >
+              {form.title || "Your Resource Title"}
+            </DraggableTextBlock>
+          )}
 
           {/* Description */}
-          <DraggableTextBlock
-            el={textElements.description}
-            onUpdate={(u) => onUpdateTextEl?.("description", u)}
-            fontClass="leading-relaxed"
-            label="Description"
-            onDragStart={() => setIsDragging(true)}
-            onDragEnd={() => setIsDragging(false)}
-            editType="text"
-            textValue={form.description}
-            onTextChange={(v) => onUpdate?.({ description: v })}
-          >
-            {form.description || "A short description of what they'll get and why it helps."}
-          </DraggableTextBlock>
+          {!(form.hiddenBlocks ?? []).includes("description") && (
+            <DraggableTextBlock
+              el={textElements.description}
+              onUpdate={(u) => onUpdateTextEl?.("description", u)}
+              fontClass="leading-relaxed"
+              label="Description"
+              onDragStart={() => setIsDragging(true)}
+              onDragEnd={() => setIsDragging(false)}
+              editType="text"
+              textValue={form.description}
+              onTextChange={(v) => onUpdate?.({ description: v })}
+              onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "description"] })}
+            >
+              {form.description || "A short description of what they'll get and why it helps."}
+            </DraggableTextBlock>
+          )}
 
           {/* Benefits / bullets */}
           {form.bulletsEnabled && (
@@ -747,6 +774,7 @@ function SplitPreview({
               bulletValues={displayBullets}
               onBulletsChange={(bs) => onUpdate?.({ bullets: bs })}
               accentColor={accent}
+              onDelete={() => onUpdate?.({ bulletsEnabled: false })}
             >
               <div className="space-y-1.5">
                 {displayBullets.slice(0, 3).map((b, i) => (
@@ -762,26 +790,29 @@ function SplitPreview({
           )}
 
           {/* Email + CTA form block */}
-          <DraggableTextBlock
-            el={textElements.form}
-            onUpdate={(u) => onUpdateTextEl?.("form", u)}
-            label="Form"
-            onDragStart={() => setIsDragging(true)}
-            onDragEnd={() => setIsDragging(false)}
-          >
-            <div className="space-y-1.5">
-              <div className="h-5 rounded-md border border-slate-200 text-[9px] text-muted-foreground flex items-center px-2 bg-white">
-                Enter your email address
+          {!(form.hiddenBlocks ?? []).includes("form") && (
+            <DraggableTextBlock
+              el={textElements.form}
+              onUpdate={(u) => onUpdateTextEl?.("form", u)}
+              label="Form"
+              onDragStart={() => setIsDragging(true)}
+              onDragEnd={() => setIsDragging(false)}
+              onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "form"] })}
+            >
+              <div className="space-y-1.5">
+                <div className="h-5 rounded-md border border-slate-200 text-[9px] text-muted-foreground flex items-center px-2 bg-white">
+                  Enter your email address
+                </div>
+                <div
+                  className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium"
+                  style={{ backgroundColor: accent }}
+                >
+                  {form.ctaLabel || "Get the resource"}
+                </div>
+                <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
               </div>
-              <div
-                className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium"
-                style={{ backgroundColor: accent }}
-              >
-                {form.ctaLabel || "Get the resource"}
-              </div>
-              <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
-            </div>
-          </DraggableTextBlock>
+            </DraggableTextBlock>
+          )}
         </div>
       ) : (
         /* ── Static pick mode ── */
@@ -973,14 +1004,18 @@ function StackedPreview({
               <div className="absolute inset-x-0 pointer-events-none z-30" style={{ top: "5%", height: "1px", background: "repeating-linear-gradient(to right, rgba(148,163,184,0.45) 0 4px, transparent 4px 8px)" }} />
             </>
           )}
-          <DraggableTextBlock el={textElements.headline} onUpdate={(u) => onUpdateTextEl?.("headline", u)} fontClass="font-bold tracking-tight leading-snug" label="Headline" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} editType="text" textValue={form.title} onTextChange={(v) => onUpdate?.({ title: v })}>
-            {form.title || "Your Resource Title"}
-          </DraggableTextBlock>
-          <DraggableTextBlock el={textElements.description} onUpdate={(u) => onUpdateTextEl?.("description", u)} fontClass="leading-relaxed" label="Description" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} editType="text" textValue={form.description} onTextChange={(v) => onUpdate?.({ description: v })}>
-            {form.description || "A short description of what they'll get and why it helps."}
-          </DraggableTextBlock>
+          {!(form.hiddenBlocks ?? []).includes("headline") && (
+            <DraggableTextBlock el={textElements.headline} onUpdate={(u) => onUpdateTextEl?.("headline", u)} fontClass="font-bold tracking-tight leading-snug" label="Headline" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} editType="text" textValue={form.title} onTextChange={(v) => onUpdate?.({ title: v })} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "headline"] })}>
+              {form.title || "Your Resource Title"}
+            </DraggableTextBlock>
+          )}
+          {!(form.hiddenBlocks ?? []).includes("description") && (
+            <DraggableTextBlock el={textElements.description} onUpdate={(u) => onUpdateTextEl?.("description", u)} fontClass="leading-relaxed" label="Description" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} editType="text" textValue={form.description} onTextChange={(v) => onUpdate?.({ description: v })} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "description"] })}>
+              {form.description || "A short description of what they'll get and why it helps."}
+            </DraggableTextBlock>
+          )}
           {form.bulletsEnabled && (
-            <DraggableTextBlock el={textElements.bullets} onUpdate={(u) => onUpdateTextEl?.("bullets", u)} label="Benefits" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} editType="bullets" bulletValues={displayBullets} onBulletsChange={(bs) => onUpdate?.({ bullets: bs })} accentColor={accent}>
+            <DraggableTextBlock el={textElements.bullets} onUpdate={(u) => onUpdateTextEl?.("bullets", u)} label="Benefits" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} editType="bullets" bulletValues={displayBullets} onBulletsChange={(bs) => onUpdate?.({ bullets: bs })} accentColor={accent} onDelete={() => onUpdate?.({ bulletsEnabled: false })}>
               <div className="space-y-1.5">
                 {displayBullets.slice(0, 3).map((b, i) => (
                   <div key={i} className="flex items-center gap-2">
@@ -993,13 +1028,15 @@ function StackedPreview({
               </div>
             </DraggableTextBlock>
           )}
-          <DraggableTextBlock el={textElements.form} onUpdate={(u) => onUpdateTextEl?.("form", u)} label="Form" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)}>
-            <div className="space-y-1.5">
-              <div className="h-5 rounded-md border border-slate-200 text-[9px] text-muted-foreground flex items-center px-2 bg-white">Enter your email address</div>
-              <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>{form.ctaLabel || "Get the resource"}</div>
-              <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
-            </div>
-          </DraggableTextBlock>
+          {!(form.hiddenBlocks ?? []).includes("form") && (
+            <DraggableTextBlock el={textElements.form} onUpdate={(u) => onUpdateTextEl?.("form", u)} label="Form" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "form"] })}>
+              <div className="space-y-1.5">
+                <div className="h-5 rounded-md border border-slate-200 text-[9px] text-muted-foreground flex items-center px-2 bg-white">Enter your email address</div>
+                <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>{form.ctaLabel || "Get the resource"}</div>
+                <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
+              </div>
+            </DraggableTextBlock>
+          )}
         </div>
       ) : (
         <div className="flex-1 overflow-hidden px-5 py-4 flex flex-col justify-center">
@@ -1111,33 +1148,39 @@ function FullImagePreview({
           )}
 
           {/* Draggable blocks */}
-          <DraggableTextBlock
-            el={textElements.headline}
-            onUpdate={(u) => onUpdateTextEl?.("headline", u)}
-            fontClass="font-bold tracking-tight leading-snug"
-            label="Headline"
-            onDragStart={() => setIsDragging(true)}
-            onDragEnd={() => setIsDragging(false)}
-            editType="text"
-            textValue={form.title}
-            onTextChange={(v) => onUpdate?.({ title: v })}
-          >
-            {form.title || "Your Resource Title"}
-          </DraggableTextBlock>
+          {!(form.hiddenBlocks ?? []).includes("headline") && (
+            <DraggableTextBlock
+              el={textElements.headline}
+              onUpdate={(u) => onUpdateTextEl?.("headline", u)}
+              fontClass="font-bold tracking-tight leading-snug"
+              label="Headline"
+              onDragStart={() => setIsDragging(true)}
+              onDragEnd={() => setIsDragging(false)}
+              editType="text"
+              textValue={form.title}
+              onTextChange={(v) => onUpdate?.({ title: v })}
+              onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "headline"] })}
+            >
+              {form.title || "Your Resource Title"}
+            </DraggableTextBlock>
+          )}
 
-          <DraggableTextBlock
-            el={textElements.description}
-            onUpdate={(u) => onUpdateTextEl?.("description", u)}
-            fontClass="leading-relaxed"
-            label="Description"
-            onDragStart={() => setIsDragging(true)}
-            onDragEnd={() => setIsDragging(false)}
-            editType="text"
-            textValue={form.description}
-            onTextChange={(v) => onUpdate?.({ description: v })}
-          >
-            {form.description || "A short description of what they'll get and why it helps."}
-          </DraggableTextBlock>
+          {!(form.hiddenBlocks ?? []).includes("description") && (
+            <DraggableTextBlock
+              el={textElements.description}
+              onUpdate={(u) => onUpdateTextEl?.("description", u)}
+              fontClass="leading-relaxed"
+              label="Description"
+              onDragStart={() => setIsDragging(true)}
+              onDragEnd={() => setIsDragging(false)}
+              editType="text"
+              textValue={form.description}
+              onTextChange={(v) => onUpdate?.({ description: v })}
+              onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "description"] })}
+            >
+              {form.description || "A short description of what they'll get and why it helps."}
+            </DraggableTextBlock>
+          )}
 
           {form.bulletsEnabled && (
             <DraggableTextBlock
@@ -1150,6 +1193,7 @@ function FullImagePreview({
               bulletValues={displayBullets}
               onBulletsChange={(bs) => onUpdate?.({ bullets: bs })}
               accentColor={accent}
+              onDelete={() => onUpdate?.({ bulletsEnabled: false })}
             >
               <div className="space-y-1.5">
                 {displayBullets.slice(0, 3).map((b, i) => (
@@ -1164,23 +1208,26 @@ function FullImagePreview({
             </DraggableTextBlock>
           )}
 
-          <DraggableTextBlock
-            el={textElements.form}
-            onUpdate={(u) => onUpdateTextEl?.("form", u)}
-            label="Form"
-            onDragStart={() => setIsDragging(true)}
-            onDragEnd={() => setIsDragging(false)}
-          >
-            <div className="space-y-1.5">
-              <div className="h-5 rounded-md border border-white/30 text-[9px] text-white/70 flex items-center px-2 bg-white/10">
-                Enter your email address
+          {!(form.hiddenBlocks ?? []).includes("form") && (
+            <DraggableTextBlock
+              el={textElements.form}
+              onUpdate={(u) => onUpdateTextEl?.("form", u)}
+              label="Form"
+              onDragStart={() => setIsDragging(true)}
+              onDragEnd={() => setIsDragging(false)}
+              onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "form"] })}
+            >
+              <div className="space-y-1.5">
+                <div className="h-5 rounded-md border border-white/30 text-[9px] text-white/70 flex items-center px-2 bg-white/10">
+                  Enter your email address
+                </div>
+                <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>
+                  {form.ctaLabel || "Get the resource"}
+                </div>
+                <p className="text-center text-[8px] text-white/60">No spam. Unsubscribe anytime.</p>
               </div>
-              <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>
-                {form.ctaLabel || "Get the resource"}
-              </div>
-              <p className="text-center text-[8px] text-white/60">No spam. Unsubscribe anytime.</p>
-            </div>
-          </DraggableTextBlock>
+            </DraggableTextBlock>
+          )}
         </div>
       ) : (
         /* ── Static pick mode — glass panels preview ── */
@@ -1395,6 +1442,8 @@ function FloatingBar({
   onBack,
   onSave,
   isEditing,
+  barPosition = "bottom",
+  onTogglePosition,
 }: {
   layout: string;
   form: Form;
@@ -1402,29 +1451,203 @@ function FloatingBar({
   onBack: () => void;
   onSave: () => void;
   isEditing?: boolean;
+  barPosition?: "bottom" | "side";
+  onTogglePosition?: () => void;
 }) {
   const [panel, setPanel] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   const toggle = (p: string) => setPanel((cur) => (cur === p ? null : p));
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const file = e.target.files?.[0]; if (!file) return;
     e.target.value = "";
-    compressImage(file).then((dataUrl) => setForm((f) => ({ ...f, imageDataUrl: dataUrl })));
+    compressImage(file).then((dataUrl) => setForm({ ...form, imageDataUrl: dataUrl }));
   };
-
-  const setBullet = (i: number, val: string) => {
-    const next = [...form.bullets]; next[i] = val;
-    setForm({ ...form, bullets: next });
-  };
+  const setBullet = (i: number, val: string) => { const next = [...form.bullets]; next[i] = val; setForm({ ...form, bullets: next }); };
   const addBullet = () => setForm({ ...form, bullets: [...form.bullets, ""] });
-  const removeBullet = (i: number) =>
-    setForm({ ...form, bullets: form.bullets.filter((_, idx) => idx !== i) });
+  const removeBullet = (i: number) => setForm({ ...form, bullets: form.bullets.filter((_, idx) => idx !== i) });
+  const restoreBlock = (key: TextElKey) => setForm({
+    ...form,
+    hiddenBlocks: (form.hiddenBlocks ?? []).filter((k) => k !== key),
+    ...(key === "bullets" ? { bulletsEnabled: true } : {}),
+  });
 
+  const hiddenKeys = form.hiddenBlocks ?? [];
+  const restorableKeys: TextElKey[] = (["headline", "description", "form"] as TextElKey[]).filter((k) => hiddenKeys.includes(k));
+  if (!form.bulletsEnabled) restorableKeys.push("bullets" as TextElKey);
+
+  const isSide = barPosition === "side";
+  const popSide = isSide ? ("left" as const) : ("top" as const);
   const sep = <div className="w-px h-5 bg-border/70 mx-0.5 shrink-0" />;
 
+  /* ── Shared popover panel content ── */
+  const imagePanel = (
+    <PopoverContent side={popSide} align="center" sideOffset={10} className="w-64 p-4 space-y-3">
+      <p className="text-xs font-semibold text-foreground">
+        {layout === "stacked" ? "Banner image" : layout === "split" ? "Panel image" : "Cover image"}
+      </p>
+      {form.imageDataUrl ? (
+        <div className="relative rounded-lg overflow-hidden border" style={{ aspectRatio: "4/3" }}>
+          <img src={form.imageDataUrl} alt="Panel" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+          <button onClick={() => setForm({ ...form, imageDataUrl: null })} className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center transition-colors">
+            <X className="h-3 w-3 text-white" />
+          </button>
+          <button onClick={() => fileInputRef.current?.click()} className="absolute bottom-2 right-2 text-[10px] bg-black/50 hover:bg-black/70 text-white rounded-md px-2 py-1 transition-colors">Replace</button>
+        </div>
+      ) : (
+        <button onClick={() => fileInputRef.current?.click()} className="w-full border-2 border-dashed border-border rounded-lg p-4 flex flex-col items-center gap-2 hover:border-primary/40 hover:bg-primary/5 transition-all group">
+          <div className="w-8 h-8 rounded-lg bg-muted group-hover:bg-primary/10 flex items-center justify-center transition-colors">
+            <Upload className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+          </div>
+          <div className="text-center">
+            <p className="text-xs font-medium">Click to upload</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">JPG, PNG, WebP</p>
+          </div>
+        </button>
+      )}
+    </PopoverContent>
+  );
+
+  const contentPanel = (
+    <PopoverContent side={popSide} align="center" sideOffset={10} className="w-72 p-4 space-y-3 max-h-[420px] overflow-y-auto">
+      <p className="text-xs font-semibold text-foreground">Content</p>
+      <div className="space-y-1">
+        <label className="text-[11px] font-medium text-muted-foreground">Headline</label>
+        <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Your Resource Title" className="h-8 text-sm" />
+      </div>
+      <div className="space-y-1">
+        <label className="text-[11px] font-medium text-muted-foreground">Description</label>
+        <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="A short description..." className="text-sm resize-none h-16" />
+      </div>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <label className="text-[11px] font-medium text-muted-foreground">Benefits</label>
+          <button onClick={() => setForm({ ...form, bulletsEnabled: !form.bulletsEnabled })} className={`relative w-8 h-4 rounded-full transition-colors shrink-0 ${form.bulletsEnabled ? "bg-primary" : "bg-muted-foreground/30"}`}>
+            <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${form.bulletsEnabled ? "translate-x-4" : "translate-x-0.5"}`} />
+          </button>
+        </div>
+        {form.bulletsEnabled && (
+          <div className="space-y-1.5">
+            {form.bullets.map((b, i) => (
+              <div key={i} className="flex items-center gap-1.5">
+                <Input value={b} onChange={(e) => setBullet(i, e.target.value)} placeholder={`Benefit ${i + 1}`} className="h-7 text-xs flex-1" />
+                {form.bullets.length > 1 && (
+                  <button onClick={() => removeBullet(i)} className="shrink-0 w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            ))}
+            {form.bullets.length < 5 && (
+              <button onClick={addBullet} className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary transition-colors">
+                <Plus className="h-3 w-3" /> Add benefit
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+      <div className="space-y-1">
+        <label className="text-[11px] font-medium text-muted-foreground">Button label</label>
+        <Input value={form.ctaLabel} onChange={(e) => setForm({ ...form, ctaLabel: e.target.value })} placeholder="Get the resource" className="h-8 text-sm" />
+      </div>
+      {restorableKeys.length > 0 && (
+        <div className="border-t pt-2 space-y-0.5">
+          <p className="text-[11px] font-medium text-muted-foreground mb-1">Hidden blocks</p>
+          {restorableKeys.map((key) => (
+            <button key={key} onClick={() => restoreBlock(key)} className="flex items-center gap-1.5 w-full text-[11px] text-muted-foreground hover:text-primary hover:bg-primary/5 rounded px-1.5 py-1 transition-colors">
+              <Plus className="h-3 w-3 shrink-0" />
+              Restore {key === "form" ? "Form block" : key === "bullets" ? "Benefits" : key.charAt(0).toUpperCase() + key.slice(1)}
+            </button>
+          ))}
+        </div>
+      )}
+    </PopoverContent>
+  );
+
+  const designPanel = (
+    <PopoverContent side={popSide} align="center" sideOffset={10} className="w-64 p-4 space-y-4">
+      <p className="text-xs font-semibold text-foreground">Design</p>
+      {layout === "simple" && (
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-medium text-muted-foreground">Background</label>
+          <div className="grid grid-cols-5 gap-1.5">
+            {GRADIENT_PRESETS.map((g) => (
+              <button key={g.id} onClick={() => setForm({ ...form, gradientPreset: g.id })} title={g.label} className={`h-8 rounded-lg transition-all ${form.gradientPreset === g.id ? "ring-2 ring-primary ring-offset-1 scale-105" : "hover:scale-105 opacity-80 hover:opacity-100"}`} style={{ background: g.value }} />
+            ))}
+          </div>
+        </div>
+      )}
+      <div className="space-y-1.5">
+        <label className="text-[11px] font-medium text-muted-foreground">Accent colour</label>
+        <div className="flex gap-2 flex-wrap">
+          {ACCENT_COLORS.map((c) => (
+            <button key={c.value} onClick={() => setForm({ ...form, accentColor: c.value })} title={c.label} className={`w-7 h-7 rounded-full transition-all ${form.accentColor === c.value ? "ring-2 ring-offset-1 ring-foreground scale-110" : "hover:scale-105"}`} style={{ backgroundColor: c.value }} />
+          ))}
+        </div>
+      </div>
+    </PopoverContent>
+  );
+
+  const settingsPanel = (
+    <PopoverContent side={popSide} align="center" sideOffset={10} className="w-64 p-4 space-y-3">
+      <p className="text-xs font-semibold text-foreground">Settings</p>
+      <div className="space-y-1">
+        <label className="text-[11px] font-medium text-muted-foreground">Page URL</label>
+        <div className="flex items-center">
+          <span className="text-xs text-muted-foreground bg-muted border border-r-0 rounded-l-md px-2 h-8 flex items-center shrink-0">/p/</span>
+          <Input value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") })} placeholder="your-resource" className="h-8 text-sm rounded-l-none" />
+        </div>
+      </div>
+    </PopoverContent>
+  );
+
+  const fileInput = <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleImageUpload} />;
+
+  /* ── Side panel mode ── */
+  if (isSide) {
+    const iconBtn = (key: string, Icon: React.ElementType, title: string) => (
+      <button onClick={() => toggle(key)} title={title} className={`w-11 h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 transition-colors ${panel === key ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}>
+        <Icon className="h-4 w-4" />
+        <span className="text-[8px] font-medium leading-none">{title}</span>
+      </button>
+    );
+    return (
+      <div className="h-full w-[64px] shrink-0 flex flex-col items-center gap-0.5 py-2.5 bg-white/95 backdrop-blur-xl border-l border-black/8 shadow-2xl z-50 overflow-y-auto">
+        <button onClick={onBack} title="Back" className="w-11 h-11 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+          <ArrowLeft className="h-4 w-4" />
+        </button>
+        <button onClick={onTogglePosition} title="Switch to bottom bar" className="w-11 h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+          <PanelBottom className="h-4 w-4" />
+          <span className="text-[8px] font-medium leading-none">Bottom</span>
+        </button>
+        <div className="w-10 h-px bg-border my-0.5" />
+        <Popover open={panel === "image"} onOpenChange={(o) => setPanel(o ? "image" : null)}>
+          <PopoverTrigger asChild><span>{iconBtn("image", Image, "Image")}</span></PopoverTrigger>
+          {imagePanel}
+        </Popover>
+        <Popover open={panel === "content"} onOpenChange={(o) => setPanel(o ? "content" : null)}>
+          <PopoverTrigger asChild><span>{iconBtn("content", Type, "Content")}</span></PopoverTrigger>
+          {contentPanel}
+        </Popover>
+        <Popover open={panel === "design"} onOpenChange={(o) => setPanel(o ? "design" : null)}>
+          <PopoverTrigger asChild><span>{iconBtn("design", Palette, "Design")}</span></PopoverTrigger>
+          {designPanel}
+        </Popover>
+        <Popover open={panel === "settings"} onOpenChange={(o) => setPanel(o ? "settings" : null)}>
+          <PopoverTrigger asChild><span>{iconBtn("settings", Settings, "Settings")}</span></PopoverTrigger>
+          {settingsPanel}
+        </Popover>
+        <div className="flex-1" />
+        <Button size="sm" className="w-12 h-9 text-[11px] font-semibold rounded-xl px-0" onClick={onSave}>
+          {isEditing ? "Upd" : "Pub"}
+        </Button>
+        {fileInput}
+      </div>
+    );
+  }
+
+  /* ── Bottom bar mode (default) ── */
   return (
     <div className="absolute bottom-7 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
       <motion.div
@@ -1433,199 +1656,36 @@ function FloatingBar({
         transition={{ duration: 0.22, ease: "easeOut" }}
         className="pointer-events-auto flex items-center gap-0.5 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-black/8 px-2.5 py-2"
       >
-        {/* ── Back + title ── */}
-        <button
-          onClick={onBack}
-          className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors mr-0.5"
-        >
+        <button onClick={onBack} className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors mr-0.5">
           <ArrowLeft className="h-4 w-4" />
         </button>
-        <input
-          value={form.title}
-          onChange={(e) => setForm({ ...form, title: e.target.value })}
-          placeholder="Untitled"
-          className="text-sm font-semibold w-[120px] bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50 mr-1.5 focus:ring-1 focus:ring-primary/30 focus:bg-muted rounded px-1 -mx-1 transition-all"
-        />
-
+        <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Untitled" className="text-sm font-semibold w-[120px] bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50 mr-1.5 focus:ring-1 focus:ring-primary/30 focus:bg-muted rounded px-1 -mx-1 transition-all" />
         {sep}
-
-        {/* ── Image ── */}
         <Popover open={panel === "image"} onOpenChange={(o) => setPanel(o ? "image" : null)}>
-          <PopoverTrigger asChild>
-            <span>
-              <BarBtn label="Image" icon={Image} active={panel === "image"} onClick={() => toggle("image")} />
-            </span>
-          </PopoverTrigger>
-          <PopoverContent side="top" align="center" sideOffset={10} className="w-64 p-4 space-y-3">
-            <p className="text-xs font-semibold text-foreground">
-              {layout === "stacked" ? "Banner image" : layout === "split" ? "Panel image" : "Cover image"}
-            </p>
-            {form.imageDataUrl ? (
-              <div className="relative rounded-lg overflow-hidden border" style={{ aspectRatio: "4/3" }}>
-                <img src={form.imageDataUrl} alt="Panel" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                <button
-                  onClick={() => setForm({ ...form, imageDataUrl: null })}
-                  className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center transition-colors"
-                >
-                  <X className="h-3 w-3 text-white" />
-                </button>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="absolute bottom-2 right-2 text-[10px] bg-black/50 hover:bg-black/70 text-white rounded-md px-2 py-1 transition-colors"
-                >
-                  Replace
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full border-2 border-dashed border-border rounded-lg p-4 flex flex-col items-center gap-2 hover:border-primary/40 hover:bg-primary/5 transition-all group"
-              >
-                <div className="w-8 h-8 rounded-lg bg-muted group-hover:bg-primary/10 flex items-center justify-center transition-colors">
-                  <Upload className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                </div>
-                <div className="text-center">
-                  <p className="text-xs font-medium">Click to upload</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">JPG, PNG, WebP</p>
-                </div>
-              </button>
-            )}
-          </PopoverContent>
+          <PopoverTrigger asChild><span><BarBtn label="Image" icon={Image} active={panel === "image"} onClick={() => toggle("image")} /></span></PopoverTrigger>
+          {imagePanel}
         </Popover>
-
-        {/* ── Content ── */}
         <Popover open={panel === "content"} onOpenChange={(o) => setPanel(o ? "content" : null)}>
-          <PopoverTrigger asChild>
-            <span>
-              <BarBtn label="Content" icon={Type} active={panel === "content"} onClick={() => toggle("content")} />
-            </span>
-          </PopoverTrigger>
-          <PopoverContent side="top" align="center" sideOffset={10} className="w-72 p-4 space-y-3 max-h-[420px] overflow-y-auto">
-            <p className="text-xs font-semibold text-foreground">Content</p>
-            <div className="space-y-1">
-              <label className="text-[11px] font-medium text-muted-foreground">Headline</label>
-              <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Your Resource Title" className="h-8 text-sm" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[11px] font-medium text-muted-foreground">Description</label>
-              <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="A short description..." className="text-sm resize-none h-16" />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-medium text-muted-foreground">Benefits</label>
-                <button
-                  onClick={() => setForm({ ...form, bulletsEnabled: !form.bulletsEnabled })}
-                  className={`relative w-8 h-4 rounded-full transition-colors shrink-0 ${form.bulletsEnabled ? "bg-primary" : "bg-muted-foreground/30"}`}
-                >
-                  <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${form.bulletsEnabled ? "translate-x-4" : "translate-x-0.5"}`} />
-                </button>
-              </div>
-              {form.bulletsEnabled && (
-                <div className="space-y-1.5">
-                  {form.bullets.map((b, i) => (
-                    <div key={i} className="flex items-center gap-1.5">
-                      <Input value={b} onChange={(e) => setBullet(i, e.target.value)} placeholder={`Benefit ${i + 1}`} className="h-7 text-xs flex-1" />
-                      {form.bullets.length > 1 && (
-                        <button onClick={() => removeBullet(i)} className="shrink-0 w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
-                          <X className="h-3 w-3" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  {form.bullets.length < 5 && (
-                    <button onClick={addBullet} className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary transition-colors">
-                      <Plus className="h-3 w-3" /> Add benefit
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="space-y-1">
-              <label className="text-[11px] font-medium text-muted-foreground">Button label</label>
-              <Input value={form.ctaLabel} onChange={(e) => setForm({ ...form, ctaLabel: e.target.value })} placeholder="Get the resource" className="h-8 text-sm" />
-            </div>
-          </PopoverContent>
+          <PopoverTrigger asChild><span><BarBtn label="Content" icon={Type} active={panel === "content"} onClick={() => toggle("content")} /></span></PopoverTrigger>
+          {contentPanel}
         </Popover>
-
-        {/* ── Design ── */}
         <Popover open={panel === "design"} onOpenChange={(o) => setPanel(o ? "design" : null)}>
-          <PopoverTrigger asChild>
-            <span>
-              <BarBtn label="Design" icon={Palette} active={panel === "design"} onClick={() => toggle("design")} />
-            </span>
-          </PopoverTrigger>
-          <PopoverContent side="top" align="center" sideOffset={10} className="w-64 p-4 space-y-4">
-            <p className="text-xs font-semibold text-foreground">Design</p>
-            {layout === "simple" && (
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-medium text-muted-foreground">Background</label>
-                <div className="grid grid-cols-5 gap-1.5">
-                  {GRADIENT_PRESETS.map((g) => (
-                    <button
-                      key={g.id}
-                      onClick={() => setForm({ ...form, gradientPreset: g.id })}
-                      title={g.label}
-                      className={`h-8 rounded-lg transition-all ${form.gradientPreset === g.id ? "ring-2 ring-primary ring-offset-1 scale-105" : "hover:scale-105 opacity-80 hover:opacity-100"}`}
-                      style={{ background: g.value }}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-medium text-muted-foreground">Accent colour</label>
-              <div className="flex gap-2 flex-wrap">
-                {ACCENT_COLORS.map((c) => (
-                  <button
-                    key={c.value}
-                    onClick={() => setForm({ ...form, accentColor: c.value })}
-                    title={c.label}
-                    className={`w-7 h-7 rounded-full transition-all ${form.accentColor === c.value ? "ring-2 ring-offset-1 ring-foreground scale-110" : "hover:scale-105"}`}
-                    style={{ backgroundColor: c.value }}
-                  />
-                ))}
-              </div>
-            </div>
-          </PopoverContent>
+          <PopoverTrigger asChild><span><BarBtn label="Design" icon={Palette} active={panel === "design"} onClick={() => toggle("design")} /></span></PopoverTrigger>
+          {designPanel}
         </Popover>
-
-        {/* ── Settings ── */}
         <Popover open={panel === "settings"} onOpenChange={(o) => setPanel(o ? "settings" : null)}>
-          <PopoverTrigger asChild>
-            <span>
-              <BarBtn label="Settings" icon={Settings} active={panel === "settings"} onClick={() => toggle("settings")} />
-            </span>
-          </PopoverTrigger>
-          <PopoverContent side="top" align="center" sideOffset={10} className="w-64 p-4 space-y-3">
-            <p className="text-xs font-semibold text-foreground">Settings</p>
-            <div className="space-y-1">
-              <label className="text-[11px] font-medium text-muted-foreground">Page URL</label>
-              <div className="flex items-center">
-                <span className="text-xs text-muted-foreground bg-muted border border-r-0 rounded-l-md px-2 h-8 flex items-center shrink-0">/p/</span>
-                <Input
-                  value={form.slug}
-                  onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") })}
-                  placeholder="your-resource"
-                  className="h-8 text-sm rounded-l-none"
-                />
-              </div>
-            </div>
-          </PopoverContent>
+          <PopoverTrigger asChild><span><BarBtn label="Settings" icon={Settings} active={panel === "settings"} onClick={() => toggle("settings")} /></span></PopoverTrigger>
+          {settingsPanel}
         </Popover>
-
         {sep}
-
-        {/* ── Actions ── */}
-        <Button variant="outline" size="sm" className="h-7 px-3 text-xs rounded-lg">
-          Save draft
-        </Button>
-        <Button size="sm" className="h-7 px-3 text-xs rounded-lg" onClick={onSave}>
-          {isEditing ? "Update" : "Publish"}
-        </Button>
+        <button onClick={onTogglePosition} title="Switch to side panel" className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+          <PanelRight className="h-3.5 w-3.5" />
+        </button>
+        {sep}
+        <Button variant="outline" size="sm" className="h-7 px-3 text-xs rounded-lg">Save draft</Button>
+        <Button size="sm" className="h-7 px-3 text-xs rounded-lg" onClick={onSave}>{isEditing ? "Update" : "Publish"}</Button>
       </motion.div>
-
-      <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleImageUpload} />
+      {fileInput}
     </div>
   );
 }
@@ -1648,6 +1708,7 @@ function magnetToForm(m: LeadMagnet): Form {
     imagePosition:  m.imagePosition  ?? { x: 50, y: 50 },
     bannerHeight:   m.bannerHeight   ?? 44,
     textElements:   (m.textElements as Record<TextElKey, TextEl>) ?? defaultForm.textElements,
+    hiddenBlocks:   (m.hiddenBlocks as TextElKey[]) ?? [],
   };
 }
 
@@ -1661,6 +1722,7 @@ export default function TemplatePicker() {
   const [mode, setMode] = useState<"pick" | "edit">(() => editingMagnet ? "edit" : "pick");
   const [layout, setLayout] = useState(() => editingMagnet?.layout ?? "simple");
   const [form, setForm] = useState<Form>(() => editingMagnet ? magnetToForm(editingMagnet) : defaultForm);
+  const [barPosition, setBarPosition] = useState<"bottom" | "side">("bottom");
 
   const handleStart = () => {
     if (layout === "fullimage") {
@@ -1697,6 +1759,7 @@ export default function TemplatePicker() {
       imagePosition:  form.imagePosition,
       bannerHeight:   form.bannerHeight,
       textElements:   form.textElements,
+      hiddenBlocks:   form.hiddenBlocks,
     };
 
     if (editingMagnet) {
@@ -1845,29 +1908,53 @@ export default function TemplatePicker() {
 
           {/* Edit mode: full-canvas preview + floating bar */}
           {mode === "edit" && (
-            <>
-              <motion.div
-                key="edit-canvas"
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.22 }}
-                className="w-full max-w-3xl px-10 pb-20"
-              >
-                <div className="rounded-2xl overflow-hidden shadow-xl border" style={{ height: "520px" }}>
-                  {previewBlock}
+            barPosition === "side" ? (
+              <div className="flex w-full h-full">
+                <div className="flex-1 flex items-center justify-center px-6 py-4 overflow-hidden">
+                  <div className="w-full max-w-3xl">
+                    <div className="rounded-2xl overflow-hidden shadow-xl border" style={{ height: "min(520px, calc(100vh - 57px - 56px))" }}>
+                      {previewBlock}
+                    </div>
+                  </div>
                 </div>
-                <p className="text-center text-xs text-muted-foreground mt-4">{previewCaption}</p>
-              </motion.div>
+                <FloatingBar
+                  layout={layout}
+                  form={form}
+                  setForm={setForm}
+                  onBack={handleBack}
+                  onSave={handleSave}
+                  isEditing={!!editingMagnet}
+                  barPosition="side"
+                  onTogglePosition={() => setBarPosition("bottom")}
+                />
+              </div>
+            ) : (
+              <>
+                <motion.div
+                  key="edit-canvas"
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.22 }}
+                  className="w-full max-w-3xl px-10 pb-20"
+                >
+                  <div className="rounded-2xl overflow-hidden shadow-xl border" style={{ height: "520px" }}>
+                    {previewBlock}
+                  </div>
+                  <p className="text-center text-xs text-muted-foreground mt-4">{previewCaption}</p>
+                </motion.div>
 
-              <FloatingBar
-                layout={layout}
-                form={form}
-                setForm={setForm}
-                onBack={handleBack}
-                onSave={handleSave}
-                isEditing={!!editingMagnet}
-              />
-            </>
+                <FloatingBar
+                  layout={layout}
+                  form={form}
+                  setForm={setForm}
+                  onBack={handleBack}
+                  onSave={handleSave}
+                  isEditing={!!editingMagnet}
+                  barPosition="bottom"
+                  onTogglePosition={() => setBarPosition("side")}
+                />
+              </>
+            )
           )}
         </div>
 

@@ -1,44 +1,58 @@
-# [Project name]
+# Sendlet
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A lean SaaS for publishing email-gated lead magnet opt-in pages.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/sendlet run dev` — run the frontend (Vite, reads `PORT`)
 - `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- Frontend: React + Vite, wouter routing, shadcn/ui, framer-motion
+- Fonts: DM Sans (Google Fonts)
+- Brand: teal `#0F766E`
+- Data: mock data in `artifacts/sendlet/src/data/mock.ts` with localStorage persistence
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/sendlet/src/data/mock.ts` — LeadMagnet type, seed data, saveMagnet/updateMagnet/removeMagnet
+- `artifacts/sendlet/src/pages/template-picker.tsx` — entire builder: FloatingBar, DraggableTextBlock, all 4 preview components, PickerPanel, TemplatePicker page
+- `artifacts/sendlet/src/pages/public-page.tsx` — public opt-in page renderer (4 layouts)
+- `artifacts/sendlet/src/pages/dashboard.tsx` — stat cards + lead magnet table
+- `artifacts/sendlet/src/pages/lead-magnet-detail.tsx` — detail page with edit button
+- `artifacts/sendlet/src/App.tsx` — wouter routes
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- No backend: all data is stored in a mutable `leadMagnets` array (seeded) and persisted to localStorage.
+- Mock user: Sarah Chen (hardcoded throughout).
+- 4 layouts: `simple`, `split`, `stacked`, `fullimage`. Each has a static preview and an interactive (draggable) edit mode.
+- `TextEl` tracks x/y/w/size/color/backdrop per block for canvas-style positioning.
+- `hiddenBlocks: TextElKey[]` on Form + LeadMagnet controls which text blocks are hidden in both the editor and the public page.
+- Images are compressed via `compressImage()` (canvas resize → JPEG 0.82) before saving to localStorage.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Dashboard showing lead magnet stats and a table of existing pages.
+- Layout picker (Simple, Visual Split, Stacked, Full Image).
+- Full-canvas editor with draggable/resizable text blocks, color picker, backdrop styles, inline text editing.
+- Floating editor bar (bottom pill or side panel) with Image, Content, Design, Settings popovers.
+- Text blocks can be hidden individually; hidden blocks shown in Content → "Hidden blocks" section with a restore button.
+- Published public opt-in pages at `/p/:slug` (4 layout renderers).
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- No backend/DB for the Sendlet artifact — localStorage only.
+- All 4 layouts must support the same interactive editing features.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- `setForm` in FloatingBar expects `(f: Form) => void` (direct object), not a setter function.
+- The `barPosition` state lives in TemplatePicker (not FloatingBar) so the layout can flex between side/bottom modes.
+- When `barPosition === "side"`, the edit area renders as a flex row; FloatingBar returns a vertical div (not absolutely positioned).
+- `bulletsEnabled` controls bullet visibility separately from `hiddenBlocks` (for backward compat with public page rendering).
 
 ## Pointers
 
