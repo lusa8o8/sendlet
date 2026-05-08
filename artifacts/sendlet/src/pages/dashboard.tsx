@@ -1,9 +1,9 @@
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { leadMagnets, leads } from "@/data/mock";
+import { leadMagnets } from "@/data/mock";
 import { AppLayout } from "@/components/layout/app-layout";
-import { Plus, Copy, Eye, Edit2, Send, TrendingUp } from "lucide-react";
+import { Plus, Copy, Eye, Edit2, Send, TrendingUp, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
+import type { LeadMagnet } from "@/data/mock";
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -35,7 +36,7 @@ function StatCard({
   contextPositive?: boolean;
 }) {
   return (
-    <div className="bg-card border rounded-lg p-6 space-y-1.5">
+    <div className="bg-card border rounded-xl p-5 space-y-1">
       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{label}</p>
       <p className="text-3xl font-semibold tracking-tight">{value}</p>
       {context && (
@@ -50,22 +51,116 @@ function StatCard({
 function StatusBadge({ status }: { status: string }) {
   if (status === "published") {
     return (
-      <Badge className="rounded-full font-normal text-xs bg-primary text-primary-foreground">
+      <Badge className="rounded-full font-normal text-xs bg-primary text-primary-foreground shrink-0">
         Published
       </Badge>
     );
   }
   if (status === "paused") {
     return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 shrink-0">
         Paused
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium text-muted-foreground border bg-background">
+    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium text-muted-foreground border bg-background shrink-0">
       Draft
     </span>
+  );
+}
+
+function MagnetCard({ magnet, onCopy }: { magnet: LeadMagnet; onCopy: (slug: string) => void }) {
+  return (
+    <div className="bg-card border rounded-xl p-4 space-y-3">
+      {/* Title row */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <Link
+            href={`/lead-magnets/${magnet.id}`}
+            className="font-medium text-sm hover:text-primary transition-colors line-clamp-2"
+          >
+            {magnet.title}
+          </Link>
+          <p className="text-xs text-muted-foreground mt-0.5 truncate">/p/{magnet.slug}</p>
+        </div>
+        <StatusBadge status={magnet.status} />
+      </div>
+
+      {/* Stats row */}
+      <div className="flex items-center gap-4 text-sm">
+        <div className="flex flex-col">
+          <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Visits</span>
+          <span className="font-medium tabular-nums">
+            {magnet.visits > 0 ? magnet.visits.toLocaleString() : <span className="text-muted-foreground">—</span>}
+          </span>
+        </div>
+        <div className="flex flex-col">
+          <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Leads</span>
+          <span className="font-medium tabular-nums flex items-center gap-1">
+            {magnet.leads > 0 ? (
+              <>
+                {magnet.leads}
+                {magnet.weeklyLeads > 0 && <TrendingUp className="h-3 w-3 text-primary" />}
+              </>
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            )}
+          </span>
+        </div>
+        {magnet.lastLead && (
+          <div className="flex flex-col">
+            <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Last lead</span>
+            <span className="text-muted-foreground text-xs">{magnet.lastLead}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Actions row */}
+      <div className="flex items-center gap-1 pt-1 border-t">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-9 px-3 text-xs text-muted-foreground gap-1.5 flex-1"
+          onClick={() => onCopy(magnet.slug)}
+        >
+          <Copy className="h-3.5 w-3.5" />
+          Copy link
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-9 px-3 text-xs text-muted-foreground gap-1.5 flex-1"
+          asChild
+        >
+          <Link href={`/p/${magnet.slug}`}>
+            <Eye className="h-3.5 w-3.5" />
+            Preview
+          </Link>
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-9 px-3 text-xs text-muted-foreground gap-1.5 flex-1"
+          asChild
+        >
+          <Link href={`/lead-magnets/${magnet.id}/edit`}>
+            <Edit2 className="h-3.5 w-3.5" />
+            Edit
+          </Link>
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 text-muted-foreground"
+          asChild
+        >
+          <Link href={`/lead-magnets/${magnet.id}`}>
+            <ChevronRight className="h-4 w-4" />
+          </Link>
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -92,11 +187,31 @@ export default function Dashboard() {
     toast({ title: "Link copied", description: "The public link is on your clipboard." });
   };
 
+  const emptyState = (
+    <div className="border border-dashed rounded-xl p-12 text-center bg-card flex flex-col items-center justify-center gap-4">
+      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+        <Send className="h-5 w-5 text-muted-foreground" />
+      </div>
+      <div className="space-y-1.5">
+        <h3 className="text-base font-medium">No lead magnets yet</h3>
+        <p className="text-sm text-muted-foreground max-w-xs mx-auto">
+          Create your first one to start publishing and collecting leads.
+        </p>
+      </div>
+      <Button asChild size="sm">
+        <Link href="/lead-magnets/new">
+          <Plus className="mr-2 h-4 w-4" />
+          Create lead magnet
+        </Link>
+      </Button>
+    </div>
+  );
+
   return (
     <AppLayout>
-      <div className="container max-w-5xl mx-auto px-6 py-10">
+      <div className="container max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
         {/* Page header */}
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-7">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
               {getGreeting()}, {firstName}.
@@ -109,7 +224,7 @@ export default function Dashboard() {
               })}
             </p>
           </div>
-          <Button asChild className="shrink-0">
+          <Button asChild className="shrink-0 w-full sm:w-auto">
             <Link href="/lead-magnets/new" data-testid="button-create-lead-magnet">
               <Plus className="mr-2 h-4 w-4" />
               Create lead magnet
@@ -118,7 +233,7 @@ export default function Dashboard() {
         </div>
 
         {/* Stat cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-7">
           <StatCard
             label="Total leads"
             value={totalLeads}
@@ -132,125 +247,124 @@ export default function Dashboard() {
             contextPositive={draftCount === 0}
           />
           <StatCard
-            label="Avg. conversion"
+            label="Avg. conv."
             value={avgConv > 0 ? `${avgConv}%` : "—"}
-            context="Industry avg ~20%"
+            context="Industry ~20%"
             contextPositive={avgConv >= 20}
           />
         </div>
 
-        {/* Lead magnets table */}
+        {/* Lead magnets — mobile cards */}
         {leadMagnets.length === 0 ? (
-          <div className="border border-dashed rounded-lg p-16 text-center bg-card flex flex-col items-center justify-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-              <Send className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <div className="space-y-1.5">
-              <h3 className="text-base font-medium">No lead magnets yet</h3>
-              <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-                Create your first one to start publishing and collecting leads.
-              </p>
-            </div>
-            <Button asChild size="sm">
-              <Link href="/lead-magnets/new">
-                <Plus className="mr-2 h-4 w-4" />
-                Create lead magnet
-              </Link>
-            </Button>
-          </div>
+          emptyState
         ) : (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25 }}
-            className="border rounded-lg bg-card overflow-hidden"
-          >
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent border-b">
-                  <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Resource</TableHead>
-                  <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</TableHead>
-                  <TableHead className="text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Visits</TableHead>
-                  <TableHead className="text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Leads</TableHead>
-                  <TableHead className="text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Last lead</TableHead>
-                  <TableHead className="text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {leadMagnets.map((magnet) => (
-                  <TableRow key={magnet.id} className="hover:bg-muted/30 transition-colors">
-                    <TableCell className="py-4">
-                      <Link
-                        href={`/lead-magnets/${magnet.id}`}
-                        className="font-medium text-sm hover:text-primary transition-colors"
-                      >
-                        {magnet.title}
-                      </Link>
-                      <div className="text-xs text-muted-foreground font-normal mt-0.5 hidden sm:block">
-                        /p/{magnet.slug}
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-4">
-                      <StatusBadge status={magnet.status} />
-                    </TableCell>
-                    <TableCell className="text-right py-4 text-sm tabular-nums">
-                      {magnet.visits > 0 ? magnet.visits.toLocaleString() : <span className="text-muted-foreground">—</span>}
-                    </TableCell>
-                    <TableCell className="text-right py-4 text-sm tabular-nums">
-                      {magnet.leads > 0 ? (
-                        <span className="flex items-center justify-end gap-1.5">
-                          {magnet.leads}
-                          {magnet.weeklyLeads > 0 && (
-                            <TrendingUp className="h-3 w-3 text-primary" />
-                          )}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right py-4 text-sm text-muted-foreground">
-                      {magnet.lastLead ?? <span>—</span>}
-                    </TableCell>
-                    <TableCell className="text-right py-4">
-                      <div className="flex items-center justify-end gap-0.5">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                          onClick={() => copyLink(magnet.slug)}
-                          title="Copy link"
-                        >
-                          <Copy className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          asChild
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                          title="View page"
-                        >
-                          <Link href={`/p/${magnet.slug}`}>
-                            <Eye className="h-3.5 w-3.5" />
-                          </Link>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          asChild
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                          title="Edit"
-                        >
-                          <Link href={`/lead-magnets/${magnet.id}/edit`}>
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </Link>
-                        </Button>
-                      </div>
-                    </TableCell>
+          <>
+            {/* Mobile card list (hidden on sm+) */}
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              className="flex flex-col gap-3 sm:hidden"
+            >
+              {leadMagnets.map((magnet) => (
+                <MagnetCard key={magnet.id} magnet={magnet} onCopy={copyLink} />
+              ))}
+            </motion.div>
+
+            {/* Desktop table (hidden on mobile) */}
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              className="hidden sm:block border rounded-xl bg-card overflow-hidden"
+            >
+              <Table>
+                <TableHeader>
+                  <TableRow className="hover:bg-transparent border-b">
+                    <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Resource</TableHead>
+                    <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Status</TableHead>
+                    <TableHead className="text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Visits</TableHead>
+                    <TableHead className="text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Leads</TableHead>
+                    <TableHead className="text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Last lead</TableHead>
+                    <TableHead className="text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </motion.div>
+                </TableHeader>
+                <TableBody>
+                  {leadMagnets.map((magnet) => (
+                    <TableRow key={magnet.id} className="hover:bg-muted/30 transition-colors">
+                      <TableCell className="py-4">
+                        <Link
+                          href={`/lead-magnets/${magnet.id}`}
+                          className="font-medium text-sm hover:text-primary transition-colors"
+                        >
+                          {magnet.title}
+                        </Link>
+                        <div className="text-xs text-muted-foreground font-normal mt-0.5">
+                          /p/{magnet.slug}
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-4">
+                        <StatusBadge status={magnet.status} />
+                      </TableCell>
+                      <TableCell className="text-right py-4 text-sm tabular-nums">
+                        {magnet.visits > 0 ? magnet.visits.toLocaleString() : <span className="text-muted-foreground">—</span>}
+                      </TableCell>
+                      <TableCell className="text-right py-4 text-sm tabular-nums">
+                        {magnet.leads > 0 ? (
+                          <span className="flex items-center justify-end gap-1.5">
+                            {magnet.leads}
+                            {magnet.weeklyLeads > 0 && (
+                              <TrendingUp className="h-3 w-3 text-primary" />
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right py-4 text-sm text-muted-foreground">
+                        {magnet.lastLead ?? <span>—</span>}
+                      </TableCell>
+                      <TableCell className="text-right py-4">
+                        <div className="flex items-center justify-end gap-0.5">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            onClick={() => copyLink(magnet.slug)}
+                            title="Copy link"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            asChild
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            title="View page"
+                          >
+                            <Link href={`/p/${magnet.slug}`}>
+                              <Eye className="h-3.5 w-3.5" />
+                            </Link>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            asChild
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                            title="Edit"
+                          >
+                            <Link href={`/lead-magnets/${magnet.id}/edit`}>
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </Link>
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </motion.div>
+          </>
         )}
       </div>
     </AppLayout>
