@@ -1,0 +1,305 @@
+ Brand kit for Sendlet
+
+  Brand name:
+  Sendlet
+
+  Brand idea:
+  Sendlet is a small, reliable delivery layer for useful downloads. It helps people publish a clean opt-in page, collect
+  an email, and send the promised resource without duct-taping forms, file links, and email tools together.
+
+  Brand positioning:
+  Simple opt-in pages for useful downloads.
+
+  Product personality:
+  - calm
+  - practical
+  - lightweight
+  - trustworthy
+  - focused
+  - quietly polished
+
+  Do not make Sendlet feel like:
+  - an AI product
+  - a funnel-marketing product
+  - a creator-hype product
+  - an enterprise CRM
+  - a page-builder playground
+  - a flashy link-in-bio storefront
+
+  Voice:
+  Use plain, operational language. Keep copy short and concrete.
+
+  Preferred words:
+  - create
+  - publish
+  - send
+  - deliver
+  - download
+  - resource
+  - lead
+  - opt-in page
+  - copy link
+  - export
+  - preview
+
+  Avoid words:
+  - funnel
+  - growth hack
+  - 10x
+  - monetize
+  - viral
+  - AI-powered
+  - unlock your audience
+  - creator empire
+  - automation engine
+
+  Tagline:
+  Simple opt-in pages for useful downloads.
+
+  Short product description:
+  Create a clean email-gated page, collect leads, and deliver your free resource in minutes.
+
+  Primary CTA:
+  Create lead magnet
+
+  Secondary CTAs:
+  - Copy link
+  - Preview
+  - Export CSV
+  - Send magic link
+  - Publish
+
+  Color system:
+  Use a quiet, neutral UI with one confident accent. The product should feel warm enough for creators and sharp enough
+  for consultants/agencies.
+
+  Core colors:
+  - Ink: #151713
+  - Muted ink: #62685F
+  - Soft ink: #8A9086
+  - App background: #F7F8F5
+  - Surface: #FFFFFF
+  - Surface soft: #F1F3EE
+  - Border: #E1E5DC
+  - Border strong: #C9D0C2
+  - Primary: #0F766E
+  - Primary hover: #115E59
+  - Primary soft: #DDF3EF
+  - Secondary accent: #2563EB
+  - Success: #15803D
+  - Warning: #B45309
+  - Error: #B42318
+
+  Do not use a purple-heavy theme. Do not use glassmorphism. Do not use large decorative gradients. Subtle background
+  texture or very soft paper-like surfaces are acceptable.
+
+  CSS token direction:
+  :root {
+    --background: #F7F8F5;
+    --foreground: #151713;
+    --card: #FFFFFF;
+    --card-foreground: #151713;
+    --muted: #F1F3EE;
+    --muted-foreground: #62685F;
+    --border: #E1E5DC;
+    --input: #E1E5DC;
+    --primary: #0F766E;
+    --primary-foreground: #FFFFFF;
+    --secondary: #F1F3EE;
+    --secondary-foreground: #151713;
+    --accent: #DDF3EF;
+    --accent-foreground: #0F766E;
+    --destructive: #B42318;
+    --destructive-foreground: #FFFFFF;
+    --ring: #0F766E;
+    --radius: 0.5rem;
+  }
+
+  Typography:
+  Use a modern, human sans-serif that feels clean but not generic.
+
+  Recommended:
+  - Primary UI font: DM Sans
+  - Optional display/accent font for the wordmark only: Fraunces or Newsreader
+
+  Rules:
+  - Do not use Inter, Roboto, Arial, or system font as the primary brand direction.
+  - Dashboard text should be compact and easy to scan.
+  - Public opt-in pages can use slightly larger, calmer headings.
+  - No negative letter spacing.
+  - Avoid oversized marketing typography inside the app.
+
+  Logo direction:
+  Use a simple wordmark: Sendlet.
+  Pair it with a small delivery mark that suggests sending a resource, not email spam.
+
+  Logo mark concept:
+  - a minimal folded page
+  - a small send arrow
+  - or a document with a clean outgoing corner
+
+  Use lucide icons where possible. Good candidates:
+  - Send
+  - FileText
+  - Mail
+  - Download
+  - Link
+  - Copy
+  - Upload
+  - BarChart3
+
+  Do not make the logo look like an AI sparkle, rocket, megaphone, or funnel.
+
+  Shape system:
+  - Radius: 6-8px
+  - Buttons: 8px radius
+  - Cards: 8px radius max
+  - Inputs: 8px radius
+  - Badges: 999px radius is fine for small status pills only
+  - Avoid pill-shaped primary buttons unless the component is truly a compact badge or filter
+
+  Surface rules:
+  - Main app background: soft neutral
+  - Panels: white with subtle border
+  - Avoid nested cards
+  - Avoid heavy shadows
+  - Use shadows only for menus, dialogs, and elevated overlays
+
+  Button rules:
+  Primary button:
+  - background #0F766E
+  - white text
+  - hover #115E59
+
+  Secondary button:
+  - white or soft surface
+  - ink text
+  - subtle border
+
+  Destructive button:
+  - only for destructive actions
+  - use #B42318
+
+  Public page button:
+  - use creator accent color if set
+  - default to Sendlet primary
+
+  Dashboard layout:
+  The app should feel like a focused workspace.
+
+  Navigation:
+  - compact sidebar or clean top nav
+  - Sendlet wordmark visible
+  - primary action always easy to find
+  - avoid marketing nav inside the product
+
+  Dashboard cards:
+  Use cards for individual metric blocks, lead magnet rows, and editor panels only. Do not wrap whole pages in a large
+  card.
+
+  Lead magnet list:
+  Rows should show:
+  - title
+  - status
+  - visits
+  - leads
+  - conversion rate
+  - copy link
+  - preview
+  - edit
+
+  Status labels:
+  - Draft
+  - Published
+  - Paused
+
+  Public opt-in page:
+  This is the most polished part of the product. It should feel credible and simple.
+
+  Layout:
+  - centered, narrow content
+  - creator identity near top
+  - resource title
+  - short value promise
+  - 3 benefit bullets
+  - cover/resource preview
+  - email field
+  - primary CTA
+  - small privacy reassurance
+
+  Default public page copy:
+  Title example:
+  Client Onboarding Checklist
+
+  Description example:
+  A simple checklist to help service businesses onboard new clients without missed steps.
+
+  Benefits example:
+  - Confirm scope, payment, and access
+  - Send the right welcome materials
+  - Start every project with fewer back-and-forth emails
+
+  Privacy line:
+  No spam. Unsubscribe anytime.
+
+  Success state:
+  Your resource is ready.
+  Use the same primary CTA style for download/access.
+
+  Form rules:
+  - one email field on the public page
+  - visible label or clear accessible label
+  - no unnecessary fields
+  - validation should be plain and specific
+  - error copy should say what to fix
+
+  Example error copy:
+  Enter a valid email address.
+
+  Magic link auth:
+  Sign-in should feel low friction.
+
+  Sign-in page copy:
+  Sign in to Sendlet
+  Enter your email and we will send a sign-in link.
+
+  Button:
+  Send magic link
+
+  Confirmation:
+  Check your email
+  We sent a sign-in link to {email}.
+
+  Empty states:
+  Empty states should be useful, not cute.
+
+  Dashboard empty state:
+  Create your first lead magnet
+  Add a resource, write a short opt-in page, and publish a shareable link.
+
+  Button:
+  Create lead magnet
+
+  No leads empty state:
+  No leads yet
+  Share your opt-in page to start collecting emails.
+
+  Motion:
+  Use motion sparingly.
+  - subtle page enter
+  - gentle list item reveal
+  - button hover transitions
+  - no bouncing
+  - no flashy animations
+
+  Accessibility:
+  - strong contrast
+  - visible focus states
+  - semantic labels
+  - keyboard-friendly forms
+  - clear error messages
+  - responsive tables/cards
+
+  Overall design instruction:
+  Sendlet should look like a tool someone can trust with a client-facing download page. Keep the UI lean, structured,
+  and calm. The interface should help users finish the job quickly without asking them to become designers.

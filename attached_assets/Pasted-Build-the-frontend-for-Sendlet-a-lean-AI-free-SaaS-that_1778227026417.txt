@@ -1,0 +1,214 @@
+Build the frontend for Sendlet, a lean, AI-free SaaS that helps creators, consultants, small businesses, and agencies
+  publish a simple email-gated lead magnet page and collect leads without using a messy stack.
+
+  The app is hosted on Vercel. Build it as a Next.js App Router project with TypeScript, Tailwind CSS, and shadcn/ui.
+  Use responsive, production-ready UI patterns and keep the implementation clean and modular.
+
+  Product summary:
+  Sendlet lets a user:
+  - sign in with a magic link
+  - create a lead magnet
+  - upload a file or paste an external URL
+  - generate a hosted public opt-in page
+  - collect email leads
+  - show a download/access page after signup
+  - view basic analytics and export leads
+
+  This is an AI-free product. Do not include any AI branding, sparkle effects, or AI copy. The tone should be calm,
+  practical, and trustworthy.
+
+  Design direction:
+  - Universal appeal, not creator-hype, not enterprise-heavy
+  - Quiet, professional, modern SaaS
+  - Neutral off-white background, white surfaces, subtle borders
+  - No glassmorphism
+  - No heavy gradients
+  - No purple-dominant palette
+  - No decorative blobs or bokeh
+  - Small radius, around 6 to 8px
+  - Clear hierarchy, strong typography, simple layouts
+  - Use a restrained accent color, preferably blue or teal
+  - Keep the UI light, fast, and easy to scan
+  - The product should feel like a useful utility, not a marketing site
+
+  Visual references in spirit:
+  - Carrd for simplicity
+  - Tally for form clarity
+  - BookFunnel for gated delivery
+  - Kit or MailerLite for clean creator tooling
+  Do not copy their exact styles. Adapt the best parts into a lean Sendlet experience.
+
+  Primary users:
+  - creators
+  - consultants
+  - coaches
+  - small business owners
+  - newsletter builders
+  - agencies setting up a quick lead magnet for a client
+
+  Core UX goals:
+  - no setup friction
+  - no blank-canvas design complexity
+  - no overbuilt dashboard
+  - users should be able to create and publish in minutes
+  - keep forms short and focused
+  - use plain language everywhere
+  - make the public landing page feel credible enough to share
+
+  Stack assumptions:
+  - Frontend: Next.js App Router, TypeScript, Tailwind CSS, shadcn/ui
+  - Hosting: Vercel
+  - Auth/backend later: Supabase magic link auth, Supabase Postgres, Supabase Storage
+  - The frontend should be designed to plug into that backend cleanly, but do not build backend logic here unless needed
+  for mocked UI states
+
+  Information architecture:
+  Create these screens:
+
+  1. Marketing-lite home / dashboard entry
+  - If signed out, show a simple sign-in page
+  - If signed in, route to the dashboard
+  - No full marketing homepage needed for the app itself
+
+  2. Sign-in page
+  - Email field only
+  - “Send magic link” button
+  - Short helper text
+  - Minimal and trustworthy
+  - After submit, show a “check your email” confirmation state
+
+  3. Dashboard
+  - Header with Sendlet branding
+  - Primary CTA: “Create lead magnet”
+  - Table or list of lead magnets
+  - Each item shows title, status, visits, leads, conversion rate
+  - Actions: copy link, preview, edit
+  - Empty state should be useful and not cheesy
+
+  4. Create lead magnet flow
+  Use a step-based flow or a compact editor, not a giant form.
+  Steps:
+  - Resource
+  - Page copy
+  - Delivery email
+  - Publish
+
+  Fields:
+  - title
+  - short description
+  - 3 benefit bullets
+  - CTA label
+  - upload file or paste external URL
+  - optional cover image
+  - optional accent color
+  - sender name
+  - sender email
+  - delivery email subject
+  - delivery email body
+  - slug / public URL preview
+
+  The editor should feel guided and low friction. Do not add unnecessary options.
+
+  5. Lead magnet detail page
+  - preview card of the public page
+  - copy public link
+  - edit button
+  - leads table
+  - CSV export button
+  - basic metrics summary
+  - recent activity panel if useful
+
+  6. Public lead magnet page
+  This is the most important screen.
+  It should include:
+  - creator name/logo
+  - lead magnet title
+  - one-sentence value prop
+  - 3 short bullet benefits
+  - cover image or preview if available
+  - single email input
+  - primary CTA button
+  - tiny privacy reassurance text
+  - after submit, show a clean success state with download/access button
+
+  The public page should feel polished, minimal, and credible. It should not look like a generic form dump.
+
+  7. Download / success page
+  - confirm signup
+  - show immediate access to the resource
+  - offer a download button or external link button
+  - keep the user oriented
+
+  8. Leads page
+  - searchable table
+  - email
+  - lead magnet
+  - source/referrer if available
+  - date captured
+  - export CSV action
+  - empty state when no leads exist
+
+  Layout and interaction rules:
+  - Keep page structure simple and functional
+  - Use cards only where they genuinely frame a unit of content
+  - Avoid nested cards
+  - Avoid oversized hero sections inside the app
+  - Use icons sparingly and only where they improve clarity
+  - Use button variants sensibly, with a single primary CTA per view
+  - Make sure everything works well on mobile and desktop
+  - Forms should be compact and readable
+  - Tables should collapse gracefully on smaller screens
+  - Use skeletons or subtle loading states where appropriate
+  - Add empty states that explain the next action without marketing language
+
+  Tone and copy:
+  - Plain, direct, and helpful
+  - Avoid jargon like “funnel,” “growth hacking,” “AI-powered,” or “monetize”
+  - Prefer words like create, publish, deliver, copy link, leads, export, preview
+  - Use concise helper text
+  - Make the product feel calm and reliable
+
+  Brand:
+  Product name: Sendlet
+  Use this name in the UI.
+  Tagline direction: simple opt-in pages for useful downloads
+
+  Components to include:
+  - sign-in form
+  - magic link confirmation state
+  - sidebar or top nav for dashboard
+  - lead magnet list/table
+  - create flow wizard or segmented editor
+  - public lead magnet page
+  - success state
+  - leads table
+  - stats cards
+  - copy-to-clipboard button
+  - file upload area
+  - external URL input
+  - CSV export button
+  - status badges
+  - empty states
+  - skeletons
+
+  Data model assumptions for frontend props:
+  - leadMagnet: id, title, slug, description, status, visits, leads, conversionRate, accentColor, createdAt
+  - lead: id, email, source, referrer, createdAt
+  - user/workspace: name, email, avatar
+
+  Technical preferences:
+  - Use semantic components and accessible form labels
+  - Use client components only where needed
+  - Keep code readable and production-oriented
+  - Use mock data where backend is not connected yet
+  - Prepare the UI so it can later connect to Supabase cleanly
+
+  Important constraints:
+  - AI-free product
+  - No over-designed “glass” surfaces
+  - No purple-heavy theme
+  - No trendy creator-economy aesthetic
+  - No enterprise dashboard bloat
+  - Keep it lean, practical, and universal
+
+  Build the UI as if it will be deployed to Vercel immediately and used by real customers.
