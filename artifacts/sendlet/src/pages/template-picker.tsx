@@ -198,12 +198,16 @@ function DraggableTextBlock({
   children,
   fontClass = "",
   label,
+  onDragStart,
+  onDragEnd,
 }: {
   el: TextEl;
   onUpdate: (u: Partial<TextEl>) => void;
   children: React.ReactNode;
   fontClass?: string;
   label: string;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
 }) {
   const ref       = useRef<HTMLDivElement>(null);
   const colorRef  = useRef<HTMLInputElement>(null);
@@ -214,6 +218,7 @@ function DraggableTextBlock({
   const startDrag = (e: React.MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
     setSelected(true);
+    onDragStart?.();
     dragRef.current = { mx: e.clientX, my: e.clientY, x0: el.x, y0: el.y };
     const onMove = (me: MouseEvent) => {
       if (!dragRef.current || !ref.current) return;
@@ -225,7 +230,12 @@ function DraggableTextBlock({
         y: Math.max(0, Math.min(80, dragRef.current.y0 + dy)),
       });
     };
-    const onUp = () => { dragRef.current = null; document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
+    const onUp = () => {
+      dragRef.current = null;
+      onDragEnd?.();
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
     document.addEventListener("mousemove", onMove);
     document.addEventListener("mouseup", onUp);
   };
@@ -308,7 +318,7 @@ function DraggableTextBlock({
             <span className="text-[8px] font-mono text-slate-600 w-5 text-center">{el.size}</span>
             <button
               className="text-[9px] font-semibold text-slate-500 hover:text-slate-800 leading-none px-0.5"
-              onClick={() => onUpdate({ size: Math.min(32, el.size + 1) })}
+              onClick={() => onUpdate({ size: Math.min(72, el.size + 1) })}
             >A+</button>
           </div>
 
@@ -340,6 +350,7 @@ function SplitPreview({
   interactive?: boolean;
   onUpdateTextEl?: (key: TextElKey, u: Partial<TextEl>) => void;
 }) {
+  const [isDragging, setIsDragging] = useState(false);
   const accent = form.accentColor || ACCENT;
   const bullets = form.bulletsEnabled ? form.bullets.filter(Boolean) : [];
   const displayBullets = bullets.length ? bullets : ["Benefit 1", "Benefit 2", "Benefit 3"];
@@ -407,12 +418,31 @@ function SplitPreview({
       {interactive ? (
         /* ── Interactive edit mode: all four blocks draggable ── */
         <div className="flex-1 bg-white relative overflow-hidden">
+
+          {/* ── Alignment guides (visible while any block is dragged) ── */}
+          {isDragging && (
+            <>
+              {/* Vertical centre */}
+              <div className="absolute inset-y-0 pointer-events-none z-30" style={{ left: "50%", width: "1px", background: "repeating-linear-gradient(to bottom, rgba(14,165,233,0.55) 0 4px, transparent 4px 8px)" }} />
+              {/* Horizontal centre */}
+              <div className="absolute inset-x-0 pointer-events-none z-30" style={{ top: "50%", height: "1px", background: "repeating-linear-gradient(to right, rgba(14,165,233,0.55) 0 4px, transparent 4px 8px)" }} />
+              {/* Left margin */}
+              <div className="absolute inset-y-0 pointer-events-none z-30" style={{ left: "4%", width: "1px", background: "repeating-linear-gradient(to bottom, rgba(148,163,184,0.45) 0 4px, transparent 4px 8px)" }} />
+              {/* Right margin */}
+              <div className="absolute inset-y-0 pointer-events-none z-30" style={{ right: "4%", width: "1px", background: "repeating-linear-gradient(to bottom, rgba(148,163,184,0.45) 0 4px, transparent 4px 8px)" }} />
+              {/* Top margin */}
+              <div className="absolute inset-x-0 pointer-events-none z-30" style={{ top: "5%", height: "1px", background: "repeating-linear-gradient(to right, rgba(148,163,184,0.45) 0 4px, transparent 4px 8px)" }} />
+            </>
+          )}
+
           {/* Headline */}
           <DraggableTextBlock
             el={textElements.headline}
             onUpdate={(u) => onUpdateTextEl?.("headline", u)}
             fontClass="font-bold tracking-tight leading-snug"
             label="Headline"
+            onDragStart={() => setIsDragging(true)}
+            onDragEnd={() => setIsDragging(false)}
           >
             {form.title || "Your Resource Title"}
           </DraggableTextBlock>
@@ -423,6 +453,8 @@ function SplitPreview({
             onUpdate={(u) => onUpdateTextEl?.("description", u)}
             fontClass="leading-relaxed"
             label="Description"
+            onDragStart={() => setIsDragging(true)}
+            onDragEnd={() => setIsDragging(false)}
           >
             {form.description || "A short description of what they'll get and why it helps."}
           </DraggableTextBlock>
@@ -433,6 +465,8 @@ function SplitPreview({
               el={textElements.bullets}
               onUpdate={(u) => onUpdateTextEl?.("bullets", u)}
               label="Benefits"
+              onDragStart={() => setIsDragging(true)}
+              onDragEnd={() => setIsDragging(false)}
             >
               <div className="space-y-1.5">
                 {displayBullets.slice(0, 3).map((b, i) => (
@@ -452,6 +486,8 @@ function SplitPreview({
             el={textElements.form}
             onUpdate={(u) => onUpdateTextEl?.("form", u)}
             label="Form"
+            onDragStart={() => setIsDragging(true)}
+            onDragEnd={() => setIsDragging(false)}
           >
             <div className="space-y-1.5">
               <div className="h-5 rounded-md border border-slate-200 text-[9px] text-muted-foreground flex items-center px-2 bg-white">
