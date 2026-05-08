@@ -1575,6 +1575,13 @@ function FloatingBar({
   const presetInputRef = useRef<HTMLInputElement>(null);
   const toggle = (p: string) => setPanel((cur) => (cur === p ? null : p));
 
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 640);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
     e.target.value = "";
@@ -1804,6 +1811,94 @@ function FloatingBar({
   );
 
   const fileInput = <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleImageUpload} />;
+
+  /* ── Mobile bottom bar ── */
+  if (isMobile && !isSide) {
+    const iconPanelBtn = (key: string, Icon: React.ElementType, title: string) => (
+      <button
+        onClick={() => toggle(key)}
+        title={title}
+        className={`flex flex-col items-center justify-center w-12 h-10 rounded-xl transition-colors gap-0.5 ${
+          panel === key ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+        }`}
+      >
+        <Icon className="h-4 w-4" />
+        <span className="text-[9px] font-medium leading-none">{title}</span>
+      </button>
+    );
+
+    return (
+      <div className="absolute bottom-0 left-0 right-0 z-50 pointer-events-none">
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          className="pointer-events-auto bg-white/97 backdrop-blur-xl border-t border-black/8 shadow-[0_-4px_24px_rgba(0,0,0,0.08)]"
+        >
+          {/* Row 1 — tool icons */}
+          <div className="flex items-center px-1 pt-1.5 pb-0.5 gap-0.5">
+            <button
+              onClick={onBack}
+              className="flex items-center justify-center w-10 h-10 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+
+            <div className="h-5 w-px bg-border mx-0.5 shrink-0" />
+
+            <Popover open={panel === "image"} onOpenChange={(o) => setPanel(o ? "image" : null)}>
+              <PopoverTrigger asChild><span>{iconPanelBtn("image", Image, "Image")}</span></PopoverTrigger>
+              {imagePanel}
+            </Popover>
+            <Popover open={panel === "content"} onOpenChange={(o) => setPanel(o ? "content" : null)}>
+              <PopoverTrigger asChild><span>{iconPanelBtn("content", Type, "Content")}</span></PopoverTrigger>
+              {contentPanel}
+            </Popover>
+            <Popover open={panel === "design"} onOpenChange={(o) => setPanel(o ? "design" : null)}>
+              <PopoverTrigger asChild><span>{iconPanelBtn("design", Palette, "Design")}</span></PopoverTrigger>
+              {designPanel}
+            </Popover>
+            <Popover open={panel === "settings"} onOpenChange={(o) => setPanel(o ? "settings" : null)}>
+              <PopoverTrigger asChild><span>{iconPanelBtn("settings", Settings, "Settings")}</span></PopoverTrigger>
+              {settingsPanel}
+            </Popover>
+
+            <div className="h-5 w-px bg-border mx-0.5 shrink-0" />
+
+            <button onClick={onUndo} disabled={!canUndo} className="flex items-center justify-center w-9 h-10 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0">
+              <Undo2 className="h-3.5 w-3.5" />
+            </button>
+            <button onClick={onRedo} disabled={!canRedo} className="flex items-center justify-center w-9 h-10 rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0">
+              <Redo2 className="h-3.5 w-3.5" />
+            </button>
+
+            <div className="flex-1" />
+
+            <button
+              onClick={onToggleLock}
+              className={`flex items-center justify-center w-9 h-10 rounded-xl shrink-0 transition-colors ${
+                locked ? "text-primary bg-primary/10" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+            >
+              {locked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
+            </button>
+          </div>
+
+          {/* Row 2 — publish action */}
+          <div className="flex gap-2 px-3 pb-4 pt-1">
+            <Button
+              size="lg"
+              className="flex-1 h-11 text-sm font-semibold rounded-xl"
+              onClick={onSave}
+            >
+              {isEditing ? "Update" : "Publish"}
+            </Button>
+          </div>
+        </motion.div>
+        {fileInput}
+      </div>
+    );
+  }
 
   /* ── Side panel mode ── */
   if (isSide) {
