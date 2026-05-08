@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/layout/app-layout";
@@ -52,6 +52,13 @@ const LEFT_TYPES = [
 
 /* ─── Form state ────────────────────────────────────────────── */
 
+interface TextEl {
+  x:    number; // 0-100 % from left of right panel
+  y:    number; // 0-100 % from top of right panel
+  w:    number; // 0-100 % width
+  size: number; // font-size in px
+}
+
 interface Form {
   title:          string;
   description:    string;
@@ -63,6 +70,10 @@ interface Form {
   leftType:       "image" | "text";
   imageDataUrl:   string | null;
   slug:           string;
+  textElements: {
+    headline:    TextEl;
+    description: TextEl;
+  };
 }
 
 const defaultForm: Form = {
@@ -76,6 +87,10 @@ const defaultForm: Form = {
   leftType:       "image",
   imageDataUrl:   null,
   slug:           "",
+  textElements: {
+    headline:    { x: 4, y: 6,  w: 92, size: 14 },
+    description: { x: 4, y: 30, w: 92, size: 11 },
+  },
 };
 
 /* ─── Accordion ─────────────────────────────────────────────── */
@@ -173,12 +188,125 @@ function SimplePreview({ form }: { form: Form }) {
   );
 }
 
+/* ─── Draggable text block (used inside interactive previews) ── */
+
+function DraggableTextBlock({
+  el,
+  onUpdate,
+  children,
+  fontClass,
+}: {
+  el: TextEl;
+  onUpdate: (u: Partial<TextEl>) => void;
+  children: React.ReactNode;
+  fontClass: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [selected, setSelected] = useState(false);
+  const dragRef  = useRef<{ mx: number; my: number; x0: number; y0: number } | null>(null);
+  const resizeRef = useRef<{ mx: number; w0: number } | null>(null);
+
+  const startDrag = (e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    setSelected(true);
+    dragRef.current = { mx: e.clientX, my: e.clientY, x0: el.x, y0: el.y };
+    const onMove = (me: MouseEvent) => {
+      if (!dragRef.current || !ref.current) return;
+      const r = ref.current.parentElement!.getBoundingClientRect();
+      const dx = ((me.clientX - dragRef.current.mx) / r.width)  * 100;
+      const dy = ((me.clientY - dragRef.current.my) / r.height) * 100;
+      onUpdate({
+        x: Math.max(0, Math.min(85, dragRef.current.x0 + dx)),
+        y: Math.max(0, Math.min(75, dragRef.current.y0 + dy)),
+      });
+    };
+    const onUp = () => { dragRef.current = null; document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  };
+
+  const startResize = (e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    resizeRef.current = { mx: e.clientX, w0: el.w };
+    const onMove = (me: MouseEvent) => {
+      if (!resizeRef.current || !ref.current) return;
+      const r = ref.current.parentElement!.getBoundingClientRect();
+      const dx = ((me.clientX - resizeRef.current.mx) / r.width) * 100;
+      onUpdate({ w: Math.max(15, Math.min(97, resizeRef.current.w0 + dx)) });
+    };
+    const onUp = () => { resizeRef.current = null; document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  };
+
+  const startFontResize = (e: React.MouseEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    const startY = e.clientY;
+    const startSize = el.size;
+    const onMove = (me: MouseEvent) => {
+      const dy = startY - me.clientY;
+      onUpdate({ size: Math.max(8, Math.min(28, Math.round(startSize + dy * 0.25))) });
+    };
+    const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  };
+
+  useEffect(() => {
+    if (!selected) return;
+    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setSelected(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [selected]);
+
+  return (
+    <div
+      ref={ref}
+      style={{ position: "absolute", left: `${el.x}%`, top: `${el.y}%`, width: `${el.w}%`, fontSize: `${el.size}px` }}
+      className={`group cursor-move select-none ${selected ? "outline outline-[1.5px] outline-sky-400 outline-offset-1" : "outline outline-1 outline-transparent hover:outline-sky-200"}`}
+      onMouseDown={startDrag}
+    >
+      <span className={fontClass}>{children}</span>
+
+      {/* Bottom-right resize (width) handle */}
+      <div
+        className={`absolute -bottom-1.5 -right-1.5 w-3 h-3 rounded-sm bg-sky-400 cursor-se-resize transition-opacity ${selected ? "opacity-100" : "opacity-0 group-hover:opacity-60"}`}
+        onMouseDown={startResize}
+        title="Drag to resize width"
+      />
+
+      {/* Bottom-left font-size handle */}
+      <div
+        className={`absolute -bottom-1.5 -left-1.5 w-3 h-3 rounded-sm bg-violet-400 cursor-n-resize transition-opacity ${selected ? "opacity-100" : "opacity-0 group-hover:opacity-60"}`}
+        onMouseDown={startFontResize}
+        title="Drag up/down to change font size"
+      />
+
+      {/* Tooltip */}
+      {selected && (
+        <div className="absolute -top-5 left-0 flex items-center gap-2 pointer-events-none">
+          <span className="text-[8px] text-sky-500 font-medium whitespace-nowrap">drag · <span className="text-sky-400">⊞ resize width</span> · <span className="text-violet-400">Ab font size</span></span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─── Live preview: Visual Split layout ─────────────────────── */
 
-function SplitPreview({ form }: { form: Form }) {
+function SplitPreview({
+  form,
+  interactive = false,
+  onUpdateTextEl,
+}: {
+  form: Form;
+  interactive?: boolean;
+  onUpdateTextEl?: (key: "headline" | "description", u: Partial<TextEl>) => void;
+}) {
   const accent = form.accentColor || ACCENT;
   const bullets = form.bulletsEnabled ? form.bullets.filter(Boolean) : [];
   const displayBullets = bullets.length ? bullets : ["Key benefit one", "Key benefit two", "Key benefit three"];
+  const textElements = form.textElements ?? defaultForm.textElements;
 
   return (
     <div className="w-full h-full flex">
@@ -236,37 +364,86 @@ function SplitPreview({ form }: { form: Form }) {
       </div>
 
       {/* Right panel */}
-      <div className="flex-1 bg-white flex items-center overflow-hidden">
-        <div className="px-5 py-5 w-full">
-          <h2 className="text-sm font-bold tracking-tight mb-1 text-foreground leading-snug">
+      {interactive ? (
+        /* ── Interactive edit mode: draggable title + description ── */
+        <div className="flex-1 bg-white relative overflow-hidden">
+          {/* Draggable headline */}
+          <DraggableTextBlock
+            el={textElements.headline}
+            onUpdate={(u) => onUpdateTextEl?.("headline", u)}
+            fontClass="font-bold tracking-tight text-foreground leading-snug block"
+          >
             {form.title || "Your Resource Title"}
-          </h2>
-          <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
+          </DraggableTextBlock>
+
+          {/* Draggable description */}
+          <DraggableTextBlock
+            el={textElements.description}
+            onUpdate={(u) => onUpdateTextEl?.("description", u)}
+            fontClass="text-muted-foreground leading-relaxed block"
+          >
             {form.description || "A short description of what they'll get and why it helps."}
-          </p>
-          {form.bulletsEnabled && (
-            <div className="space-y-1.5 mb-3">
-              {displayBullets.slice(0, 3).map((b, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <div className="w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${accent}22` }}>
-                    <Check className="h-2 w-2" style={{ color: accent }} />
+          </DraggableTextBlock>
+
+          {/* Form section — pinned to bottom */}
+          <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
+            {form.bulletsEnabled && (
+              <div className="space-y-1.5 mb-2">
+                {displayBullets.slice(0, 3).map((b, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <div className="w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${accent}22` }}>
+                      <Check className="h-2 w-2" style={{ color: accent }} />
+                    </div>
+                    <span className="text-[10px] text-foreground/80">{b}</span>
                   </div>
-                  <span className="text-[10px] text-foreground/80">{b}</span>
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+            <div className="border-t pt-2 space-y-1.5">
+              <div className="h-5 rounded-md border text-[9px] text-muted-foreground flex items-center px-2">
+                Enter your email address
+              </div>
+              <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>
+                {form.ctaLabel || "Get the resource"}
+              </div>
+              <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
             </div>
-          )}
-          <div className="border-t pt-2.5 space-y-1.5">
-            <div className="h-5 rounded-md border text-[9px] text-muted-foreground flex items-center px-2">
-              Enter your email address
-            </div>
-            <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>
-              {form.ctaLabel || "Get the resource"}
-            </div>
-            <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
           </div>
         </div>
-      </div>
+      ) : (
+        /* ── Static pick mode ── */
+        <div className="flex-1 bg-white flex items-center overflow-hidden">
+          <div className="px-5 py-5 w-full">
+            <h2 className="text-sm font-bold tracking-tight mb-1 text-foreground leading-snug">
+              {form.title || "Your Resource Title"}
+            </h2>
+            <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
+              {form.description || "A short description of what they'll get and why it helps."}
+            </p>
+            {form.bulletsEnabled && (
+              <div className="space-y-1.5 mb-3">
+                {displayBullets.slice(0, 3).map((b, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <div className="w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${accent}22` }}>
+                      <Check className="h-2 w-2" style={{ color: accent }} />
+                    </div>
+                    <span className="text-[10px] text-foreground/80">{b}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="border-t pt-2.5 space-y-1.5">
+              <div className="h-5 rounded-md border text-[9px] text-muted-foreground flex items-center px-2">
+                Enter your email address
+              </div>
+              <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>
+                {form.ctaLabel || "Get the resource"}
+              </div>
+              <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -872,7 +1049,19 @@ export default function TemplatePicker() {
                   ) : layout === "stacked" ? (
                     <StackedPreview form={form} />
                   ) : (
-                    <SplitPreview form={form} />
+                    <SplitPreview
+                      form={form}
+                      interactive={mode === "edit"}
+                      onUpdateTextEl={(key, u) =>
+                        setForm((f) => ({
+                          ...f,
+                          textElements: {
+                            ...f.textElements,
+                            [key]: { ...f.textElements[key], ...u },
+                          },
+                        }))
+                      }
+                    />
                   )}
                 </motion.div>
               </AnimatePresence>
