@@ -53,11 +53,14 @@ const LEFT_TYPES = [
 /* ─── Form state ────────────────────────────────────────────── */
 
 interface TextEl {
-  x:    number; // 0-100 % from left of right panel
-  y:    number; // 0-100 % from top of right panel
-  w:    number; // 0-100 % width
-  size: number; // font-size in px
+  x:     number; // 0-100 % from left of right panel
+  y:     number; // 0-100 % from top of right panel
+  w:     number; // 0-100 % width
+  size:  number; // font-size in px
+  color: string; // hex colour
 }
+
+type TextElKey = "headline" | "description" | "bullets" | "form";
 
 interface Form {
   title:          string;
@@ -70,16 +73,13 @@ interface Form {
   leftType:       "image" | "text";
   imageDataUrl:   string | null;
   slug:           string;
-  textElements: {
-    headline:    TextEl;
-    description: TextEl;
-  };
+  textElements: Record<TextElKey, TextEl>;
 }
 
 const defaultForm: Form = {
   title:          "",
   description:    "",
-  bullets:        ["", "", ""],
+  bullets:        ["Benefit 1", "Benefit 2", "Benefit 3"],
   bulletsEnabled: true,
   ctaLabel:       "Get the resource",
   accentColor:    ACCENT,
@@ -88,8 +88,10 @@ const defaultForm: Form = {
   imageDataUrl:   null,
   slug:           "",
   textElements: {
-    headline:    { x: 4, y: 6,  w: 92, size: 14 },
-    description: { x: 4, y: 30, w: 92, size: 11 },
+    headline:    { x: 4, y: 5,  w: 92, size: 14, color: "#0f172a" },
+    description: { x: 4, y: 27, w: 92, size: 11, color: "#64748b" },
+    bullets:     { x: 4, y: 50, w: 92, size: 10, color: "#374151" },
+    form:        { x: 4, y: 70, w: 92, size: 10, color: "#0f172a" },
   },
 };
 
@@ -194,16 +196,19 @@ function DraggableTextBlock({
   el,
   onUpdate,
   children,
-  fontClass,
+  fontClass = "",
+  label,
 }: {
   el: TextEl;
   onUpdate: (u: Partial<TextEl>) => void;
   children: React.ReactNode;
-  fontClass: string;
+  fontClass?: string;
+  label: string;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const ref       = useRef<HTMLDivElement>(null);
+  const colorRef  = useRef<HTMLInputElement>(null);
   const [selected, setSelected] = useState(false);
-  const dragRef  = useRef<{ mx: number; my: number; x0: number; y0: number } | null>(null);
+  const dragRef   = useRef<{ mx: number; my: number; x0: number; y0: number } | null>(null);
   const resizeRef = useRef<{ mx: number; w0: number } | null>(null);
 
   const startDrag = (e: React.MouseEvent) => {
@@ -217,7 +222,7 @@ function DraggableTextBlock({
       const dy = ((me.clientY - dragRef.current.my) / r.height) * 100;
       onUpdate({
         x: Math.max(0, Math.min(85, dragRef.current.x0 + dx)),
-        y: Math.max(0, Math.min(75, dragRef.current.y0 + dy)),
+        y: Math.max(0, Math.min(80, dragRef.current.y0 + dy)),
       });
     };
     const onUp = () => { dragRef.current = null; document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
@@ -239,55 +244,87 @@ function DraggableTextBlock({
     document.addEventListener("mouseup", onUp);
   };
 
-  const startFontResize = (e: React.MouseEvent) => {
-    e.preventDefault(); e.stopPropagation();
-    const startY = e.clientY;
-    const startSize = el.size;
-    const onMove = (me: MouseEvent) => {
-      const dy = startY - me.clientY;
-      onUpdate({ size: Math.max(8, Math.min(28, Math.round(startSize + dy * 0.25))) });
-    };
-    const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
-  };
-
   useEffect(() => {
     if (!selected) return;
-    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setSelected(false); };
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setSelected(false);
+    };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [selected]);
 
+  const safeColor = el.color || "#0f172a";
+
   return (
     <div
       ref={ref}
-      style={{ position: "absolute", left: `${el.x}%`, top: `${el.y}%`, width: `${el.w}%`, fontSize: `${el.size}px` }}
-      className={`group cursor-move select-none ${selected ? "outline outline-[1.5px] outline-sky-400 outline-offset-1" : "outline outline-1 outline-transparent hover:outline-sky-200"}`}
+      style={{
+        position: "absolute",
+        left: `${el.x}%`,
+        top:  `${el.y}%`,
+        width: `${el.w}%`,
+        fontSize: `${el.size}px`,
+        color: safeColor,
+      }}
+      className={`group cursor-move select-none ${fontClass} ${
+        selected
+          ? "outline outline-[1.5px] outline-sky-400 outline-offset-1"
+          : "outline outline-1 outline-transparent hover:outline-sky-200"
+      }`}
       onMouseDown={startDrag}
     >
-      <span className={fontClass}>{children}</span>
+      {children}
 
-      {/* Bottom-right resize (width) handle */}
+      {/* Floating toolbar — visible when selected */}
+      {selected && (
+        <div
+          className="absolute -top-7 left-0 flex items-center gap-1 bg-white border border-slate-200 rounded-md shadow-md px-1.5 py-0.5 z-50 whitespace-nowrap"
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          {/* Label */}
+          <span className="text-[7px] text-slate-400 font-medium pr-1 border-r border-slate-200">{label}</span>
+
+          {/* Color swatch → native color picker */}
+          <button
+            className="w-3.5 h-3.5 rounded-sm border border-slate-300 shrink-0 cursor-pointer"
+            style={{ backgroundColor: safeColor }}
+            onClick={() => colorRef.current?.click()}
+            title="Text colour"
+          />
+          <input
+            ref={colorRef}
+            type="color"
+            value={safeColor}
+            onChange={(e) => onUpdate({ color: e.target.value })}
+            className="sr-only"
+          />
+
+          {/* Font size */}
+          <div className="flex items-center gap-0.5 border-l border-slate-200 pl-1">
+            <button
+              className="text-[9px] font-semibold text-slate-500 hover:text-slate-800 leading-none px-0.5"
+              onClick={() => onUpdate({ size: Math.max(8, el.size - 1) })}
+            >A−</button>
+            <span className="text-[8px] font-mono text-slate-600 w-5 text-center">{el.size}</span>
+            <button
+              className="text-[9px] font-semibold text-slate-500 hover:text-slate-800 leading-none px-0.5"
+              onClick={() => onUpdate({ size: Math.min(32, el.size + 1) })}
+            >A+</button>
+          </div>
+
+          {/* Width resize hint */}
+          <span className="text-[7px] text-slate-300 border-l border-slate-200 pl-1">⊞ corner</span>
+        </div>
+      )}
+
+      {/* Bottom-right resize handle */}
       <div
-        className={`absolute -bottom-1.5 -right-1.5 w-3 h-3 rounded-sm bg-sky-400 cursor-se-resize transition-opacity ${selected ? "opacity-100" : "opacity-0 group-hover:opacity-60"}`}
+        className={`absolute -bottom-1.5 -right-1.5 w-3 h-3 rounded-sm bg-sky-400 cursor-se-resize transition-opacity ${
+          selected ? "opacity-100" : "opacity-0 group-hover:opacity-60"
+        }`}
         onMouseDown={startResize}
         title="Drag to resize width"
       />
-
-      {/* Bottom-left font-size handle */}
-      <div
-        className={`absolute -bottom-1.5 -left-1.5 w-3 h-3 rounded-sm bg-violet-400 cursor-n-resize transition-opacity ${selected ? "opacity-100" : "opacity-0 group-hover:opacity-60"}`}
-        onMouseDown={startFontResize}
-        title="Drag up/down to change font size"
-      />
-
-      {/* Tooltip */}
-      {selected && (
-        <div className="absolute -top-5 left-0 flex items-center gap-2 pointer-events-none">
-          <span className="text-[8px] text-sky-500 font-medium whitespace-nowrap">drag · <span className="text-sky-400">⊞ resize width</span> · <span className="text-violet-400">Ab font size</span></span>
-        </div>
-      )}
     </div>
   );
 }
@@ -301,12 +338,15 @@ function SplitPreview({
 }: {
   form: Form;
   interactive?: boolean;
-  onUpdateTextEl?: (key: "headline" | "description", u: Partial<TextEl>) => void;
+  onUpdateTextEl?: (key: TextElKey, u: Partial<TextEl>) => void;
 }) {
   const accent = form.accentColor || ACCENT;
   const bullets = form.bulletsEnabled ? form.bullets.filter(Boolean) : [];
-  const displayBullets = bullets.length ? bullets : ["Key benefit one", "Key benefit two", "Key benefit three"];
-  const textElements = form.textElements ?? defaultForm.textElements;
+  const displayBullets = bullets.length ? bullets : ["Benefit 1", "Benefit 2", "Benefit 3"];
+  const textElements: Record<TextElKey, TextEl> = {
+    ...defaultForm.textElements,
+    ...(form.textElements ?? {}),
+  };
 
   return (
     <div className="w-full h-full flex">
@@ -365,50 +405,67 @@ function SplitPreview({
 
       {/* Right panel */}
       {interactive ? (
-        /* ── Interactive edit mode: draggable title + description ── */
+        /* ── Interactive edit mode: all four blocks draggable ── */
         <div className="flex-1 bg-white relative overflow-hidden">
-          {/* Draggable headline */}
+          {/* Headline */}
           <DraggableTextBlock
             el={textElements.headline}
             onUpdate={(u) => onUpdateTextEl?.("headline", u)}
-            fontClass="font-bold tracking-tight text-foreground leading-snug block"
+            fontClass="font-bold tracking-tight leading-snug"
+            label="Headline"
           >
             {form.title || "Your Resource Title"}
           </DraggableTextBlock>
 
-          {/* Draggable description */}
+          {/* Description */}
           <DraggableTextBlock
             el={textElements.description}
             onUpdate={(u) => onUpdateTextEl?.("description", u)}
-            fontClass="text-muted-foreground leading-relaxed block"
+            fontClass="leading-relaxed"
+            label="Description"
           >
             {form.description || "A short description of what they'll get and why it helps."}
           </DraggableTextBlock>
 
-          {/* Form section — pinned to bottom */}
-          <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
-            {form.bulletsEnabled && (
-              <div className="space-y-1.5 mb-2">
+          {/* Benefits / bullets */}
+          {form.bulletsEnabled && (
+            <DraggableTextBlock
+              el={textElements.bullets}
+              onUpdate={(u) => onUpdateTextEl?.("bullets", u)}
+              label="Benefits"
+            >
+              <div className="space-y-1.5">
                 {displayBullets.slice(0, 3).map((b, i) => (
                   <div key={i} className="flex items-center gap-2">
                     <div className="w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${accent}22` }}>
                       <Check className="h-2 w-2" style={{ color: accent }} />
                     </div>
-                    <span className="text-[10px] text-foreground/80">{b}</span>
+                    <span>{b}</span>
                   </div>
                 ))}
               </div>
-            )}
-            <div className="border-t pt-2 space-y-1.5">
-              <div className="h-5 rounded-md border text-[9px] text-muted-foreground flex items-center px-2">
+            </DraggableTextBlock>
+          )}
+
+          {/* Email + CTA form block */}
+          <DraggableTextBlock
+            el={textElements.form}
+            onUpdate={(u) => onUpdateTextEl?.("form", u)}
+            label="Form"
+          >
+            <div className="space-y-1.5">
+              <div className="h-5 rounded-md border border-slate-200 text-[9px] text-muted-foreground flex items-center px-2 bg-white">
                 Enter your email address
               </div>
-              <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>
+              <div
+                className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium"
+                style={{ backgroundColor: accent }}
+              >
                 {form.ctaLabel || "Get the resource"}
               </div>
               <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
             </div>
-          </div>
+          </DraggableTextBlock>
         </div>
       ) : (
         /* ── Static pick mode ── */
