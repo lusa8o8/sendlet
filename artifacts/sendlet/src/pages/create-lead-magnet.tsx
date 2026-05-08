@@ -47,17 +47,17 @@ function OptInPreview({ formData }: { formData: FormData }) {
 
       <div className="bg-[hsl(var(--background))] rounded-lg border flex-1 overflow-hidden">
         <div className="flex flex-col items-center pt-7 pb-5 px-6">
-          <div className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center text-sm font-semibold text-foreground mb-2">
+          <div className="w-14 h-14 rounded-full bg-secondary flex items-center justify-center text-base font-semibold text-foreground mb-2">
             {creatorName.charAt(0).toUpperCase()}
           </div>
-          <p className="text-xs text-muted-foreground font-medium">{creatorName}</p>
+          <p className="text-sm text-muted-foreground font-medium">{creatorName}</p>
         </div>
 
         <div className="bg-card border-t mx-5 rounded-t-lg overflow-hidden shadow-sm">
-          <div className="h-2 w-full" style={{ backgroundColor: accentColor }} />
-          <div className="p-5">
-            <h2 className="text-base font-bold leading-snug text-foreground mb-2">{title}</h2>
-            <p className="text-xs text-muted-foreground leading-relaxed mb-4">{description}</p>
+          <div className="h-2.5 w-full" style={{ backgroundColor: accentColor }} />
+          <div className="p-6">
+            <h2 className="text-lg font-bold leading-snug text-foreground mb-2">{title}</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-5">{description}</p>
 
             <AnimatePresence>
               {formData.bulletsEnabled && displayBullets.length > 0 && (
@@ -66,35 +66,35 @@ function OptInPreview({ formData }: { formData: FormData }) {
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
                   transition={{ duration: 0.2 }}
-                  className="space-y-2.5 mb-4 overflow-hidden"
+                  className="space-y-3 mb-5 overflow-hidden"
                 >
                   {displayBullets.map((b, i) => (
-                    <li key={i} className="flex items-start gap-2.5">
+                    <li key={i} className="flex items-start gap-3">
                       <div
-                        className="mt-0.5 p-0.5 rounded-full shrink-0"
+                        className="mt-0.5 p-1 rounded-full shrink-0"
                         style={{ backgroundColor: `${accentColor}22` }}
                       >
-                        <Check className="h-3 w-3" style={{ color: accentColor }} />
+                        <Check className="h-3.5 w-3.5" style={{ color: accentColor }} />
                       </div>
-                      <span className="text-xs text-foreground/80 leading-relaxed">{b}</span>
+                      <span className="text-sm text-foreground/80 leading-relaxed">{b}</span>
                     </li>
                   ))}
                 </motion.ul>
               )}
             </AnimatePresence>
 
-            <div className="pt-3 border-t space-y-2.5">
-              <div className="text-xs text-foreground/70 font-medium mb-1">Where should we send it?</div>
-              <div className="h-9 rounded border border-input bg-background text-xs text-muted-foreground flex items-center px-3">
+            <div className="pt-4 border-t space-y-3">
+              <div className="text-sm text-foreground/70 font-medium">Where should we send it?</div>
+              <div className="h-10 rounded border border-input bg-background text-sm text-muted-foreground flex items-center px-3">
                 Enter your email address
               </div>
               <div
-                className="h-9 rounded flex items-center justify-center text-xs font-semibold text-white"
+                className="h-10 rounded flex items-center justify-center text-sm font-semibold text-white"
                 style={{ backgroundColor: accentColor }}
               >
                 {ctaLabel}
               </div>
-              <p className="text-center text-[10px] text-muted-foreground pt-0.5">
+              <p className="text-center text-xs text-muted-foreground pt-0.5">
                 No spam. Unsubscribe anytime.
               </p>
             </div>
@@ -521,7 +521,7 @@ export default function CreateLeadMagnet() {
         </div>
 
         {showPreview ? (
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] xl:grid-cols-[1fr_480px] gap-8 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_500px] xl:grid-cols-[1fr_560px] gap-8 items-start">
             <div className="bg-card border rounded-lg p-6 sm:p-8">
               {stepForm}
               {stepNav}
