@@ -73,7 +73,10 @@ interface Form {
   leftType:       "image" | "text";
   imageDataUrl:   string | null;
   slug:           string;
-  textElements: Record<TextElKey, TextEl>;
+  textElements:   Record<TextElKey, TextEl>;
+  leftPanelWidth: number;
+  imagePosition:  { x: number; y: number };
+  bannerHeight:   number;
 }
 
 const defaultForm: Form = {
@@ -87,6 +90,9 @@ const defaultForm: Form = {
   leftType:       "image",
   imageDataUrl:   null,
   slug:           "",
+  leftPanelWidth: 48,
+  imagePosition:  { x: 50, y: 50 },
+  bannerHeight:   44,
   textElements: {
     headline:    { x: 4, y: 5,  w: 92, size: 14, color: "#0f172a" },
     description: { x: 4, y: 27, w: 92, size: 11, color: "#64748b" },
@@ -394,12 +400,17 @@ function SplitPreview({
   form,
   interactive = false,
   onUpdateTextEl,
+  onUpdate,
 }: {
   form: Form;
   interactive?: boolean;
   onUpdateTextEl?: (key: TextElKey, u: Partial<TextEl>) => void;
+  onUpdate?: (partial: Partial<Form>) => void;
 }) {
   const [isDragging, setIsDragging] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const imgFileRef   = useRef<HTMLInputElement>(null);
+
   const accent = form.accentColor || ACCENT;
   const bullets = form.bulletsEnabled ? form.bullets.filter(Boolean) : [];
   const displayBullets = bullets.length ? bullets : ["Benefit 1", "Benefit 2", "Benefit 3"];
@@ -407,23 +418,51 @@ function SplitPreview({
     ...defaultForm.textElements,
     ...(form.textElements ?? {}),
   };
+  const panelWidth = form.leftPanelWidth ?? 48;
+  const imgPos     = form.imagePosition  ?? { x: 50, y: 50 };
+
+  const startDividerDrag = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const onMove = (me: MouseEvent) => {
+      if (!containerRef.current) return;
+      const r = containerRef.current.getBoundingClientRect();
+      onUpdate?.({ leftPanelWidth: Math.max(20, Math.min(75, ((me.clientX - r.left) / r.width) * 100)) });
+    };
+    const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  };
+
+  const startImagePan = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const sx = imgPos.x; const sy = imgPos.y;
+    const mx = e.clientX; const my = e.clientY;
+    const onMove = (me: MouseEvent) => {
+      onUpdate?.({ imagePosition: {
+        x: Math.max(0, Math.min(100, sx - (me.clientX - mx) * 0.35)),
+        y: Math.max(0, Math.min(100, sy - (me.clientY - my) * 0.35)),
+      }});
+    };
+    const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  };
+
+  const handleImgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => { if (typeof ev.target?.result === "string") onUpdate?.({ imageDataUrl: ev.target.result }); };
+    reader.readAsDataURL(file); e.target.value = "";
+  };
 
   return (
-    <div className="w-full h-full flex">
+    <div ref={containerRef} className="w-full h-full flex relative">
       {/* Left panel */}
       <div
-        className="w-[48%] h-full flex flex-col relative overflow-hidden shrink-0"
-        style={{ backgroundColor: accent }}
+        className="h-full flex flex-col relative overflow-hidden shrink-0"
+        style={{ width: `${panelWidth}%`, backgroundColor: accent }}
       >
-        {/* Subtle texture */}
-        <div
-          className="absolute inset-0 opacity-[0.06]"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 25% 25%, white 1px, transparent 1px)",
-            backgroundSize: "48px 48px",
-          }}
-        />
+        <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(circle at 25% 25%, white 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
 
         {form.leftType === "image" ? (
           form.imageDataUrl ? (
@@ -431,15 +470,34 @@ function SplitPreview({
               <img
                 src={form.imageDataUrl}
                 alt="Panel"
-                className="absolute inset-0 w-full h-full object-cover z-0"
+                className="absolute inset-0 w-full h-full object-cover z-0 select-none"
+                style={{ objectPosition: `${imgPos.x}% ${imgPos.y}%`, cursor: interactive ? "move" : undefined }}
+                onMouseDown={interactive ? startImagePan : undefined}
+                draggable={false}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent z-10" />
-              <div className="flex-1 relative z-10" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent z-10 pointer-events-none" />
+              <div className="flex-1 relative z-10 pointer-events-none" />
+              {interactive && (
+                <button
+                  onClick={() => imgFileRef.current?.click()}
+                  className="absolute top-2 right-2 z-20 text-[9px] bg-black/50 hover:bg-black/70 text-white rounded-md px-1.5 py-0.5 transition-colors"
+                >Replace</button>
+              )}
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center relative z-10">
-              <div className="w-20 h-20 rounded-xl border-2 border-white/20 flex items-center justify-center">
-                <Image className="h-7 w-7 text-white/25" />
+            <div
+              className={`flex-1 flex items-center justify-center relative z-10 ${interactive ? "cursor-pointer group" : ""}`}
+              onClick={interactive ? () => imgFileRef.current?.click() : undefined}
+            >
+              <div className={`w-20 h-20 rounded-xl border-2 border-white/20 flex flex-col items-center justify-center gap-1.5 transition-all ${interactive ? "group-hover:border-white/50 group-hover:bg-white/10" : ""}`}>
+                {interactive ? (
+                  <>
+                    <Upload className="h-6 w-6 text-white/50 group-hover:text-white/80 transition-colors" />
+                    <span className="text-[9px] text-white/50 group-hover:text-white/80 font-medium">Upload image</span>
+                  </>
+                ) : (
+                  <Image className="h-7 w-7 text-white/25" />
+                )}
               </div>
             </div>
           )
@@ -456,9 +514,7 @@ function SplitPreview({
 
         {/* Creator identity */}
         <div className="relative z-10 px-4 pb-4 flex items-center gap-2 shrink-0">
-          <div className="w-6 h-6 rounded-full bg-white/20 ring-2 ring-white/30 flex items-center justify-center text-white font-semibold text-[10px]">
-            S
-          </div>
+          <div className="w-6 h-6 rounded-full bg-white/20 ring-2 ring-white/30 flex items-center justify-center text-white font-semibold text-[10px]">S</div>
           <span className="text-white/60 text-[10px]">Sarah Chen</span>
         </div>
       </div>
@@ -586,6 +642,20 @@ function SplitPreview({
           </div>
         </div>
       )}
+
+      {/* ── Panel-width drag divider (interactive only) ── */}
+      {interactive && (
+        <div
+          className="absolute top-0 bottom-0 z-40 cursor-col-resize flex items-center justify-center group"
+          style={{ left: `${panelWidth}%`, width: "14px", marginLeft: "-7px" }}
+          onMouseDown={startDividerDrag}
+        >
+          <div className="w-1 h-10 rounded-full bg-white/70 shadow group-hover:bg-white group-hover:h-14 transition-all duration-150" />
+        </div>
+      )}
+
+      {/* Hidden upload input */}
+      {interactive && <input ref={imgFileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleImgUpload} />}
     </div>
   );
 }
@@ -596,12 +666,17 @@ function StackedPreview({
   form,
   interactive = false,
   onUpdateTextEl,
+  onUpdate,
 }: {
   form: Form;
   interactive?: boolean;
   onUpdateTextEl?: (key: TextElKey, u: Partial<TextEl>) => void;
+  onUpdate?: (partial: Partial<Form>) => void;
 }) {
   const [isDragging, setIsDragging] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const imgFileRef   = useRef<HTMLInputElement>(null);
+
   const accent = form.accentColor || ACCENT;
   const bullets = form.bulletsEnabled ? form.bullets.filter(Boolean) : [];
   const displayBullets = bullets.length ? bullets : ["Key benefit one", "Key benefit two", "Key benefit three"];
@@ -609,13 +684,49 @@ function StackedPreview({
     ...defaultForm.textElements,
     ...(form.textElements ?? {}),
   };
+  const bannerH = form.bannerHeight ?? 44;
+  const imgPos  = form.imagePosition ?? { x: 50, y: 50 };
+
+  const startBannerDrag = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const onMove = (me: MouseEvent) => {
+      if (!containerRef.current) return;
+      const r = containerRef.current.getBoundingClientRect();
+      onUpdate?.({ bannerHeight: Math.max(25, Math.min(70, ((me.clientY - r.top) / r.height) * 100)) });
+    };
+    const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  };
+
+  const startImagePan = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const sx = imgPos.x; const sy = imgPos.y;
+    const mx = e.clientX; const my = e.clientY;
+    const onMove = (me: MouseEvent) => {
+      onUpdate?.({ imagePosition: {
+        x: Math.max(0, Math.min(100, sx - (me.clientX - mx) * 0.35)),
+        y: Math.max(0, Math.min(100, sy - (me.clientY - my) * 0.35)),
+      }});
+    };
+    const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  };
+
+  const handleImgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => { if (typeof ev.target?.result === "string") onUpdate?.({ imageDataUrl: ev.target.result }); };
+    reader.readAsDataURL(file); e.target.value = "";
+  };
 
   return (
-    <div className="w-full h-full flex flex-col bg-white">
-      {/* Top: image banner — always static */}
+    <div ref={containerRef} className="w-full h-full flex flex-col bg-white">
+      {/* Top: image banner */}
       <div
         className="relative shrink-0 overflow-hidden"
-        style={{ height: "44%", backgroundColor: accent }}
+        style={{ height: `${bannerH}%`, backgroundColor: accent }}
       >
         <div
           className="absolute inset-0 opacity-[0.06]"
@@ -626,13 +737,36 @@ function StackedPreview({
         />
         {form.imageDataUrl ? (
           <>
-            <img src={form.imageDataUrl} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/25" />
+            <img
+              src={form.imageDataUrl}
+              alt="Banner"
+              className="absolute inset-0 w-full h-full object-cover select-none"
+              style={{ objectPosition: `${imgPos.x}% ${imgPos.y}%`, cursor: interactive ? "move" : undefined }}
+              onMouseDown={interactive ? startImagePan : undefined}
+              draggable={false}
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/25 pointer-events-none" />
+            {interactive && (
+              <button
+                onClick={() => imgFileRef.current?.click()}
+                className="absolute top-2 right-2 z-20 text-[9px] bg-black/50 hover:bg-black/70 text-white rounded-md px-1.5 py-0.5 transition-colors"
+              >Replace</button>
+            )}
           </>
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-16 h-16 rounded-xl border-2 border-white/20 flex items-center justify-center">
-              <Image className="h-6 w-6 text-white/25" />
+          <div
+            className={`absolute inset-0 flex items-center justify-center ${interactive ? "cursor-pointer group" : ""}`}
+            onClick={interactive ? () => imgFileRef.current?.click() : undefined}
+          >
+            <div className={`w-16 h-16 rounded-xl border-2 border-white/20 flex flex-col items-center justify-center gap-1.5 transition-all ${interactive ? "group-hover:border-white/50 group-hover:bg-white/10" : ""}`}>
+              {interactive ? (
+                <>
+                  <Upload className="h-5 w-5 text-white/50 group-hover:text-white/80 transition-colors" />
+                  <span className="text-[9px] text-white/50 group-hover:text-white/80 font-medium">Upload image</span>
+                </>
+              ) : (
+                <Image className="h-6 w-6 text-white/25" />
+              )}
             </div>
           </div>
         )}
@@ -640,7 +774,18 @@ function StackedPreview({
           <div className="w-6 h-6 rounded-full bg-white/90 shadow flex items-center justify-center font-semibold text-foreground text-[9px]">S</div>
           <span className="text-[10px] font-medium drop-shadow" style={{ color: form.imageDataUrl ? "white" : "rgba(255,255,255,0.7)" }}>Sarah Chen</span>
         </div>
+        {/* Banner height drag handle */}
+        {interactive && (
+          <div
+            className="absolute bottom-0 left-0 right-0 z-20 cursor-row-resize flex justify-center items-end pb-0.5"
+            style={{ height: "12px" }}
+            onMouseDown={startBannerDrag}
+          >
+            <div className="w-10 h-1 rounded-full bg-white/50 group-hover:bg-white transition-all duration-150" />
+          </div>
+        )}
       </div>
+      {interactive && <input ref={imgFileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleImgUpload} />}
 
       {/* Bottom: drag surface in edit mode, static otherwise */}
       {interactive ? (
@@ -901,10 +1046,11 @@ function EditorRail({
       <div className="flex-1 overflow-y-auto px-6">
         {/* Content */}
         <Accordion title="Content" open={open.content} onToggle={() => toggle("content")}>
-          {/* Image upload — for split+image or stacked */}
-          {(layout === "stacked" || (layout === "split" && form.leftType === "image")) && (
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Panel image</label>
+          {/* Image upload — always visible */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">
+              {layout === "stacked" ? "Banner image" : layout === "split" ? "Panel image" : "Cover image"}
+            </label>
               {form.imageDataUrl ? (
                 <div className="relative rounded-lg overflow-hidden border" style={{ aspectRatio: "4/3" }}>
                   <img
@@ -947,8 +1093,7 @@ function EditorRail({
                 className="hidden"
                 onChange={handleImageUpload}
               />
-            </div>
-          )}
+          </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">Headline</label>
             <Input
@@ -1225,12 +1370,10 @@ export default function TemplatePicker() {
                       onUpdateTextEl={(key, u) =>
                         setForm((f) => ({
                           ...f,
-                          textElements: {
-                            ...f.textElements,
-                            [key]: { ...f.textElements[key], ...u },
-                          },
+                          textElements: { ...f.textElements, [key]: { ...f.textElements[key], ...u } },
                         }))
                       }
+                      onUpdate={(partial) => setForm((f) => ({ ...f, ...partial }))}
                     />
                   ) : layout === "stacked" ? (
                     <StackedPreview
@@ -1239,12 +1382,10 @@ export default function TemplatePicker() {
                       onUpdateTextEl={(key, u) =>
                         setForm((f) => ({
                           ...f,
-                          textElements: {
-                            ...f.textElements,
-                            [key]: { ...f.textElements[key], ...u },
-                          },
+                          textElements: { ...f.textElements, [key]: { ...f.textElements[key], ...u } },
                         }))
                       }
+                      onUpdate={(partial) => setForm((f) => ({ ...f, ...partial }))}
                     />
                   ) : (
                     <SplitPreview
@@ -1259,6 +1400,7 @@ export default function TemplatePicker() {
                           },
                         }))
                       }
+                      onUpdate={(partial) => setForm((f) => ({ ...f, ...partial }))}
                     />
                   )}
                 </motion.div>
