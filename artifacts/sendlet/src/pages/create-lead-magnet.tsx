@@ -6,13 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronRight, ArrowLeft, Upload, Link as LinkIcon, Check } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { ChevronRight, ArrowLeft, Upload, Link as LinkIcon, Check, Plus, X } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface FormData {
   title: string;
   description: string;
   bullets: string[];
+  bulletsEnabled: boolean;
   ctaLabel: string;
   deliveryType: string;
   externalUrl: string;
@@ -27,63 +29,80 @@ interface FormData {
 function OptInPreview({ formData }: { formData: FormData }) {
   const title = formData.title || "Your resource title";
   const description = formData.description || "A short description of what they'll get.";
-  const bullets = formData.bullets.filter(Boolean);
-  const displayBullets = bullets.length > 0
-    ? bullets
-    : ["Key benefit one", "Key benefit two", "Key benefit three"];
+  const activeBullets = formData.bulletsEnabled ? formData.bullets.filter(Boolean) : [];
+  const displayBullets =
+    formData.bulletsEnabled && activeBullets.length === 0
+      ? ["Key benefit one", "Key benefit two", "Key benefit three"]
+      : activeBullets;
   const ctaLabel = formData.ctaLabel || "Get the resource";
   const creatorName = formData.senderName || "Your name";
   const accentColor = formData.accentColor || "#0F766E";
 
   return (
-    <div className="w-full">
+    <div className="w-full h-full flex flex-col">
       <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
         <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" />
         Live preview
       </div>
 
-      <div className="bg-background rounded-lg border overflow-hidden">
-        <div className="flex flex-col items-center pt-5 pb-4 px-5">
-          <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-xs font-semibold text-foreground mb-1.5">
+      <div className="bg-[hsl(var(--background))] rounded-lg border flex-1 overflow-hidden">
+        <div className="flex flex-col items-center pt-7 pb-5 px-6">
+          <div className="w-11 h-11 rounded-full bg-secondary flex items-center justify-center text-sm font-semibold text-foreground mb-2">
             {creatorName.charAt(0).toUpperCase()}
           </div>
-          <p className="text-[11px] text-muted-foreground font-medium">{creatorName}</p>
+          <p className="text-xs text-muted-foreground font-medium">{creatorName}</p>
         </div>
 
-        <div className="bg-card border-t border-b-0 mx-4 rounded-t-lg overflow-hidden shadow-sm">
-          <div className="h-1.5 w-full" style={{ backgroundColor: accentColor }} />
-          <div className="p-4">
-            <h2 className="text-sm font-bold leading-snug text-foreground mb-1.5">{title}</h2>
-            <p className="text-[11px] text-muted-foreground leading-relaxed mb-3">{description}</p>
+        <div className="bg-card border-t mx-5 rounded-t-lg overflow-hidden shadow-sm">
+          <div className="h-2 w-full" style={{ backgroundColor: accentColor }} />
+          <div className="p-5">
+            <h2 className="text-base font-bold leading-snug text-foreground mb-2">{title}</h2>
+            <p className="text-xs text-muted-foreground leading-relaxed mb-4">{description}</p>
 
-            <ul className="space-y-2 mb-3">
-              {displayBullets.map((b, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <div className="mt-0.5 p-0.5 rounded-full shrink-0" style={{ backgroundColor: `${accentColor}22` }}>
-                    <Check className="h-2.5 w-2.5" style={{ color: accentColor }} />
-                  </div>
-                  <span className="text-[11px] text-foreground/80 leading-relaxed">{b}</span>
-                </li>
-              ))}
-            </ul>
+            <AnimatePresence>
+              {formData.bulletsEnabled && displayBullets.length > 0 && (
+                <motion.ul
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-2.5 mb-4 overflow-hidden"
+                >
+                  {displayBullets.map((b, i) => (
+                    <li key={i} className="flex items-start gap-2.5">
+                      <div
+                        className="mt-0.5 p-0.5 rounded-full shrink-0"
+                        style={{ backgroundColor: `${accentColor}22` }}
+                      >
+                        <Check className="h-3 w-3" style={{ color: accentColor }} />
+                      </div>
+                      <span className="text-xs text-foreground/80 leading-relaxed">{b}</span>
+                    </li>
+                  ))}
+                </motion.ul>
+              )}
+            </AnimatePresence>
 
-            <div className="pt-3 border-t space-y-2">
-              <div className="h-7 rounded border border-input bg-background text-[10px] text-muted-foreground flex items-center px-3">
+            <div className="pt-3 border-t space-y-2.5">
+              <div className="text-xs text-foreground/70 font-medium mb-1">Where should we send it?</div>
+              <div className="h-9 rounded border border-input bg-background text-xs text-muted-foreground flex items-center px-3">
                 Enter your email address
               </div>
               <div
-                className="h-7 rounded flex items-center justify-center text-[11px] font-medium text-white"
+                className="h-9 rounded flex items-center justify-center text-xs font-semibold text-white"
                 style={{ backgroundColor: accentColor }}
               >
                 {ctaLabel}
               </div>
-              <p className="text-center text-[9px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
+              <p className="text-center text-[10px] text-muted-foreground pt-0.5">
+                No spam. Unsubscribe anytime.
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="h-4 mx-4 rounded-b-lg border border-t-0 bg-card/60" />
-        <div className="h-3 mx-6 rounded-b-lg border border-t-0 bg-card/30 mb-4" />
+        <div className="h-5 mx-5 rounded-b-lg border border-t-0 bg-card/60" />
+        <div className="h-4 mx-8 rounded-b-lg border border-t-0 bg-card/30 mb-5" />
       </div>
     </div>
   );
@@ -97,7 +116,8 @@ export default function CreateLeadMagnet() {
   const [formData, setFormData] = useState<FormData>({
     title: "",
     description: "",
-    bullets: ["", "", ""],
+    bullets: [""],
+    bulletsEnabled: true,
     ctaLabel: "Get the resource",
     deliveryType: "upload",
     externalUrl: "",
@@ -109,13 +129,25 @@ export default function CreateLeadMagnet() {
     slug: "",
   });
 
-  const updateForm = (key: keyof FormData, value: string | string[]) => {
+  const updateForm = (key: keyof FormData, value: string | string[] | boolean) => {
     setFormData((prev) => ({ ...prev, [key]: value }));
   };
 
   const updateBullet = (index: number, value: string) => {
     const newBullets = [...formData.bullets];
     newBullets[index] = value;
+    updateForm("bullets", newBullets);
+  };
+
+  const addBullet = () => {
+    if (formData.bullets.length < 3) {
+      updateForm("bullets", [...formData.bullets, ""]);
+    }
+  };
+
+  const removeBullet = (index: number) => {
+    if (formData.bullets.length <= 1) return;
+    const newBullets = formData.bullets.filter((_, i) => i !== index);
     updateForm("bullets", newBullets);
   };
 
@@ -163,21 +195,87 @@ export default function CreateLeadMagnet() {
                   data-testid="input-description"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Benefit bullets</Label>
-                <p className="text-xs text-muted-foreground">List up to 3 key things they'll get.</p>
-                <div className="space-y-2 mt-1">
-                  {formData.bullets.map((bullet, i) => (
-                    <Input
-                      key={i}
-                      placeholder={`Benefit ${i + 1}`}
-                      value={bullet}
-                      onChange={(e) => updateBullet(i, e.target.value)}
-                      data-testid={`input-bullet-${i}`}
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className={formData.bulletsEnabled ? "" : "text-muted-foreground"}>
+                      Benefit bullets
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Up to 3 short reasons to opt in.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs text-muted-foreground">
+                      {formData.bulletsEnabled ? "Shown" : "Hidden"}
+                    </span>
+                    <Switch
+                      checked={formData.bulletsEnabled}
+                      onCheckedChange={(val) => updateForm("bulletsEnabled", val)}
+                      data-testid="toggle-bullets"
                     />
-                  ))}
+                  </div>
                 </div>
+
+                <AnimatePresence>
+                  {formData.bulletsEnabled && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.18 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="space-y-2">
+                        {formData.bullets.map((bullet, i) => (
+                          <motion.div
+                            key={i}
+                            initial={{ opacity: 0, y: -4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.15 }}
+                            className="flex items-center gap-2"
+                          >
+                            <Input
+                              placeholder={`Benefit ${i + 1}`}
+                              value={bullet}
+                              onChange={(e) => updateBullet(i, e.target.value)}
+                              data-testid={`input-bullet-${i}`}
+                            />
+                            {formData.bullets.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
+                                onClick={() => removeBullet(i)}
+                                data-testid={`button-remove-bullet-${i}`}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </motion.div>
+                        ))}
+
+                        {formData.bullets.length < 3 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="text-muted-foreground hover:text-foreground h-8 px-2 text-xs"
+                            onClick={addBullet}
+                            data-testid="button-add-bullet"
+                          >
+                            <Plus className="h-3.5 w-3.5 mr-1" />
+                            Add bullet
+                          </Button>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
+
               <div className="space-y-2">
                 <Label htmlFor="ctaLabel">CTA button label</Label>
                 <Input
@@ -394,7 +492,7 @@ export default function CreateLeadMagnet() {
 
   return (
     <AppLayout>
-      <div className={`mx-auto px-4 py-8 ${showPreview ? "max-w-6xl" : "max-w-3xl container"}`}>
+      <div className={`mx-auto px-4 py-8 ${showPreview ? "max-w-7xl" : "max-w-3xl container"}`}>
         <div className="mb-8">
           <Button variant="ghost" size="sm" asChild className="text-muted-foreground mb-4 -ml-3">
             <Link href="/dashboard">
@@ -423,7 +521,7 @@ export default function CreateLeadMagnet() {
         </div>
 
         {showPreview ? (
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_420px] xl:grid-cols-[1fr_480px] gap-8 items-start">
             <div className="bg-card border rounded-lg p-6 sm:p-8">
               {stepForm}
               {stepNav}
