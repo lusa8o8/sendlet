@@ -13,45 +13,29 @@ import { useAuth } from "@/contexts/auth-context";
 
 const CONTENT_FILLS: Record<string, { title: string; description: string; bullets: string[]; ctaLabel: string; emailSubject: string; emailBody: string }> = {
   blank: { title: "", description: "", bullets: [""], ctaLabel: "Get the resource", emailSubject: "", emailBody: "" },
-  checklist: {
+  download: {
+    title: "The [Topic] Guide",
+    description: "Everything you need to know about [topic] in one clear, free document.",
+    bullets: ["Plain-English explanations", "Real-world examples", "Instant PDF download"],
+    ctaLabel: "Download free",
+    emailSubject: "Your free guide is ready",
+    emailBody: "Hey [First name],\n\nHere's your free guide — [Guide title].\n\n[Download link]\n\nHope it's useful. Reply anytime if you have questions.\n\n— [Your name]",
+  },
+  steps: {
     title: "The [Topic] Checklist",
-    description: "A simple, step-by-step guide to help you [outcome] faster.",
+    description: "A simple, step-by-step process to help you [outcome] faster.",
     bullets: ["Step-by-step process", "Ready-to-use format", "Saves hours of planning"],
     ctaLabel: "Get the checklist",
     emailSubject: "Here's your checklist!",
     emailBody: "Hey [First name],\n\nHere's the checklist you signed up for.\n\nI hope it saves you time and makes the process a lot cleaner.\n\n[Download link]\n\nLet me know if you have questions.\n\n— [Your name]",
   },
-  "email-course": {
-    title: "[Topic] in 5 Days",
-    description: "A free email course that walks you through [topic] one step at a time.",
-    bullets: ["One focused lesson a day", "Actionable exercises", "Built for busy people"],
-    ctaLabel: "Start the course",
-    emailSubject: "Your first lesson is here",
-    emailBody: "Hey [First name],\n\nWelcome — Day 1 of your course starts now.\n\n[Lesson content or link]\n\nSee you tomorrow for Day 2.\n\n— [Your name]",
-  },
-  "pdf-guide": {
-    title: "The [Topic] Guide",
-    description: "Everything you need to know about [topic] in one clear, concise document.",
-    bullets: ["Plain-English explanations", "Real-world examples", "Instant PDF download"],
-    ctaLabel: "Download the guide",
-    emailSubject: "Your free guide is ready",
-    emailBody: "Hey [First name],\n\nHere's your free guide — [Guide title].\n\n[Download link]\n\nHope it's useful. Reply anytime if you have questions.\n\n— [Your name]",
-  },
-  "swipe-file": {
-    title: "[Topic] Swipe File",
-    description: "[N] proven [templates/examples] you can copy and adapt right away.",
-    bullets: ["Ready to use immediately", "Battle-tested examples", "Saves hours of research"],
-    ctaLabel: "Get the swipe file",
-    emailSubject: "Your swipe file is inside",
-    emailBody: "Hey [First name],\n\nHere's your swipe file.\n\n[Download link]\n\nFeel free to copy, adapt, and make it yours.\n\n— [Your name]",
-  },
-  "mini-audit": {
-    title: "Free [Topic] Audit",
-    description: "Find out exactly what's holding your [area] back — in under 10 minutes.",
-    bullets: ["Quick self-assessment", "Clear scoring system", "Actionable next steps"],
-    ctaLabel: "Get the audit",
-    emailSubject: "Your audit results + next steps",
-    emailBody: "Hey [First name],\n\nHere's your audit — go through each section and score yourself honestly.\n\n[Download link]\n\nReply if you want to talk through your results.\n\n— [Your name]",
+  bold: {
+    title: "The fastest way to [outcome]",
+    description: "Everything you need to [achieve result] — no fluff, no filler.",
+    bullets: [""],
+    ctaLabel: "Get instant access",
+    emailSubject: "Here's what you signed up for",
+    emailBody: "Hey [First name],\n\nYou're in. Here's your link:\n\n[Download link]\n\n— [Your name]",
   },
 };
 

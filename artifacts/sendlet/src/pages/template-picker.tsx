@@ -4,12 +4,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
 import {
-  ListChecks,
-  Mail,
-  BookOpen,
-  Copy,
-  ClipboardCheck,
   FileText,
+  Download,
+  ListOrdered,
+  Type,
   ArrowRight,
   Check,
   Image,
@@ -29,52 +27,61 @@ const LAYOUTS = [
 ];
 
 const CONTENT_TEMPLATES = [
-  { id: "blank", label: "Blank", icon: FileText, description: "Start from scratch" },
-  { id: "checklist", label: "Checklist", icon: ListChecks, description: "Step-by-step guide" },
-  { id: "email-course", label: "Email Course", icon: Mail, description: "Multi-day series" },
-  { id: "pdf-guide", label: "PDF Guide", icon: BookOpen, description: "Comprehensive doc" },
-  { id: "swipe-file", label: "Swipe File", icon: Copy, description: "Ready-to-use examples" },
-  { id: "mini-audit", label: "Mini-Audit", icon: ClipboardCheck, description: "Self-assessment" },
+  {
+    id: "blank",
+    label: "Blank",
+    icon: FileText,
+    description: "Start from scratch",
+  },
+  {
+    id: "download",
+    label: "Free Download",
+    icon: Download,
+    description: "PDF, template, toolkit",
+  },
+  {
+    id: "steps",
+    label: "Step-by-Step",
+    icon: ListOrdered,
+    description: "Guide or checklist",
+  },
+  {
+    id: "bold",
+    label: "Bold Headline",
+    icon: Type,
+    description: "Photo-forward, punchy copy",
+  },
 ];
 
 const ACCENT = "#0F766E";
 
-const CONTENT_FILLS: Record<string, { title: string; description: string; bullets: string[]; ctaLabel: string }> = {
+const CONTENT_FILLS: Record<
+  string,
+  { title: string; description: string; bullets: string[]; ctaLabel: string }
+> = {
   blank: {
     title: "Your Resource Title",
     description: "A short description of what they'll get and why it helps.",
     bullets: ["Benefit one", "Benefit two", "Benefit three"],
     ctaLabel: "Get the resource",
   },
-  checklist: {
+  download: {
+    title: "The [Topic] Guide",
+    description: "Everything you need to know about [topic] in one clear, free document.",
+    bullets: ["Plain-English explanations", "Real-world examples", "Instant PDF download"],
+    ctaLabel: "Download free",
+  },
+  steps: {
     title: "The [Topic] Checklist",
-    description: "A simple, step-by-step guide to help you [outcome] faster.",
+    description: "A simple, step-by-step process to help you [outcome] faster.",
     bullets: ["Step-by-step process", "Ready-to-use format", "Saves hours of planning"],
     ctaLabel: "Get the checklist",
   },
-  "email-course": {
-    title: "[Topic] in 5 Days",
-    description: "A free email course that walks you through [topic] one step at a time.",
-    bullets: ["One focused lesson a day", "Actionable exercises", "Built for busy people"],
-    ctaLabel: "Start the course",
-  },
-  "pdf-guide": {
-    title: "The [Topic] Guide",
-    description: "Everything you need to know about [topic] in one clear document.",
-    bullets: ["Plain-English explanations", "Real-world examples", "Instant PDF download"],
-    ctaLabel: "Download the guide",
-  },
-  "swipe-file": {
-    title: "[Topic] Swipe File",
-    description: "[N] proven examples you can copy and adapt right away.",
-    bullets: ["Ready to use immediately", "Battle-tested examples", "Saves hours of research"],
-    ctaLabel: "Get the swipe file",
-  },
-  "mini-audit": {
-    title: "Free [Topic] Audit",
-    description: "Find out exactly what's holding your [area] back — in under 10 minutes.",
-    bullets: ["Quick self-assessment", "Clear scoring system", "Actionable next steps"],
-    ctaLabel: "Get the audit",
+  bold: {
+    title: "The fastest way to [outcome]",
+    description: "Everything you need to [achieve result] — no fluff, no filler.",
+    bullets: [],
+    ctaLabel: "Get instant access",
   },
 };
 
@@ -85,49 +92,247 @@ interface PreviewContent {
   ctaLabel: string;
 }
 
-function PreviewCard({ content }: { content: PreviewContent }) {
+/* ─── Left panel variants ────────────────────────────────────── */
+
+function LeftBlank() {
   return (
-    <div className="w-full max-w-[280px] bg-white rounded-2xl shadow-md overflow-hidden">
-      <div className="p-5">
-        <h2 className="text-sm font-bold tracking-tight mb-1 text-foreground leading-snug">
-          {content.title}
-        </h2>
-        <p className="text-[11px] text-muted-foreground mb-4 leading-relaxed">
-          {content.description}
-        </p>
-        <div className="space-y-2 mb-4">
-          {content.bullets.map((b, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <div
-                className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
-                style={{ backgroundColor: `${ACCENT}22` }}
-              >
-                <Check className="h-2.5 w-2.5" style={{ color: ACCENT }} />
-              </div>
-              <span className="text-[11px] text-foreground/80">{b}</span>
-            </div>
-          ))}
+    <div className="flex-1 flex items-center justify-center relative z-10">
+      <div className="w-16 h-16 rounded-xl border-2 border-white/20 flex items-center justify-center">
+        <Image className="h-6 w-6 text-white/25" />
+      </div>
+    </div>
+  );
+}
+
+function LeftDownload() {
+  return (
+    <div className="flex-1 flex items-center justify-center relative z-10">
+      <div className="bg-white rounded-lg shadow-lg w-16 h-20 flex flex-col overflow-hidden">
+        <div className="h-5 w-full flex items-center justify-center" style={{ backgroundColor: ACCENT }}>
+          <span className="text-[7px] font-bold text-white uppercase tracking-wide">PDF</span>
         </div>
-        <div className="border-t pt-3 space-y-2">
-          <div className="h-7 rounded-md border bg-background text-[10px] text-muted-foreground flex items-center px-2.5">
-            Enter your email address
-          </div>
-          <div
-            className="h-7 rounded-md text-[10px] text-white flex items-center justify-center font-medium"
-            style={{ backgroundColor: ACCENT }}
-          >
-            {content.ctaLabel}
-          </div>
-          <p className="text-center text-[9px] text-muted-foreground">
-            No spam. Unsubscribe anytime.
-          </p>
+        <div className="flex-1 p-1.5 space-y-1">
+          <div className="h-1 w-full bg-gray-200 rounded-full" />
+          <div className="h-1 w-4/5 bg-gray-200 rounded-full" />
+          <div className="h-1 w-3/5 bg-gray-200 rounded-full" />
+          <div className="h-1 w-4/5 bg-gray-200 rounded-full" />
+          <div className="h-1 w-2/3 bg-gray-200 rounded-full" />
         </div>
       </div>
     </div>
   );
 }
 
-function SimplePreview({ content }: { content: PreviewContent }) {
+function LeftSteps() {
+  return (
+    <div className="flex-1 flex items-center justify-center relative z-10">
+      <div className="space-y-2">
+        {[1, 2, 3].map((n) => (
+          <div key={n} className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full border-2 border-white/40 flex items-center justify-center text-white font-bold text-[10px]">
+              {n}
+            </div>
+            <div className="h-1.5 w-14 bg-white/20 rounded-full" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LeftBold() {
+  return (
+    <>
+      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent z-10" />
+      <div className="flex-1 flex items-center justify-center relative z-10">
+        <div className="w-16 h-16 rounded-xl border-2 border-white/20 flex items-center justify-center">
+          <Image className="h-6 w-6 text-white/25" />
+        </div>
+      </div>
+      <div className="relative z-20 px-5 pb-5">
+        <div className="h-2 w-4/5 bg-white/70 rounded-full mb-1.5" />
+        <div className="h-2 w-3/5 bg-white/50 rounded-full" />
+      </div>
+    </>
+  );
+}
+
+/* ─── Right panel variants ───────────────────────────────────── */
+
+function RightBlank({ content }: { content: PreviewContent }) {
+  return (
+    <>
+      <h2 className="text-sm font-bold tracking-tight mb-1 text-foreground leading-snug">
+        {content.title}
+      </h2>
+      <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
+        {content.description}
+      </p>
+      <div className="space-y-1.5 mb-3">
+        {content.bullets.map((b, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <div
+              className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
+              style={{ backgroundColor: `${ACCENT}22` }}
+            >
+              <Check className="h-2.5 w-2.5" style={{ color: ACCENT }} />
+            </div>
+            <span className="text-[11px] text-foreground/80">{b}</span>
+          </div>
+        ))}
+      </div>
+      <div className="border-t pt-2.5 space-y-1.5">
+        <div className="h-6 rounded-md border bg-background text-[10px] text-muted-foreground flex items-center px-2.5">
+          Enter your email address
+        </div>
+        <div
+          className="h-6 rounded-md text-[10px] text-white flex items-center justify-center font-medium"
+          style={{ backgroundColor: ACCENT }}
+        >
+          {content.ctaLabel}
+        </div>
+        <p className="text-center text-[9px] text-muted-foreground">
+          No spam. Unsubscribe anytime.
+        </p>
+      </div>
+    </>
+  );
+}
+
+function RightDownload({ content }: { content: PreviewContent }) {
+  return (
+    <>
+      <div
+        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 mb-2 text-[9px] font-semibold uppercase tracking-wide"
+        style={{ backgroundColor: `${ACCENT}15`, color: ACCENT }}
+      >
+        Free Resource
+      </div>
+      <h2 className="text-sm font-bold tracking-tight mb-1 text-foreground leading-snug">
+        {content.title}
+      </h2>
+      <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
+        {content.description}
+      </p>
+      <div className="space-y-1.5 mb-3">
+        {content.bullets.map((b, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <div
+              className="w-5 h-4 rounded text-[8px] font-bold flex items-center justify-center shrink-0"
+              style={{ backgroundColor: `${ACCENT}15`, color: ACCENT }}
+            >
+              {String(i + 1).padStart(2, "0")}
+            </div>
+            <span className="text-[11px] text-foreground/80">{b}</span>
+          </div>
+        ))}
+      </div>
+      <div className="border-t pt-2.5 space-y-1.5">
+        <div className="h-6 rounded-md border bg-background text-[10px] text-muted-foreground flex items-center px-2.5">
+          Enter your email address
+        </div>
+        <div
+          className="h-6 rounded-md text-[10px] text-white flex items-center justify-center gap-1 font-medium"
+          style={{ backgroundColor: ACCENT }}
+        >
+          <Download className="h-2.5 w-2.5" />
+          {content.ctaLabel}
+        </div>
+        <p className="text-center text-[9px] text-muted-foreground">
+          Instant access · No credit card
+        </p>
+      </div>
+    </>
+  );
+}
+
+function RightSteps({ content }: { content: PreviewContent }) {
+  return (
+    <>
+      <h2 className="text-sm font-bold tracking-tight mb-1 text-foreground leading-snug">
+        {content.title}
+      </h2>
+      <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
+        {content.description}
+      </p>
+      <div className="space-y-2 mb-3">
+        {content.bullets.map((b, i) => (
+          <div key={i} className="flex items-start gap-2">
+            <div
+              className="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 text-[8px] font-bold mt-px"
+              style={{ borderColor: ACCENT, color: ACCENT }}
+            >
+              {i + 1}
+            </div>
+            <span className="text-[11px] text-foreground/80 leading-snug">{b}</span>
+          </div>
+        ))}
+      </div>
+      <div className="border-t pt-2.5 space-y-1.5">
+        <div className="h-6 rounded-md border bg-background text-[10px] text-muted-foreground flex items-center px-2.5">
+          Enter your email address
+        </div>
+        <div
+          className="h-6 rounded-md text-[10px] text-white flex items-center justify-center font-medium"
+          style={{ backgroundColor: ACCENT }}
+        >
+          {content.ctaLabel}
+        </div>
+        <p className="text-center text-[9px] text-muted-foreground">
+          No spam. Unsubscribe anytime.
+        </p>
+      </div>
+    </>
+  );
+}
+
+function RightBold({ content }: { content: PreviewContent }) {
+  return (
+    <>
+      <h2 className="text-base font-extrabold tracking-tight mb-2 text-foreground leading-tight">
+        {content.title}
+      </h2>
+      <p className="text-[11px] text-muted-foreground mb-4 leading-relaxed">
+        {content.description}
+      </p>
+      <div className="border-t pt-3 space-y-1.5">
+        <div className="h-6 rounded-md border bg-background text-[10px] text-muted-foreground flex items-center px-2.5">
+          Enter your email address
+        </div>
+        <div
+          className="h-7 rounded-md text-[10px] text-white flex items-center justify-center font-semibold tracking-wide"
+          style={{ backgroundColor: ACCENT }}
+        >
+          {content.ctaLabel}
+        </div>
+        <p className="text-center text-[9px] text-muted-foreground">
+          No spam. Unsubscribe anytime.
+        </p>
+      </div>
+    </>
+  );
+}
+
+/* ─── Assembled preview panels ───────────────────────────────── */
+
+const LEFT_PANELS: Record<string, React.ReactNode> = {
+  blank: <LeftBlank />,
+  download: <LeftDownload />,
+  steps: <LeftSteps />,
+  bold: <LeftBold />,
+};
+
+function RightPanel({ variant, content }: { variant: string; content: PreviewContent }) {
+  const map: Record<string, React.ReactNode> = {
+    blank: <RightBlank content={content} />,
+    download: <RightDownload content={content} />,
+    steps: <RightSteps content={content} />,
+    bold: <RightBold content={content} />,
+  };
+  return <>{map[variant] ?? map.blank}</>;
+}
+
+function SimplePreview() {
   return (
     <div
       className="w-full h-full flex flex-col items-center justify-center px-6 py-8"
@@ -140,93 +345,91 @@ function SimplePreview({ content }: { content: PreviewContent }) {
         S
       </div>
       <p className="text-[11px] text-foreground/60 mb-5">Sarah Chen</p>
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={content.title}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.18 }}
-          className="w-full flex justify-center"
-        >
-          <PreviewCard content={content} />
-        </motion.div>
-      </AnimatePresence>
+      <div className="w-full max-w-[280px] bg-white rounded-2xl shadow-md overflow-hidden">
+        <div className="p-5">
+          <h2 className="text-sm font-bold tracking-tight mb-1 text-foreground leading-snug">
+            Your Resource Title
+          </h2>
+          <p className="text-[11px] text-muted-foreground mb-4 leading-relaxed">
+            A short description of what they'll get and why it helps.
+          </p>
+          <div className="space-y-2 mb-4">
+            {["Benefit one", "Benefit two", "Benefit three"].map((b, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <div
+                  className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: `${ACCENT}22` }}
+                >
+                  <Check className="h-2.5 w-2.5" style={{ color: ACCENT }} />
+                </div>
+                <span className="text-[11px] text-foreground/80">{b}</span>
+              </div>
+            ))}
+          </div>
+          <div className="border-t pt-3 space-y-2">
+            <div className="h-7 rounded-md border bg-background text-[10px] text-muted-foreground flex items-center px-2.5">
+              Enter your email address
+            </div>
+            <div
+              className="h-7 rounded-md text-[10px] text-white flex items-center justify-center font-medium"
+              style={{ backgroundColor: ACCENT }}
+            >
+              Get the resource
+            </div>
+            <p className="text-center text-[9px] text-muted-foreground">
+              No spam. Unsubscribe anytime.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-function SplitPreview({ content }: { content: PreviewContent }) {
+function SplitPreview({ variant, content }: { variant: string; content: PreviewContent }) {
   return (
     <div className="w-full h-full flex">
-      <div
-        className="w-[55%] h-full flex flex-col justify-between p-5 relative overflow-hidden shrink-0"
-        style={{ backgroundColor: ACCENT }}
-      >
-        <div
-          className="absolute inset-0 opacity-[0.06]"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 30% 20%, white 1px, transparent 1px), radial-gradient(circle at 70% 60%, white 1px, transparent 1px)",
-            backgroundSize: "60px 60px, 90px 90px",
-          }}
-        />
-        <div className="flex-1 flex items-center justify-center relative z-10">
-          <div className="w-16 h-16 rounded-xl border-2 border-white/20 flex items-center justify-center">
-            <Image className="h-6 w-6 text-white/25" />
+      {/* Left panel */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={variant + "-left"}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
+          className="w-[50%] h-full flex flex-col justify-between p-5 relative overflow-hidden shrink-0"
+          style={{ backgroundColor: ACCENT }}
+        >
+          <div
+            className="absolute inset-0 opacity-[0.05]"
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at 30% 20%, white 1px, transparent 1px), radial-gradient(circle at 70% 60%, white 1px, transparent 1px)",
+              backgroundSize: "60px 60px, 90px 90px",
+            }}
+          />
+          {LEFT_PANELS[variant] ?? LEFT_PANELS.blank}
+          <div className="relative z-10 flex items-center gap-2 shrink-0">
+            <div className="w-6 h-6 rounded-full bg-white/20 ring-2 ring-white/30 flex items-center justify-center text-white font-semibold text-[10px]">
+              S
+            </div>
+            <span className="text-white/70 text-[10px]">Sarah Chen</span>
           </div>
-        </div>
-        <div className="relative z-10 flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-white/20 ring-2 ring-white/30 flex items-center justify-center text-white font-semibold text-xs">
-            S
-          </div>
-          <span className="text-white/70 text-[11px]">Sarah Chen</span>
-        </div>
-      </div>
+        </motion.div>
+      </AnimatePresence>
 
+      {/* Right panel */}
       <div className="flex-1 bg-white flex items-center overflow-hidden">
-        <div className="px-5 py-6 w-full">
+        <div className="px-4 py-5 w-full">
           <AnimatePresence mode="wait">
             <motion.div
-              key={content.title}
+              key={variant + "-right"}
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
               transition={{ duration: 0.18 }}
             >
-              <h2 className="text-sm font-bold tracking-tight mb-1 text-foreground leading-snug">
-                {content.title}
-              </h2>
-              <p className="text-[11px] text-muted-foreground mb-4 leading-relaxed">
-                {content.description}
-              </p>
-              <div className="space-y-2 mb-4">
-                {content.bullets.map((b, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <div
-                      className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
-                      style={{ backgroundColor: `${ACCENT}22` }}
-                    >
-                      <Check className="h-2.5 w-2.5" style={{ color: ACCENT }} />
-                    </div>
-                    <span className="text-[11px] text-foreground/80">{b}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="border-t pt-3 space-y-2">
-                <div className="h-7 rounded-md border bg-background text-[10px] text-muted-foreground flex items-center px-2.5">
-                  Enter your email address
-                </div>
-                <div
-                  className="h-7 rounded-md text-[10px] text-white flex items-center justify-center font-medium"
-                  style={{ backgroundColor: ACCENT }}
-                >
-                  {content.ctaLabel}
-                </div>
-                <p className="text-center text-[9px] text-muted-foreground">
-                  No spam. Unsubscribe anytime.
-                </p>
-              </div>
+              <RightPanel variant={variant} content={content} />
             </motion.div>
           </AnimatePresence>
         </div>
@@ -234,6 +437,8 @@ function SplitPreview({ content }: { content: PreviewContent }) {
     </div>
   );
 }
+
+/* ─── Page ───────────────────────────────────────────────────── */
 
 export default function TemplatePicker() {
   const [, setLocation] = useLocation();
@@ -243,6 +448,8 @@ export default function TemplatePicker() {
   const handleStart = () => {
     setLocation(`/lead-magnets/create?layout=${selectedLayout}&content=${selectedContent}`);
   };
+
+  const activeContent = CONTENT_FILLS[selectedContent] ?? CONTENT_FILLS.blank;
 
   return (
     <AppLayout>
@@ -347,7 +554,7 @@ export default function TemplatePicker() {
                       Optional
                     </span>
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 gap-2.5">
                     {CONTENT_TEMPLATES.map((template) => {
                       const Icon = template.icon;
                       const isSelected = selectedContent === template.id;
@@ -355,14 +562,14 @@ export default function TemplatePicker() {
                         <button
                           key={template.id}
                           onClick={() => setSelectedContent(template.id)}
-                          className={`text-left rounded-lg border p-3 transition-all ${
+                          className={`text-left rounded-lg border p-3 transition-all flex items-start gap-3 ${
                             isSelected
                               ? "border-primary bg-primary/5 ring-1 ring-primary/20"
                               : "border-border hover:border-foreground/20 bg-card hover:bg-muted/30"
                           }`}
                         >
                           <div
-                            className={`w-7 h-7 rounded-md flex items-center justify-center mb-2 ${
+                            className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 mt-0.5 ${
                               isSelected ? "bg-primary/10" : "bg-muted"
                             }`}
                           >
@@ -372,16 +579,18 @@ export default function TemplatePicker() {
                               }`}
                             />
                           </div>
-                          <p
-                            className={`text-xs font-medium mb-0.5 ${
-                              isSelected ? "text-primary" : "text-foreground"
-                            }`}
-                          >
-                            {template.label}
-                          </p>
-                          <p className="text-[11px] text-muted-foreground leading-snug">
-                            {template.description}
-                          </p>
+                          <div>
+                            <p
+                              className={`text-xs font-semibold ${
+                                isSelected ? "text-primary" : "text-foreground"
+                              }`}
+                            >
+                              {template.label}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+                              {template.description}
+                            </p>
+                          </div>
                         </button>
                       );
                     })}
@@ -424,22 +633,31 @@ export default function TemplatePicker() {
                 className="rounded-2xl overflow-hidden shadow-xl border"
                 style={{ height: "480px" }}
               >
-                {selectedLayout === "simple"
-                  ? <SimplePreview content={CONTENT_FILLS[selectedContent] ?? CONTENT_FILLS.blank} />
-                  : <SplitPreview content={CONTENT_FILLS[selectedContent] ?? CONTENT_FILLS.blank} />}
+                {selectedLayout === "simple" ? (
+                  <SimplePreview />
+                ) : (
+                  <SplitPreview variant={selectedContent} content={activeContent} />
+                )}
               </motion.div>
             </AnimatePresence>
             <motion.p
-              key={selectedLayout + "-label"}
+              key={selectedLayout + selectedContent}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.2, delay: 0.1 }}
               className="text-center text-xs text-muted-foreground mt-4"
             >
-              {LAYOUTS.find((l) => l.id === selectedLayout)?.label} layout —{" "}
               {selectedLayout === "simple"
-                ? "gradient background, centered opt-in card"
-                : "full-bleed visual panel, form alongside"}
+                ? "Simple layout — gradient background, centered opt-in card"
+                : `${CONTENT_TEMPLATES.find((t) => t.id === selectedContent)?.label ?? "Visual Split"} — ${
+                    selectedContent === "blank"
+                      ? "image panel left, opt-in form right"
+                      : selectedContent === "download"
+                      ? "document mockup left, numbered benefits right"
+                      : selectedContent === "steps"
+                      ? "image panel left, numbered steps right"
+                      : "photo left with caption overlay, bold headline right"
+                  }`}
             </motion.p>
           </div>
         </div>
