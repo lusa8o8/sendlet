@@ -37,10 +37,97 @@ const CONTENT_TEMPLATES = [
   { id: "mini-audit", label: "Mini-Audit", icon: ClipboardCheck, description: "Self-assessment" },
 ];
 
-const SAMPLE_BULLETS = ["Benefit one", "Benefit two", "Benefit three"];
 const ACCENT = "#0F766E";
 
-function SimplePreview() {
+const CONTENT_FILLS: Record<string, { title: string; description: string; bullets: string[]; ctaLabel: string }> = {
+  blank: {
+    title: "Your Resource Title",
+    description: "A short description of what they'll get and why it helps.",
+    bullets: ["Benefit one", "Benefit two", "Benefit three"],
+    ctaLabel: "Get the resource",
+  },
+  checklist: {
+    title: "The [Topic] Checklist",
+    description: "A simple, step-by-step guide to help you [outcome] faster.",
+    bullets: ["Step-by-step process", "Ready-to-use format", "Saves hours of planning"],
+    ctaLabel: "Get the checklist",
+  },
+  "email-course": {
+    title: "[Topic] in 5 Days",
+    description: "A free email course that walks you through [topic] one step at a time.",
+    bullets: ["One focused lesson a day", "Actionable exercises", "Built for busy people"],
+    ctaLabel: "Start the course",
+  },
+  "pdf-guide": {
+    title: "The [Topic] Guide",
+    description: "Everything you need to know about [topic] in one clear document.",
+    bullets: ["Plain-English explanations", "Real-world examples", "Instant PDF download"],
+    ctaLabel: "Download the guide",
+  },
+  "swipe-file": {
+    title: "[Topic] Swipe File",
+    description: "[N] proven examples you can copy and adapt right away.",
+    bullets: ["Ready to use immediately", "Battle-tested examples", "Saves hours of research"],
+    ctaLabel: "Get the swipe file",
+  },
+  "mini-audit": {
+    title: "Free [Topic] Audit",
+    description: "Find out exactly what's holding your [area] back — in under 10 minutes.",
+    bullets: ["Quick self-assessment", "Clear scoring system", "Actionable next steps"],
+    ctaLabel: "Get the audit",
+  },
+};
+
+interface PreviewContent {
+  title: string;
+  description: string;
+  bullets: string[];
+  ctaLabel: string;
+}
+
+function PreviewCard({ content }: { content: PreviewContent }) {
+  return (
+    <div className="w-full max-w-[280px] bg-white rounded-2xl shadow-md overflow-hidden">
+      <div className="p-5">
+        <h2 className="text-sm font-bold tracking-tight mb-1 text-foreground leading-snug">
+          {content.title}
+        </h2>
+        <p className="text-[11px] text-muted-foreground mb-4 leading-relaxed">
+          {content.description}
+        </p>
+        <div className="space-y-2 mb-4">
+          {content.bullets.map((b, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <div
+                className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
+                style={{ backgroundColor: `${ACCENT}22` }}
+              >
+                <Check className="h-2.5 w-2.5" style={{ color: ACCENT }} />
+              </div>
+              <span className="text-[11px] text-foreground/80">{b}</span>
+            </div>
+          ))}
+        </div>
+        <div className="border-t pt-3 space-y-2">
+          <div className="h-7 rounded-md border bg-background text-[10px] text-muted-foreground flex items-center px-2.5">
+            Enter your email address
+          </div>
+          <div
+            className="h-7 rounded-md text-[10px] text-white flex items-center justify-center font-medium"
+            style={{ backgroundColor: ACCENT }}
+          >
+            {content.ctaLabel}
+          </div>
+          <p className="text-center text-[9px] text-muted-foreground">
+            No spam. Unsubscribe anytime.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SimplePreview({ content }: { content: PreviewContent }) {
   return (
     <div
       className="w-full h-full flex flex-col items-center justify-center px-6 py-8"
@@ -53,49 +140,23 @@ function SimplePreview() {
         S
       </div>
       <p className="text-[11px] text-foreground/60 mb-5">Sarah Chen</p>
-
-      <div className="w-full max-w-[280px] bg-white rounded-2xl shadow-md overflow-hidden">
-        <div className="p-5">
-          <h2 className="text-sm font-bold tracking-tight mb-1 text-foreground">
-            Your Resource Title
-          </h2>
-          <p className="text-[11px] text-muted-foreground mb-4 leading-relaxed">
-            A short description of what they'll get and why it helps.
-          </p>
-          <div className="space-y-2 mb-4">
-            {SAMPLE_BULLETS.map((b, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <div
-                  className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: `${ACCENT}22` }}
-                >
-                  <Check className="h-2.5 w-2.5" style={{ color: ACCENT }} />
-                </div>
-                <span className="text-[11px] text-foreground/80">{b}</span>
-              </div>
-            ))}
-          </div>
-          <div className="border-t pt-3 space-y-2">
-            <div className="h-7 rounded-md border bg-background text-[10px] text-muted-foreground flex items-center px-2.5">
-              Enter your email address
-            </div>
-            <div
-              className="h-7 rounded-md text-[10px] text-white flex items-center justify-center font-medium"
-              style={{ backgroundColor: ACCENT }}
-            >
-              Get the resource
-            </div>
-            <p className="text-center text-[9px] text-muted-foreground">
-              No spam. Unsubscribe anytime.
-            </p>
-          </div>
-        </div>
-      </div>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={content.title}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.18 }}
+          className="w-full flex justify-center"
+        >
+          <PreviewCard content={content} />
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }
 
-function SplitPreview() {
+function SplitPreview({ content }: { content: PreviewContent }) {
   return (
     <div className="w-full h-full flex">
       <div
@@ -123,41 +184,51 @@ function SplitPreview() {
         </div>
       </div>
 
-      <div className="flex-1 bg-white flex items-center">
+      <div className="flex-1 bg-white flex items-center overflow-hidden">
         <div className="px-5 py-6 w-full">
-          <h2 className="text-sm font-bold tracking-tight mb-1 text-foreground">
-            Your Resource Title
-          </h2>
-          <p className="text-[11px] text-muted-foreground mb-4 leading-relaxed">
-            A short description of what they'll get and why it helps.
-          </p>
-          <div className="space-y-2 mb-4">
-            {SAMPLE_BULLETS.map((b, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <div
-                  className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: `${ACCENT}22` }}
-                >
-                  <Check className="h-2.5 w-2.5" style={{ color: ACCENT }} />
-                </div>
-                <span className="text-[11px] text-foreground/80">{b}</span>
-              </div>
-            ))}
-          </div>
-          <div className="border-t pt-3 space-y-2">
-            <div className="h-7 rounded-md border bg-background text-[10px] text-muted-foreground flex items-center px-2.5">
-              Enter your email address
-            </div>
-            <div
-              className="h-7 rounded-md text-[10px] text-white flex items-center justify-center font-medium"
-              style={{ backgroundColor: ACCENT }}
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={content.title}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.18 }}
             >
-              Get the resource
-            </div>
-            <p className="text-center text-[9px] text-muted-foreground">
-              No spam. Unsubscribe anytime.
-            </p>
-          </div>
+              <h2 className="text-sm font-bold tracking-tight mb-1 text-foreground leading-snug">
+                {content.title}
+              </h2>
+              <p className="text-[11px] text-muted-foreground mb-4 leading-relaxed">
+                {content.description}
+              </p>
+              <div className="space-y-2 mb-4">
+                {content.bullets.map((b, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <div
+                      className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
+                      style={{ backgroundColor: `${ACCENT}22` }}
+                    >
+                      <Check className="h-2.5 w-2.5" style={{ color: ACCENT }} />
+                    </div>
+                    <span className="text-[11px] text-foreground/80">{b}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="border-t pt-3 space-y-2">
+                <div className="h-7 rounded-md border bg-background text-[10px] text-muted-foreground flex items-center px-2.5">
+                  Enter your email address
+                </div>
+                <div
+                  className="h-7 rounded-md text-[10px] text-white flex items-center justify-center font-medium"
+                  style={{ backgroundColor: ACCENT }}
+                >
+                  {content.ctaLabel}
+                </div>
+                <p className="text-center text-[9px] text-muted-foreground">
+                  No spam. Unsubscribe anytime.
+                </p>
+              </div>
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
     </div>
@@ -342,7 +413,9 @@ export default function TemplatePicker() {
                 className="rounded-2xl overflow-hidden shadow-xl border"
                 style={{ height: "480px" }}
               >
-                {selectedLayout === "simple" ? <SimplePreview /> : <SplitPreview />}
+                {selectedLayout === "simple"
+                  ? <SimplePreview content={CONTENT_FILLS[selectedContent] ?? CONTENT_FILLS.blank} />
+                  : <SplitPreview content={CONTENT_FILLS[selectedContent] ?? CONTENT_FILLS.blank} />}
               </motion.div>
             </AnimatePresence>
             <motion.p
