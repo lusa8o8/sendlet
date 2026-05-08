@@ -5,13 +5,17 @@ import { AppLayout } from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   ArrowLeft,
   ArrowRight,
   Check,
   ChevronDown,
   Image,
+  Link,
+  Palette,
   Plus,
+  Settings,
   Type,
   Upload,
   X,
@@ -983,9 +987,35 @@ function PickerPanel({
   );
 }
 
-/* ─── Editor rail (left, mode === 'edit') ───────────────────── */
+/* ─── Floating editor bar (mode === 'edit') ─────────────────── */
 
-function EditorRail({
+function BarBtn({
+  label,
+  icon: Icon,
+  active,
+  onClick,
+}: {
+  label: string;
+  icon: React.ElementType;
+  active?: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+        active
+          ? "bg-primary/10 text-primary"
+          : "text-foreground/60 hover:text-foreground hover:bg-muted"
+      }`}
+    >
+      <Icon className="h-3.5 w-3.5 shrink-0" />
+      {label}
+    </button>
+  );
+}
+
+function FloatingBar({
   layout,
   form,
   setForm,
@@ -998,261 +1028,231 @@ function EditorRail({
   onBack: () => void;
   onSave: () => void;
 }) {
-  const [open, setOpen] = useState({ content: true, design: false, settings: false });
-  const toggle = (k: keyof typeof open) => setOpen((o) => ({ ...o, [k]: !o[k] }));
-
+  const [panel, setPanel] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const toggle = (p: string) => setPanel((cur) => (cur === p ? null : p));
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
-      const result = ev.target?.result;
-      if (typeof result === "string") setForm({ ...form, imageDataUrl: result });
+      if (typeof ev.target?.result === "string")
+        setForm({ ...form, imageDataUrl: ev.target.result });
     };
     reader.readAsDataURL(file);
     e.target.value = "";
   };
 
   const setBullet = (i: number, val: string) => {
-    const next = [...form.bullets];
-    next[i] = val;
+    const next = [...form.bullets]; next[i] = val;
     setForm({ ...form, bullets: next });
   };
-
   const addBullet = () => setForm({ ...form, bullets: [...form.bullets, ""] });
-
   const removeBullet = (i: number) =>
     setForm({ ...form, bullets: form.bullets.filter((_, idx) => idx !== i) });
 
+  const sep = <div className="w-px h-5 bg-border/70 mx-0.5 shrink-0" />;
+
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="px-6 py-4 border-b flex items-center gap-3 shrink-0">
+    <div className="absolute bottom-7 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.22, ease: "easeOut" }}
+        className="pointer-events-auto flex items-center gap-0.5 bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-black/8 px-2.5 py-2"
+      >
+        {/* ── Back + title ── */}
         <button
           onClick={onBack}
-          className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"
+          className="w-7 h-7 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors mr-0.5"
         >
-          <ArrowLeft className="h-4 w-4 text-muted-foreground" />
+          <ArrowLeft className="h-4 w-4" />
         </button>
-        <div>
-          <p className="text-xs text-muted-foreground">New lead magnet</p>
-          <p className="text-sm font-semibold leading-tight">{form.title || "Untitled"}</p>
-        </div>
-      </div>
+        <span className="text-sm font-semibold max-w-[110px] truncate text-foreground mr-1.5">
+          {form.title || "Untitled"}
+        </span>
 
-      {/* Accordion sections */}
-      <div className="flex-1 overflow-y-auto px-6">
-        {/* Content */}
-        <Accordion title="Content" open={open.content} onToggle={() => toggle("content")}>
-          {/* Image upload — always visible */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">
+        {sep}
+
+        {/* ── Image ── */}
+        <Popover open={panel === "image"} onOpenChange={(o) => setPanel(o ? "image" : null)}>
+          <PopoverTrigger asChild>
+            <span>
+              <BarBtn label="Image" icon={Image} active={panel === "image"} onClick={() => toggle("image")} />
+            </span>
+          </PopoverTrigger>
+          <PopoverContent side="top" align="center" sideOffset={10} className="w-64 p-4 space-y-3">
+            <p className="text-xs font-semibold text-foreground">
               {layout === "stacked" ? "Banner image" : layout === "split" ? "Panel image" : "Cover image"}
-            </label>
-              {form.imageDataUrl ? (
-                <div className="relative rounded-lg overflow-hidden border" style={{ aspectRatio: "4/3" }}>
-                  <img
-                    src={form.imageDataUrl}
-                    alt="Panel"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                  <button
-                    onClick={() => setForm({ ...form, imageDataUrl: null })}
-                    className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center transition-colors"
-                  >
-                    <X className="h-3 w-3 text-white" />
-                  </button>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="absolute bottom-2 right-2 text-[10px] bg-black/50 hover:bg-black/70 text-white rounded-md px-2 py-1 transition-colors"
-                  >
-                    Replace
-                  </button>
-                </div>
-              ) : (
+            </p>
+            {form.imageDataUrl ? (
+              <div className="relative rounded-lg overflow-hidden border" style={{ aspectRatio: "4/3" }}>
+                <img src={form.imageDataUrl} alt="Panel" className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                <button
+                  onClick={() => setForm({ ...form, imageDataUrl: null })}
+                  className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center transition-colors"
+                >
+                  <X className="h-3 w-3 text-white" />
+                </button>
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full border-2 border-dashed border-border rounded-lg p-5 flex flex-col items-center gap-2 hover:border-primary/40 hover:bg-primary/5 transition-all group"
+                  className="absolute bottom-2 right-2 text-[10px] bg-black/50 hover:bg-black/70 text-white rounded-md px-2 py-1 transition-colors"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-muted group-hover:bg-primary/10 flex items-center justify-center transition-colors">
-                    <Upload className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-xs font-medium text-foreground">Click to upload</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">JPG, PNG, WebP — up to 10 MB</p>
-                  </div>
+                  Replace
                 </button>
-              )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                className="hidden"
-                onChange={handleImageUpload}
-              />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">Headline</label>
-            <Input
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              placeholder="Your Resource Title"
-              className="h-8 text-sm"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">Description</label>
-            <Textarea
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              placeholder="A short description of what they'll get and why it helps."
-              className="text-sm resize-none h-20"
-            />
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-muted-foreground">Benefits</label>
+              </div>
+            ) : (
               <button
-                onClick={() => setForm({ ...form, bulletsEnabled: !form.bulletsEnabled })}
-                className={`relative w-8 h-4 rounded-full transition-colors shrink-0 ${
-                  form.bulletsEnabled ? "bg-primary" : "bg-muted-foreground/30"
-                }`}
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full border-2 border-dashed border-border rounded-lg p-4 flex flex-col items-center gap-2 hover:border-primary/40 hover:bg-primary/5 transition-all group"
               >
-                <span
-                  className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${
-                    form.bulletsEnabled ? "translate-x-4" : "translate-x-0.5"
-                  }`}
-                />
+                <div className="w-8 h-8 rounded-lg bg-muted group-hover:bg-primary/10 flex items-center justify-center transition-colors">
+                  <Upload className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+                <div className="text-center">
+                  <p className="text-xs font-medium">Click to upload</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">JPG, PNG, WebP</p>
+                </div>
               </button>
+            )}
+          </PopoverContent>
+        </Popover>
+
+        {/* ── Content ── */}
+        <Popover open={panel === "content"} onOpenChange={(o) => setPanel(o ? "content" : null)}>
+          <PopoverTrigger asChild>
+            <span>
+              <BarBtn label="Content" icon={Type} active={panel === "content"} onClick={() => toggle("content")} />
+            </span>
+          </PopoverTrigger>
+          <PopoverContent side="top" align="center" sideOffset={10} className="w-72 p-4 space-y-3 max-h-[420px] overflow-y-auto">
+            <p className="text-xs font-semibold text-foreground">Content</p>
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium text-muted-foreground">Headline</label>
+              <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Your Resource Title" className="h-8 text-sm" />
             </div>
-            <AnimatePresence>
-              {form.bulletsEnabled && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.15 }}
-                  className="space-y-1.5 overflow-hidden"
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium text-muted-foreground">Description</label>
+              <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="A short description..." className="text-sm resize-none h-16" />
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-medium text-muted-foreground">Benefits</label>
+                <button
+                  onClick={() => setForm({ ...form, bulletsEnabled: !form.bulletsEnabled })}
+                  className={`relative w-8 h-4 rounded-full transition-colors shrink-0 ${form.bulletsEnabled ? "bg-primary" : "bg-muted-foreground/30"}`}
                 >
+                  <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${form.bulletsEnabled ? "translate-x-4" : "translate-x-0.5"}`} />
+                </button>
+              </div>
+              {form.bulletsEnabled && (
+                <div className="space-y-1.5">
                   {form.bullets.map((b, i) => (
                     <div key={i} className="flex items-center gap-1.5">
-                      <Input
-                        value={b}
-                        onChange={(e) => setBullet(i, e.target.value)}
-                        placeholder={`Benefit ${i + 1}`}
-                        className="h-7 text-xs flex-1"
-                      />
+                      <Input value={b} onChange={(e) => setBullet(i, e.target.value)} placeholder={`Benefit ${i + 1}`} className="h-7 text-xs flex-1" />
                       {form.bullets.length > 1 && (
-                        <button
-                          onClick={() => removeBullet(i)}
-                          className="shrink-0 w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                        >
+                        <button onClick={() => removeBullet(i)} className="shrink-0 w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
                           <X className="h-3 w-3" />
                         </button>
                       )}
                     </div>
                   ))}
                   {form.bullets.length < 5 && (
-                    <button
-                      onClick={addBullet}
-                      className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary transition-colors mt-1"
-                    >
+                    <button onClick={addBullet} className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary transition-colors">
                       <Plus className="h-3 w-3" /> Add benefit
                     </button>
                   )}
-                </motion.div>
+                </div>
               )}
-            </AnimatePresence>
-          </div>
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">Button label</label>
-            <Input
-              value={form.ctaLabel}
-              onChange={(e) => setForm({ ...form, ctaLabel: e.target.value })}
-              placeholder="Get the resource"
-              className="h-8 text-sm"
-            />
-          </div>
-        </Accordion>
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium text-muted-foreground">Button label</label>
+              <Input value={form.ctaLabel} onChange={(e) => setForm({ ...form, ctaLabel: e.target.value })} placeholder="Get the resource" className="h-8 text-sm" />
+            </div>
+          </PopoverContent>
+        </Popover>
 
-        {/* Design */}
-        <Accordion title="Design" open={open.design} onToggle={() => toggle("design")}>
-          {layout === "simple" && (
+        {/* ── Design ── */}
+        <Popover open={panel === "design"} onOpenChange={(o) => setPanel(o ? "design" : null)}>
+          <PopoverTrigger asChild>
+            <span>
+              <BarBtn label="Design" icon={Palette} active={panel === "design"} onClick={() => toggle("design")} />
+            </span>
+          </PopoverTrigger>
+          <PopoverContent side="top" align="center" sideOffset={10} className="w-64 p-4 space-y-4">
+            <p className="text-xs font-semibold text-foreground">Design</p>
+            {layout === "simple" && (
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-medium text-muted-foreground">Background</label>
+                <div className="grid grid-cols-5 gap-1.5">
+                  {GRADIENT_PRESETS.map((g) => (
+                    <button
+                      key={g.id}
+                      onClick={() => setForm({ ...form, gradientPreset: g.id })}
+                      title={g.label}
+                      className={`h-8 rounded-lg transition-all ${form.gradientPreset === g.id ? "ring-2 ring-primary ring-offset-1 scale-105" : "hover:scale-105 opacity-80 hover:opacity-100"}`}
+                      style={{ background: g.value }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Background</label>
-              <div className="grid grid-cols-5 gap-1.5">
-                {GRADIENT_PRESETS.map((g) => (
+              <label className="text-[11px] font-medium text-muted-foreground">Accent colour</label>
+              <div className="flex gap-2 flex-wrap">
+                {ACCENT_COLORS.map((c) => (
                   <button
-                    key={g.id}
-                    onClick={() => setForm({ ...form, gradientPreset: g.id })}
-                    title={g.label}
-                    className={`h-8 rounded-lg transition-all ${
-                      form.gradientPreset === g.id
-                        ? "ring-2 ring-primary ring-offset-1 scale-105"
-                        : "hover:scale-105 opacity-80 hover:opacity-100"
-                    }`}
-                    style={{ background: g.value }}
+                    key={c.value}
+                    onClick={() => setForm({ ...form, accentColor: c.value })}
+                    title={c.label}
+                    className={`w-7 h-7 rounded-full transition-all ${form.accentColor === c.value ? "ring-2 ring-offset-1 ring-foreground scale-110" : "hover:scale-105"}`}
+                    style={{ backgroundColor: c.value }}
                   />
                 ))}
               </div>
             </div>
-          )}
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Accent colour</label>
-            <div className="flex gap-2 flex-wrap">
-              {ACCENT_COLORS.map((c) => (
-                <button
-                  key={c.value}
-                  onClick={() => setForm({ ...form, accentColor: c.value })}
-                  title={c.label}
-                  className={`w-7 h-7 rounded-full transition-all ${
-                    form.accentColor === c.value
-                      ? "ring-2 ring-offset-1 ring-foreground scale-110"
-                      : "hover:scale-105"
-                  }`}
-                  style={{ backgroundColor: c.value }}
+          </PopoverContent>
+        </Popover>
+
+        {/* ── Settings ── */}
+        <Popover open={panel === "settings"} onOpenChange={(o) => setPanel(o ? "settings" : null)}>
+          <PopoverTrigger asChild>
+            <span>
+              <BarBtn label="Settings" icon={Settings} active={panel === "settings"} onClick={() => toggle("settings")} />
+            </span>
+          </PopoverTrigger>
+          <PopoverContent side="top" align="center" sideOffset={10} className="w-64 p-4 space-y-3">
+            <p className="text-xs font-semibold text-foreground">Settings</p>
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium text-muted-foreground">Page URL</label>
+              <div className="flex items-center">
+                <span className="text-xs text-muted-foreground bg-muted border border-r-0 rounded-l-md px-2 h-8 flex items-center shrink-0">/p/</span>
+                <Input
+                  value={form.slug}
+                  onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-") })}
+                  placeholder="your-resource"
+                  className="h-8 text-sm rounded-l-none"
                 />
-              ))}
+              </div>
             </div>
-          </div>
-        </Accordion>
+          </PopoverContent>
+        </Popover>
 
-        {/* Settings */}
-        <Accordion title="Settings" open={open.settings} onToggle={() => toggle("settings")}>
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">Page URL</label>
-            <div className="flex items-center gap-0">
-              <span className="text-xs text-muted-foreground bg-muted border border-r-0 rounded-l-md px-2 h-8 flex items-center shrink-0">
-                /p/
-              </span>
-              <Input
-                value={form.slug}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
-                  })
-                }
-                placeholder="your-resource"
-                className="h-8 text-sm rounded-l-none"
-              />
-            </div>
-          </div>
-        </Accordion>
-      </div>
+        {sep}
 
-      {/* Footer */}
-      <div className="px-6 py-4 border-t shrink-0 flex gap-2">
-        <Button variant="outline" size="sm" className="flex-1">
+        {/* ── Actions ── */}
+        <Button variant="outline" size="sm" className="h-7 px-3 text-xs rounded-lg">
           Save draft
         </Button>
-        <Button size="sm" className="flex-1" onClick={onSave}>
+        <Button size="sm" className="h-7 px-3 text-xs rounded-lg" onClick={onSave}>
           Publish
         </Button>
-      </div>
+      </motion.div>
+
+      <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleImageUpload} />
     </div>
   );
 }
@@ -1303,112 +1303,123 @@ export default function TemplatePicker() {
       ? "Stacked layout — image banner on top, form below"
       : `Visual Split — ${form.leftType === "image" ? "photo" : "bold text"} left · form right`;
 
+  const previewBlock = (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={layout}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.18 }}
+        className="w-full h-full"
+      >
+        {layout === "simple" ? (
+          <SimplePreview
+            form={form}
+            interactive={mode === "edit"}
+            onUpdateTextEl={(key, u) =>
+              setForm((f) => ({
+                ...f,
+                textElements: { ...f.textElements, [key]: { ...f.textElements[key], ...u } },
+              }))
+            }
+            onUpdate={(partial) => setForm((f) => ({ ...f, ...partial }))}
+          />
+        ) : layout === "stacked" ? (
+          <StackedPreview
+            form={form}
+            interactive={mode === "edit"}
+            onUpdateTextEl={(key, u) =>
+              setForm((f) => ({
+                ...f,
+                textElements: { ...f.textElements, [key]: { ...f.textElements[key], ...u } },
+              }))
+            }
+            onUpdate={(partial) => setForm((f) => ({ ...f, ...partial }))}
+          />
+        ) : (
+          <SplitPreview
+            form={form}
+            interactive={mode === "edit"}
+            onUpdateTextEl={(key, u) =>
+              setForm((f) => ({
+                ...f,
+                textElements: { ...f.textElements, [key]: { ...f.textElements[key], ...u } },
+              }))
+            }
+            onUpdate={(partial) => setForm((f) => ({ ...f, ...partial }))}
+          />
+        )}
+      </motion.div>
+    </AnimatePresence>
+  );
+
   return (
     <AppLayout>
       <div className="flex h-[calc(100vh-57px)] overflow-hidden">
-        {/* Left rail */}
-        <div className="w-full lg:w-[420px] xl:w-[460px] shrink-0 border-r overflow-hidden">
-          <AnimatePresence mode="wait">
-            {mode === "pick" ? (
+
+        {/* ── Pick mode: left panel + right preview ── */}
+        <AnimatePresence>
+          {mode === "pick" && (
+            <motion.div
+              key="picker-panel"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.2 }}
+              className="w-full lg:w-[420px] xl:w-[460px] shrink-0 border-r overflow-hidden"
+            >
+              <PickerPanel
+                layout={layout}
+                setLayout={setLayout}
+                form={form}
+                setForm={setForm}
+                onStart={handleStart}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Preview area (both modes) ── */}
+        <div className="relative flex-1 flex items-center justify-center bg-muted/30 overflow-hidden">
+
+          {/* Pick mode: static preview pane */}
+          {mode === "pick" && (
+            <div className="hidden lg:block w-full max-w-2xl px-10">
+              <div className="rounded-2xl overflow-hidden shadow-xl border" style={{ height: "480px" }}>
+                {previewBlock}
+              </div>
+              <p className="text-center text-xs text-muted-foreground mt-4">{previewCaption}</p>
+            </div>
+          )}
+
+          {/* Edit mode: full-canvas preview + floating bar */}
+          {mode === "edit" && (
+            <>
               <motion.div
-                key="pick"
-                initial={{ opacity: 0, x: -16 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -16 }}
-                transition={{ duration: 0.18 }}
-                className="h-full"
+                key="edit-canvas"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.22 }}
+                className="w-full max-w-3xl px-10 pb-20"
               >
-                <PickerPanel
-                  layout={layout}
-                  setLayout={setLayout}
-                  form={form}
-                  setForm={setForm}
-                  onStart={handleStart}
-                />
+                <div className="rounded-2xl overflow-hidden shadow-xl border" style={{ height: "520px" }}>
+                  {previewBlock}
+                </div>
+                <p className="text-center text-xs text-muted-foreground mt-4">{previewCaption}</p>
               </motion.div>
-            ) : (
-              <motion.div
-                key="edit"
-                initial={{ opacity: 0, x: 16 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 16 }}
-                transition={{ duration: 0.18 }}
-                className="h-full"
-              >
-                <EditorRail
-                  layout={layout}
-                  form={form}
-                  setForm={setForm}
-                  onBack={handleBack}
-                  onSave={handleSave}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
+
+              <FloatingBar
+                layout={layout}
+                form={form}
+                setForm={setForm}
+                onBack={handleBack}
+                onSave={handleSave}
+              />
+            </>
+          )}
         </div>
 
-        {/* Right: live preview — always mounted, never unmounts */}
-        <div className="hidden lg:flex flex-1 flex-col items-center justify-center bg-muted/30 p-10">
-          <div className="w-full max-w-2xl">
-            <div
-              className="rounded-2xl overflow-hidden shadow-xl border"
-              style={{ height: "480px" }}
-            >
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={layout}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.18 }}
-                  className="w-full h-full"
-                >
-                  {layout === "simple" ? (
-                    <SimplePreview
-                      form={form}
-                      interactive={mode === "edit"}
-                      onUpdateTextEl={(key, u) =>
-                        setForm((f) => ({
-                          ...f,
-                          textElements: { ...f.textElements, [key]: { ...f.textElements[key], ...u } },
-                        }))
-                      }
-                      onUpdate={(partial) => setForm((f) => ({ ...f, ...partial }))}
-                    />
-                  ) : layout === "stacked" ? (
-                    <StackedPreview
-                      form={form}
-                      interactive={mode === "edit"}
-                      onUpdateTextEl={(key, u) =>
-                        setForm((f) => ({
-                          ...f,
-                          textElements: { ...f.textElements, [key]: { ...f.textElements[key], ...u } },
-                        }))
-                      }
-                      onUpdate={(partial) => setForm((f) => ({ ...f, ...partial }))}
-                    />
-                  ) : (
-                    <SplitPreview
-                      form={form}
-                      interactive={mode === "edit"}
-                      onUpdateTextEl={(key, u) =>
-                        setForm((f) => ({
-                          ...f,
-                          textElements: {
-                            ...f.textElements,
-                            [key]: { ...f.textElements[key], ...u },
-                          },
-                        }))
-                      }
-                      onUpdate={(partial) => setForm((f) => ({ ...f, ...partial }))}
-                    />
-                  )}
-                </motion.div>
-              </AnimatePresence>
-            </div>
-            <p className="text-center text-xs text-muted-foreground mt-4">{previewCaption}</p>
-          </div>
-        </div>
       </div>
     </AppLayout>
   );
