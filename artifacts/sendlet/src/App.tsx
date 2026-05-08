@@ -34,6 +34,7 @@ function Router() {
       <Route path="/sign-in" component={SignIn} />
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/lead-magnets/new" component={TemplatePicker} />
+      <Route path="/lead-magnets/:id/edit" component={TemplatePicker} />
       <Route path="/lead-magnets/:id" component={LeadMagnetDetail} />
       <Route path="/leads" component={Leads} />
       <Route path="/p/:slug" component={PublicPage} />

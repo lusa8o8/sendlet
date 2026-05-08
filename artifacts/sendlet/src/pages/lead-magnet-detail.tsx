@@ -152,9 +152,11 @@ export default function LeadMagnetDetail() {
                 Preview
               </Link>
             </Button>
-            <Button size="sm">
-              <Settings className="mr-1.5 h-4 w-4" />
-              Edit
+            <Button size="sm" asChild>
+              <Link href={`/lead-magnets/${magnet.id}/edit`}>
+                <Settings className="mr-1.5 h-4 w-4" />
+                Edit
+              </Link>
             </Button>
           </div>
         </div>

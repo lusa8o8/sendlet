@@ -240,7 +240,7 @@ export default function Dashboard() {
                           className="h-8 w-8 text-muted-foreground hover:text-foreground"
                           title="Edit"
                         >
-                          <Link href={`/lead-magnets/${magnet.id}`}>
+                          <Link href={`/lead-magnets/${magnet.id}/edit`}>
                             <Edit2 className="h-3.5 w-3.5" />
                           </Link>
                         </Button>

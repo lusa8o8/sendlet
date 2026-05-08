@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useParams } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { leadMagnets, saveMagnet } from "@/data/mock";
+import { leadMagnets, saveMagnet, updateMagnet, type LeadMagnet } from "@/data/mock";
 
 /* ─── Image compression util ───────────────────────────────── */
 
@@ -1394,12 +1394,14 @@ function FloatingBar({
   setForm,
   onBack,
   onSave,
+  isEditing,
 }: {
   layout: string;
   form: Form;
   setForm: (f: Form) => void;
   onBack: () => void;
   onSave: () => void;
+  isEditing?: boolean;
 }) {
   const [panel, setPanel] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1619,7 +1621,7 @@ function FloatingBar({
           Save draft
         </Button>
         <Button size="sm" className="h-7 px-3 text-xs rounded-lg" onClick={onSave}>
-          Publish
+          {isEditing ? "Update" : "Publish"}
         </Button>
       </motion.div>
 
@@ -1628,13 +1630,37 @@ function FloatingBar({
   );
 }
 
+/* ─── Helpers ───────────────────────────────────────────────── */
+
+function magnetToForm(m: LeadMagnet): Form {
+  return {
+    title:          m.title,
+    description:    m.description,
+    bullets:        m.bullets        ?? defaultForm.bullets,
+    bulletsEnabled: m.bulletsEnabled ?? true,
+    ctaLabel:       m.ctaLabel       ?? "Get the resource",
+    accentColor:    m.accentColor,
+    gradientPreset: m.backgroundPreset,
+    leftType:       (m.leftType as "image" | "text") ?? "image",
+    imageDataUrl:   m.imageDataUrl   ?? null,
+    slug:           m.slug,
+    leftPanelWidth: m.leftPanelWidth ?? 48,
+    imagePosition:  m.imagePosition  ?? { x: 50, y: 50 },
+    bannerHeight:   m.bannerHeight   ?? 44,
+    textElements:   (m.textElements as Record<TextElKey, TextEl>) ?? defaultForm.textElements,
+  };
+}
+
 /* ─── Page ──────────────────────────────────────────────────── */
 
 export default function TemplatePicker() {
   const [, setLocation] = useLocation();
-  const [mode, setMode] = useState<"pick" | "edit">("pick");
-  const [layout, setLayout] = useState("simple");
-  const [form, setForm] = useState<Form>(defaultForm);
+  const { id } = useParams<{ id?: string }>();
+  const editingMagnet = id ? leadMagnets.find((m) => m.id === id) : undefined;
+
+  const [mode, setMode] = useState<"pick" | "edit">(() => editingMagnet ? "edit" : "pick");
+  const [layout, setLayout] = useState(() => editingMagnet?.layout ?? "simple");
+  const [form, setForm] = useState<Form>(() => editingMagnet ? magnetToForm(editingMagnet) : defaultForm);
 
   const handleStart = () => {
     if (layout === "fullimage") {
@@ -1652,39 +1678,57 @@ export default function TemplatePicker() {
   };
 
   const handleBack = () => {
-    setMode("pick");
+    if (editingMagnet) {
+      setLocation(`/lead-magnets/${editingMagnet.id}`);
+    } else {
+      setMode("pick");
+    }
   };
 
   const handleSave = () => {
     const slug = form.slug || `resource-${Date.now()}`;
-    const newMagnet = {
-      id: String(leadMagnets.length + 1),
-      title: form.title || "Untitled",
-      slug,
-      description: form.description,
-      status: "published" as const,
-      visits: 0,
-      weeklyVisits: 0,
-      leads: 0,
-      weeklyLeads: 0,
-      conversionRate: 0,
-      lastLead: null,
-      accentColor: form.accentColor,
-      backgroundPreset: form.gradientPreset,
-      layout,
-      createdAt: new Date().toISOString().split("T")[0],
-      // Full form state for public page rendering
-      bullets: form.bullets,
+    const formState = {
+      bullets:        form.bullets,
       bulletsEnabled: form.bulletsEnabled,
-      ctaLabel: form.ctaLabel,
-      imageDataUrl: form.imageDataUrl,
-      leftType: form.leftType,
+      ctaLabel:       form.ctaLabel,
+      imageDataUrl:   form.imageDataUrl,
+      leftType:       form.leftType,
       leftPanelWidth: form.leftPanelWidth,
-      imagePosition: form.imagePosition,
-      bannerHeight: form.bannerHeight,
-      textElements: form.textElements,
+      imagePosition:  form.imagePosition,
+      bannerHeight:   form.bannerHeight,
+      textElements:   form.textElements,
     };
-    saveMagnet(newMagnet);
+
+    if (editingMagnet) {
+      updateMagnet(editingMagnet.id, {
+        title:            form.title || "Untitled",
+        slug,
+        description:      form.description,
+        accentColor:      form.accentColor,
+        backgroundPreset: form.gradientPreset,
+        layout,
+        ...formState,
+      });
+    } else {
+      saveMagnet({
+        id:               String(Date.now()),
+        title:            form.title || "Untitled",
+        slug,
+        description:      form.description,
+        status:           "published",
+        visits:           0,
+        weeklyVisits:     0,
+        leads:            0,
+        weeklyLeads:      0,
+        conversionRate:   0,
+        lastLead:         null,
+        accentColor:      form.accentColor,
+        backgroundPreset: form.gradientPreset,
+        layout,
+        createdAt:        new Date().toISOString().split("T")[0],
+        ...formState,
+      });
+    }
     setLocation("/dashboard");
   };
 
@@ -1821,6 +1865,7 @@ export default function TemplatePicker() {
                 setForm={setForm}
                 onBack={handleBack}
                 onSave={handleSave}
+                isEditing={!!editingMagnet}
               />
             </>
           )}
