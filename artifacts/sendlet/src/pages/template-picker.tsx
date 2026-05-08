@@ -153,6 +153,38 @@ type CustomPreset = {
   elements: Record<TextElKey, TextEl>;
 };
 
+/* ─── Touch-safe pointer helper ─────────────────────────────── */
+
+function pointerXY(e: MouseEvent | TouchEvent): { x: number; y: number } {
+  if ("touches" in e) {
+    const t = e.touches[0] ?? (e as TouchEvent).changedTouches[0];
+    return { x: t.clientX, y: t.clientY };
+  }
+  return { x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY };
+}
+
+function addDragListeners(
+  onMove: (e: MouseEvent | TouchEvent) => void,
+  onUp: () => void,
+) {
+  document.addEventListener("mousemove", onMove as EventListener);
+  document.addEventListener("mouseup",   onUp);
+  document.addEventListener("touchmove", onMove as EventListener, { passive: false });
+  document.addEventListener("touchend",  onUp);
+  document.addEventListener("touchcancel", onUp);
+}
+
+function removeDragListeners(
+  onMove: (e: MouseEvent | TouchEvent) => void,
+  onUp: () => void,
+) {
+  document.removeEventListener("mousemove", onMove as EventListener);
+  document.removeEventListener("mouseup",   onUp);
+  document.removeEventListener("touchmove", onMove as EventListener);
+  document.removeEventListener("touchend",  onUp);
+  document.removeEventListener("touchcancel", onUp);
+}
+
 /* ─── Form state ────────────────────────────────────────────── */
 
 interface TextEl {
@@ -404,17 +436,17 @@ function DraggableTextBlock({
   const dragRef    = useRef<{ mx: number; my: number; x0: number; y0: number } | null>(null);
   const resizeRef  = useRef<{ mx: number; w0: number } | null>(null);
 
-  const startDrag = (e: React.MouseEvent) => {
-    if (editing) return;
-    e.preventDefault(); e.stopPropagation();
+  const startDrag = (cx: number, cy: number) => {
     setSelected(true);
     onDragStart?.();
-    dragRef.current = { mx: e.clientX, my: e.clientY, x0: el.x, y0: el.y };
-    const onMove = (me: MouseEvent) => {
+    dragRef.current = { mx: cx, my: cy, x0: el.x, y0: el.y };
+    const onMove = (me: MouseEvent | TouchEvent) => {
       if (!dragRef.current || !ref.current) return;
+      if ("cancelable" in me && me.cancelable) me.preventDefault();
+      const { x, y } = pointerXY(me);
       const r = ref.current.parentElement!.getBoundingClientRect();
-      const dx = ((me.clientX - dragRef.current.mx) / r.width)  * 100;
-      const dy = ((me.clientY - dragRef.current.my) / r.height) * 100;
+      const dx = ((x - dragRef.current.mx) / r.width)  * 100;
+      const dy = ((y - dragRef.current.my) / r.height) * 100;
       onUpdate({
         x: Math.max(0, Math.min(85, dragRef.current.x0 + dx)),
         y: Math.max(0, Math.min(80, dragRef.current.y0 + dy)),
@@ -423,25 +455,24 @@ function DraggableTextBlock({
     const onUp = () => {
       dragRef.current = null;
       onDragEnd?.();
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
+      removeDragListeners(onMove, onUp);
     };
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
+    addDragListeners(onMove, onUp);
   };
 
-  const startResize = (e: React.MouseEvent) => {
-    e.preventDefault(); e.stopPropagation();
-    resizeRef.current = { mx: e.clientX, w0: el.w };
-    const onMove = (me: MouseEvent) => {
+  const startResize = (cx: number, cy: number) => {
+    void cy;
+    resizeRef.current = { mx: cx, w0: el.w };
+    const onMove = (me: MouseEvent | TouchEvent) => {
       if (!resizeRef.current || !ref.current) return;
+      if ("cancelable" in me && me.cancelable) me.preventDefault();
+      const { x } = pointerXY(me);
       const r = ref.current.parentElement!.getBoundingClientRect();
-      const dx = ((me.clientX - resizeRef.current.mx) / r.width) * 100;
+      const dx = ((x - resizeRef.current.mx) / r.width) * 100;
       onUpdate({ w: Math.max(15, Math.min(97, resizeRef.current.w0 + dx)) });
     };
-    const onUp = () => { resizeRef.current = null; document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
+    const onUp = () => { resizeRef.current = null; removeDragListeners(onMove, onUp); };
+    addDragListeners(onMove, onUp);
   };
 
   const enterEdit = (e: React.MouseEvent) => {
@@ -523,8 +554,10 @@ function DraggableTextBlock({
           ? "outline outline-1 outline-transparent"
           : "outline outline-1 outline-transparent hover:outline-sky-200"
       }`}
-      onMouseDown={locked ? undefined : startDrag}
+      onMouseDown={locked ? undefined : (e) => { if (editing) return; e.preventDefault(); e.stopPropagation(); startDrag(e.clientX, e.clientY); }}
+      onTouchStart={locked ? undefined : (e) => { if (editing) return; e.preventDefault(); e.stopPropagation(); startDrag(e.touches[0].clientX, e.touches[0].clientY); }}
       onDoubleClick={enterEdit}
+      onTouchEnd={(e) => { if (!editing && editType && e.timeStamp - ((e.target as HTMLElement).dataset.lastTap ? Number((e.target as HTMLElement).dataset.lastTap) : 0) < 350) { enterEdit(e as unknown as React.MouseEvent); } (e.target as HTMLElement).dataset.lastTap = String(e.timeStamp); }}
     >
       {/* ── Editable content ── */}
       {editing && editType === "text" ? (
@@ -649,7 +682,8 @@ function DraggableTextBlock({
           className={`absolute -bottom-1.5 -right-1.5 w-3 h-3 rounded-sm bg-sky-400 cursor-se-resize transition-opacity ${
             selected ? "opacity-100" : "opacity-0 group-hover:opacity-60"
           }`}
-          onMouseDown={startResize}
+          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); startResize(e.clientX, e.clientY); }}
+          onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); startResize(e.touches[0].clientX, e.touches[0].clientY); }}
           title="Drag to resize width"
         />
       )}
@@ -686,31 +720,31 @@ function SplitPreview({
   const panelWidth = form.leftPanelWidth ?? 48;
   const imgPos     = form.imagePosition  ?? { x: 50, y: 50 };
 
-  const startDividerDrag = (e: React.MouseEvent) => {
-    e.preventDefault();
-    const onMove = (me: MouseEvent) => {
+  const startDividerDrag = (cx: number) => {
+    const onMove = (me: MouseEvent | TouchEvent) => {
+      if ("cancelable" in me && me.cancelable) me.preventDefault();
       if (!containerRef.current) return;
       const r = containerRef.current.getBoundingClientRect();
-      onUpdate?.({ leftPanelWidth: Math.max(20, Math.min(75, ((me.clientX - r.left) / r.width) * 100)) });
+      const { x } = pointerXY(me);
+      onUpdate?.({ leftPanelWidth: Math.max(20, Math.min(75, ((x - r.left) / r.width) * 100)) });
     };
-    const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
+    const onUp = () => removeDragListeners(onMove, onUp);
+    addDragListeners(onMove, onUp);
   };
 
-  const startImagePan = (e: React.MouseEvent) => {
-    e.preventDefault();
+  const startImagePan = (cx: number, cy: number) => {
     const sx = imgPos.x; const sy = imgPos.y;
-    const mx = e.clientX; const my = e.clientY;
-    const onMove = (me: MouseEvent) => {
+    const mx = cx; const my = cy;
+    const onMove = (me: MouseEvent | TouchEvent) => {
+      if ("cancelable" in me && me.cancelable) me.preventDefault();
+      const { x, y } = pointerXY(me);
       onUpdate?.({ imagePosition: {
-        x: Math.max(0, Math.min(100, sx - (me.clientX - mx) * 0.35)),
-        y: Math.max(0, Math.min(100, sy - (me.clientY - my) * 0.35)),
+        x: Math.max(0, Math.min(100, sx - (x - mx) * 0.35)),
+        y: Math.max(0, Math.min(100, sy - (y - my) * 0.35)),
       }});
     };
-    const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
+    const onUp = () => removeDragListeners(onMove, onUp);
+    addDragListeners(onMove, onUp);
   };
 
   const handleImgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -736,7 +770,8 @@ function SplitPreview({
                 alt="Panel"
                 className="absolute inset-0 w-full h-full object-cover z-0 select-none"
                 style={{ objectPosition: `${imgPos.x}% ${imgPos.y}%`, cursor: interactive ? "move" : undefined }}
-                onMouseDown={interactive ? startImagePan : undefined}
+                onMouseDown={interactive ? (e) => { e.preventDefault(); startImagePan(e.clientX, e.clientY); } : undefined}
+                onTouchStart={interactive ? (e) => { e.preventDefault(); startImagePan(e.touches[0].clientX, e.touches[0].clientY); } : undefined}
                 draggable={false}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent z-10 pointer-events-none" />
@@ -936,7 +971,8 @@ function SplitPreview({
         <div
           className="absolute top-0 bottom-0 z-40 cursor-col-resize flex items-center justify-center group"
           style={{ left: `${panelWidth}%`, width: "14px", marginLeft: "-7px" }}
-          onMouseDown={startDividerDrag}
+          onMouseDown={(e) => { e.preventDefault(); startDividerDrag(e.clientX); }}
+          onTouchStart={(e) => { e.preventDefault(); startDividerDrag(e.touches[0].clientX); }}
         >
           <div className="w-1 h-10 rounded-full bg-white/70 shadow group-hover:bg-white group-hover:h-14 transition-all duration-150" />
         </div>
@@ -977,31 +1013,31 @@ function StackedPreview({
   const bannerH = form.bannerHeight ?? 44;
   const imgPos  = form.imagePosition ?? { x: 50, y: 50 };
 
-  const startBannerDrag = (e: React.MouseEvent) => {
-    e.preventDefault();
-    const onMove = (me: MouseEvent) => {
+  const startBannerDrag = () => {
+    const onMove = (me: MouseEvent | TouchEvent) => {
+      if ("cancelable" in me && me.cancelable) me.preventDefault();
       if (!containerRef.current) return;
       const r = containerRef.current.getBoundingClientRect();
-      onUpdate?.({ bannerHeight: Math.max(25, Math.min(70, ((me.clientY - r.top) / r.height) * 100)) });
+      const { y } = pointerXY(me);
+      onUpdate?.({ bannerHeight: Math.max(25, Math.min(70, ((y - r.top) / r.height) * 100)) });
     };
-    const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
+    const onUp = () => removeDragListeners(onMove, onUp);
+    addDragListeners(onMove, onUp);
   };
 
-  const startImagePan = (e: React.MouseEvent) => {
-    e.preventDefault();
+  const startImagePan = (cx: number, cy: number) => {
     const sx = imgPos.x; const sy = imgPos.y;
-    const mx = e.clientX; const my = e.clientY;
-    const onMove = (me: MouseEvent) => {
+    const mx = cx; const my = cy;
+    const onMove = (me: MouseEvent | TouchEvent) => {
+      if ("cancelable" in me && me.cancelable) me.preventDefault();
+      const { x, y } = pointerXY(me);
       onUpdate?.({ imagePosition: {
-        x: Math.max(0, Math.min(100, sx - (me.clientX - mx) * 0.35)),
-        y: Math.max(0, Math.min(100, sy - (me.clientY - my) * 0.35)),
+        x: Math.max(0, Math.min(100, sx - (x - mx) * 0.35)),
+        y: Math.max(0, Math.min(100, sy - (y - my) * 0.35)),
       }});
     };
-    const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
+    const onUp = () => removeDragListeners(onMove, onUp);
+    addDragListeners(onMove, onUp);
   };
 
   const handleImgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1031,7 +1067,8 @@ function StackedPreview({
               alt="Banner"
               className="absolute inset-0 w-full h-full object-cover select-none"
               style={{ objectPosition: `${imgPos.x}% ${imgPos.y}%`, cursor: interactive ? "move" : undefined }}
-              onMouseDown={interactive ? startImagePan : undefined}
+              onMouseDown={interactive ? (e) => { e.preventDefault(); startImagePan(e.clientX, e.clientY); } : undefined}
+              onTouchStart={interactive ? (e) => { e.preventDefault(); startImagePan(e.touches[0].clientX, e.touches[0].clientY); } : undefined}
               draggable={false}
             />
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/25 pointer-events-none" />
@@ -1068,7 +1105,8 @@ function StackedPreview({
           <div
             className="absolute bottom-0 left-0 right-0 z-20 cursor-row-resize flex justify-center items-end pb-0.5"
             style={{ height: "12px" }}
-            onMouseDown={startBannerDrag}
+            onMouseDown={(e) => { e.preventDefault(); startBannerDrag(); }}
+            onTouchStart={(e) => { e.preventDefault(); startBannerDrag(); }}
           >
             <div className="w-10 h-1 rounded-full bg-white/50 group-hover:bg-white transition-all duration-150" />
           </div>
