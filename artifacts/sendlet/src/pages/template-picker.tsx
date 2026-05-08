@@ -545,6 +545,7 @@ function DraggableTextBlock({
         width: `${el.w}%`,
         fontSize: `${el.size}px`,
         color: safeColor,
+        touchAction: (locked || editing) ? undefined : "none",
         ...backdropInlineStyle,
       }}
       className={`group ${editing ? "cursor-text" : locked ? "cursor-default" : "cursor-move"} ${editing ? "" : "select-none"} ${fontClass} ${
@@ -683,7 +684,8 @@ function DraggableTextBlock({
             selected ? "opacity-100" : "opacity-0 group-hover:opacity-60"
           }`}
           onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); startResize(e.clientX, e.clientY); }}
-          onTouchStart={(e) => { e.preventDefault(); e.stopPropagation(); startResize(e.touches[0].clientX, e.touches[0].clientY); }}
+          onTouchStart={(e) => { e.stopPropagation(); startResize(e.touches[0].clientX, e.touches[0].clientY); }}
+          style={{ touchAction: "none" }}
           title="Drag to resize width"
         />
       )}
@@ -769,9 +771,9 @@ function SplitPreview({
                 src={form.imageDataUrl}
                 alt="Panel"
                 className="absolute inset-0 w-full h-full object-cover z-0 select-none"
-                style={{ objectPosition: `${imgPos.x}% ${imgPos.y}%`, cursor: interactive ? "move" : undefined }}
                 onMouseDown={interactive ? (e) => { e.preventDefault(); startImagePan(e.clientX, e.clientY); } : undefined}
-                onTouchStart={interactive ? (e) => { e.preventDefault(); startImagePan(e.touches[0].clientX, e.touches[0].clientY); } : undefined}
+                onTouchStart={interactive ? (e) => { startImagePan(e.touches[0].clientX, e.touches[0].clientY); } : undefined}
+                style={{ objectPosition: `${imgPos.x}% ${imgPos.y}%`, cursor: interactive ? "move" : undefined, touchAction: interactive ? "none" : undefined }}
                 draggable={false}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent z-10 pointer-events-none" />
@@ -970,9 +972,9 @@ function SplitPreview({
       {interactive && (
         <div
           className="absolute top-0 bottom-0 z-40 cursor-col-resize flex items-center justify-center group"
-          style={{ left: `${panelWidth}%`, width: "14px", marginLeft: "-7px" }}
+          style={{ left: `${panelWidth}%`, width: "14px", marginLeft: "-7px", touchAction: "none" }}
           onMouseDown={(e) => { e.preventDefault(); startDividerDrag(e.clientX); }}
-          onTouchStart={(e) => { e.preventDefault(); startDividerDrag(e.touches[0].clientX); }}
+          onTouchStart={(e) => { startDividerDrag(e.touches[0].clientX); }}
         >
           <div className="w-1 h-10 rounded-full bg-white/70 shadow group-hover:bg-white group-hover:h-14 transition-all duration-150" />
         </div>
@@ -1066,9 +1068,9 @@ function StackedPreview({
               src={form.imageDataUrl}
               alt="Banner"
               className="absolute inset-0 w-full h-full object-cover select-none"
-              style={{ objectPosition: `${imgPos.x}% ${imgPos.y}%`, cursor: interactive ? "move" : undefined }}
               onMouseDown={interactive ? (e) => { e.preventDefault(); startImagePan(e.clientX, e.clientY); } : undefined}
-              onTouchStart={interactive ? (e) => { e.preventDefault(); startImagePan(e.touches[0].clientX, e.touches[0].clientY); } : undefined}
+              onTouchStart={interactive ? (e) => { startImagePan(e.touches[0].clientX, e.touches[0].clientY); } : undefined}
+              style={{ objectPosition: `${imgPos.x}% ${imgPos.y}%`, cursor: interactive ? "move" : undefined, touchAction: interactive ? "none" : undefined }}
               draggable={false}
             />
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/25 pointer-events-none" />
@@ -1104,9 +1106,9 @@ function StackedPreview({
         {interactive && (
           <div
             className="absolute bottom-0 left-0 right-0 z-20 cursor-row-resize flex justify-center items-end pb-0.5"
-            style={{ height: "12px" }}
+            style={{ height: "12px", touchAction: "none" }}
             onMouseDown={(e) => { e.preventDefault(); startBannerDrag(); }}
-            onTouchStart={(e) => { e.preventDefault(); startBannerDrag(); }}
+            onTouchStart={() => { startBannerDrag(); }}
           >
             <div className="w-10 h-1 rounded-full bg-white/50 group-hover:bg-white transition-all duration-150" />
           </div>
@@ -2437,7 +2439,7 @@ export default function TemplatePicker() {
                 transition={{ duration: 0.22 }}
                 className={`w-full max-w-3xl px-10 ${barPosition === "bottom" ? "pb-20" : "pb-6"}`}
               >
-                <div className="rounded-2xl overflow-hidden shadow-xl border" style={{ height: "min(520px, calc(100dvh - 180px))" }}>
+                <div className="rounded-2xl overflow-hidden shadow-xl border" style={{ height: "min(520px, calc(100dvh - 180px))", touchAction: "none" }}>
                   {previewBlock}
                 </div>
                 <p className="text-center text-xs text-muted-foreground mt-4">{previewCaption}</p>
