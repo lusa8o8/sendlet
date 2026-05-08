@@ -13,6 +13,7 @@ import {
   Image,
   Plus,
   Type,
+  Upload,
   X,
 } from "lucide-react";
 import { leadMagnets } from "@/data/mock";
@@ -59,6 +60,7 @@ interface Form {
   accentColor:    string;
   gradientPreset: string;
   leftType:       "image" | "text";
+  imageDataUrl:   string | null;
   slug:           string;
 }
 
@@ -71,6 +73,7 @@ const defaultForm: Form = {
   accentColor:    ACCENT,
   gradientPreset: "dusk",
   leftType:       "image",
+  imageDataUrl:   null,
   slug:           "",
 };
 
@@ -194,11 +197,23 @@ function SplitPreview({ form }: { form: Form }) {
         />
 
         {form.leftType === "image" ? (
-          <div className="flex-1 flex items-center justify-center relative z-10">
-            <div className="w-20 h-20 rounded-xl border-2 border-white/20 flex items-center justify-center">
-              <Image className="h-7 w-7 text-white/25" />
+          form.imageDataUrl ? (
+            <>
+              <img
+                src={form.imageDataUrl}
+                alt="Panel"
+                className="absolute inset-0 w-full h-full object-cover z-0"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent z-10" />
+              <div className="flex-1 relative z-10" />
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center relative z-10">
+              <div className="w-20 h-20 rounded-xl border-2 border-white/20 flex items-center justify-center">
+                <Image className="h-7 w-7 text-white/25" />
+              </div>
             </div>
-          </div>
+          )
         ) : (
           <>
             <div className="flex-1" />
@@ -398,6 +413,20 @@ function EditorRail({
   const [open, setOpen] = useState({ content: true, design: false, settings: false });
   const toggle = (k: keyof typeof open) => setOpen((o) => ({ ...o, [k]: !o[k] }));
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const result = ev.target?.result;
+      if (typeof result === "string") setForm({ ...form, imageDataUrl: result });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
   const setBullet = (i: number, val: string) => {
     const next = [...form.bullets];
     next[i] = val;
@@ -429,6 +458,54 @@ function EditorRail({
       <div className="flex-1 overflow-y-auto px-6">
         {/* Content */}
         <Accordion title="Content" open={open.content} onToggle={() => toggle("content")}>
+          {/* Image upload — only for split + image panel */}
+          {layout === "split" && form.leftType === "image" && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Panel image</label>
+              {form.imageDataUrl ? (
+                <div className="relative rounded-lg overflow-hidden border" style={{ aspectRatio: "4/3" }}>
+                  <img
+                    src={form.imageDataUrl}
+                    alt="Panel"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                  <button
+                    onClick={() => setForm({ ...form, imageDataUrl: null })}
+                    className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center transition-colors"
+                  >
+                    <X className="h-3 w-3 text-white" />
+                  </button>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute bottom-2 right-2 text-[10px] bg-black/50 hover:bg-black/70 text-white rounded-md px-2 py-1 transition-colors"
+                  >
+                    Replace
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full border-2 border-dashed border-border rounded-lg p-5 flex flex-col items-center gap-2 hover:border-primary/40 hover:bg-primary/5 transition-all group"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-muted group-hover:bg-primary/10 flex items-center justify-center transition-colors">
+                    <Upload className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs font-medium text-foreground">Click to upload</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">JPG, PNG, WebP — up to 10 MB</p>
+                  </div>
+                </button>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                onChange={handleImageUpload}
+              />
+            </div>
+          )}
           <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">Headline</label>
             <Input
