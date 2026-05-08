@@ -139,12 +139,25 @@ function Accordion({
 
 /* ─── Live preview: Simple layout ──────────────────────────── */
 
-function SimplePreview({ form }: { form: Form }) {
+function SimplePreview({
+  form,
+  interactive = false,
+  onUpdateTextEl,
+}: {
+  form: Form;
+  interactive?: boolean;
+  onUpdateTextEl?: (key: TextElKey, u: Partial<TextEl>) => void;
+}) {
+  const [isDragging, setIsDragging] = useState(false);
   const gradient = GRADIENT_PRESETS.find((g) => g.id === form.gradientPreset)?.value
     ?? GRADIENT_PRESETS[0].value;
   const accent = form.accentColor || ACCENT;
   const bullets = form.bulletsEnabled ? form.bullets.filter(Boolean) : [];
   const displayBullets = bullets.length ? bullets : ["Key benefit one", "Key benefit two", "Key benefit three"];
+  const textElements: Record<TextElKey, TextEl> = {
+    ...defaultForm.textElements,
+    ...(form.textElements ?? {}),
+  };
 
   return (
     <div
@@ -156,35 +169,71 @@ function SimplePreview({ form }: { form: Form }) {
       </div>
       <p className="text-[11px] text-foreground/50 mb-4">Sarah Chen</p>
       <div className="w-full max-w-[280px] bg-white rounded-2xl shadow-md overflow-hidden">
-        <div className="p-5">
-          <h2 className="text-sm font-bold tracking-tight mb-1 text-foreground leading-snug">
-            {form.title || "Your Resource Title"}
-          </h2>
-          <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
-            {form.description || "A short description of what they'll get and why it helps."}
-          </p>
-          {form.bulletsEnabled && (
-            <div className="space-y-1.5 mb-3">
-              {displayBullets.slice(0, 4).map((b, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <div className="w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${accent}22` }}>
-                    <Check className="h-2 w-2" style={{ color: accent }} />
-                  </div>
-                  <span className="text-[10px] text-foreground/80">{b}</span>
+        {interactive ? (
+          <div className="relative" style={{ height: "290px" }}>
+            {isDragging && (
+              <>
+                <div className="absolute inset-y-0 pointer-events-none z-30" style={{ left: "50%", width: "1px", background: "repeating-linear-gradient(to bottom, rgba(14,165,233,0.55) 0 4px, transparent 4px 8px)" }} />
+                <div className="absolute inset-x-0 pointer-events-none z-30" style={{ top: "50%", height: "1px", background: "repeating-linear-gradient(to right, rgba(14,165,233,0.55) 0 4px, transparent 4px 8px)" }} />
+                <div className="absolute inset-y-0 pointer-events-none z-30" style={{ left: "4%", width: "1px", background: "repeating-linear-gradient(to bottom, rgba(148,163,184,0.45) 0 4px, transparent 4px 8px)" }} />
+                <div className="absolute inset-y-0 pointer-events-none z-30" style={{ right: "4%", width: "1px", background: "repeating-linear-gradient(to bottom, rgba(148,163,184,0.45) 0 4px, transparent 4px 8px)" }} />
+              </>
+            )}
+            <DraggableTextBlock el={textElements.headline} onUpdate={(u) => onUpdateTextEl?.("headline", u)} fontClass="font-bold tracking-tight leading-snug" label="Headline" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)}>
+              {form.title || "Your Resource Title"}
+            </DraggableTextBlock>
+            <DraggableTextBlock el={textElements.description} onUpdate={(u) => onUpdateTextEl?.("description", u)} fontClass="leading-relaxed" label="Description" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)}>
+              {form.description || "A short description of what they'll get and why it helps."}
+            </DraggableTextBlock>
+            {form.bulletsEnabled && (
+              <DraggableTextBlock el={textElements.bullets} onUpdate={(u) => onUpdateTextEl?.("bullets", u)} label="Benefits" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)}>
+                <div className="space-y-1.5">
+                  {displayBullets.slice(0, 3).map((b, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <div className="w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${accent}22` }}>
+                        <Check className="h-2 w-2" style={{ color: accent }} />
+                      </div>
+                      <span>{b}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
-          <div className="border-t pt-2.5 space-y-1.5">
-            <div className="h-5 rounded-md border text-[9px] text-muted-foreground flex items-center px-2">
-              Enter your email address
-            </div>
-            <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>
-              {form.ctaLabel || "Get the resource"}
-            </div>
-            <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
+              </DraggableTextBlock>
+            )}
+            <DraggableTextBlock el={textElements.form} onUpdate={(u) => onUpdateTextEl?.("form", u)} label="Form" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)}>
+              <div className="space-y-1.5">
+                <div className="h-5 rounded-md border border-slate-200 text-[9px] text-muted-foreground flex items-center px-2 bg-white">Enter your email address</div>
+                <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>{form.ctaLabel || "Get the resource"}</div>
+                <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
+              </div>
+            </DraggableTextBlock>
           </div>
-        </div>
+        ) : (
+          <div className="p-5">
+            <h2 className="text-sm font-bold tracking-tight mb-1 text-foreground leading-snug">
+              {form.title || "Your Resource Title"}
+            </h2>
+            <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
+              {form.description || "A short description of what they'll get and why it helps."}
+            </p>
+            {form.bulletsEnabled && (
+              <div className="space-y-1.5 mb-3">
+                {displayBullets.slice(0, 4).map((b, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <div className="w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${accent}22` }}>
+                      <Check className="h-2 w-2" style={{ color: accent }} />
+                    </div>
+                    <span className="text-[10px] text-foreground/80">{b}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="border-t pt-2.5 space-y-1.5">
+              <div className="h-5 rounded-md border text-[9px] text-muted-foreground flex items-center px-2">Enter your email address</div>
+              <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>{form.ctaLabel || "Get the resource"}</div>
+              <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -543,14 +592,27 @@ function SplitPreview({
 
 /* ─── Live preview: Stacked layout ─────────────────────────── */
 
-function StackedPreview({ form }: { form: Form }) {
+function StackedPreview({
+  form,
+  interactive = false,
+  onUpdateTextEl,
+}: {
+  form: Form;
+  interactive?: boolean;
+  onUpdateTextEl?: (key: TextElKey, u: Partial<TextEl>) => void;
+}) {
+  const [isDragging, setIsDragging] = useState(false);
   const accent = form.accentColor || ACCENT;
   const bullets = form.bulletsEnabled ? form.bullets.filter(Boolean) : [];
   const displayBullets = bullets.length ? bullets : ["Key benefit one", "Key benefit two", "Key benefit three"];
+  const textElements: Record<TextElKey, TextEl> = {
+    ...defaultForm.textElements,
+    ...(form.textElements ?? {}),
+  };
 
   return (
     <div className="w-full h-full flex flex-col bg-white">
-      {/* Top: image banner */}
+      {/* Top: image banner — always static */}
       <div
         className="relative shrink-0 overflow-hidden"
         style={{ height: "44%", backgroundColor: accent }}
@@ -564,11 +626,7 @@ function StackedPreview({ form }: { form: Form }) {
         />
         {form.imageDataUrl ? (
           <>
-            <img
-              src={form.imageDataUrl}
-              alt="Banner"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
+            <img src={form.imageDataUrl} alt="Banner" className="absolute inset-0 w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/25" />
           </>
         ) : (
@@ -578,56 +636,79 @@ function StackedPreview({ form }: { form: Form }) {
             </div>
           </div>
         )}
-        {/* Creator identity — bottom-left of image */}
         <div className="absolute bottom-3 left-4 flex items-center gap-1.5 z-10">
-          <div className="w-6 h-6 rounded-full bg-white/90 shadow flex items-center justify-center font-semibold text-foreground text-[9px]">
-            S
-          </div>
-          <span
-            className="text-[10px] font-medium drop-shadow"
-            style={{ color: form.imageDataUrl ? "white" : "rgba(255,255,255,0.7)" }}
-          >
-            Sarah Chen
-          </span>
+          <div className="w-6 h-6 rounded-full bg-white/90 shadow flex items-center justify-center font-semibold text-foreground text-[9px]">S</div>
+          <span className="text-[10px] font-medium drop-shadow" style={{ color: form.imageDataUrl ? "white" : "rgba(255,255,255,0.7)" }}>Sarah Chen</span>
         </div>
       </div>
 
-      {/* Bottom: form content */}
-      <div className="flex-1 overflow-hidden px-5 py-4 flex flex-col justify-center">
-        <h2 className="text-sm font-bold tracking-tight mb-1 text-foreground leading-snug">
-          {form.title || "Your Resource Title"}
-        </h2>
-        <p className="text-[11px] text-muted-foreground mb-2.5 leading-relaxed">
-          {form.description || "A short description of what they'll get and why it helps."}
-        </p>
-        {form.bulletsEnabled && (
-          <div className="space-y-1.5 mb-3">
-            {displayBullets.slice(0, 3).map((b, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <div
-                  className="w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: `${accent}22` }}
-                >
-                  <Check className="h-2 w-2" style={{ color: accent }} />
-                </div>
-                <span className="text-[10px] text-foreground/80">{b}</span>
+      {/* Bottom: drag surface in edit mode, static otherwise */}
+      {interactive ? (
+        <div className="flex-1 relative overflow-hidden bg-white">
+          {isDragging && (
+            <>
+              <div className="absolute inset-y-0 pointer-events-none z-30" style={{ left: "50%", width: "1px", background: "repeating-linear-gradient(to bottom, rgba(14,165,233,0.55) 0 4px, transparent 4px 8px)" }} />
+              <div className="absolute inset-x-0 pointer-events-none z-30" style={{ top: "50%", height: "1px", background: "repeating-linear-gradient(to right, rgba(14,165,233,0.55) 0 4px, transparent 4px 8px)" }} />
+              <div className="absolute inset-y-0 pointer-events-none z-30" style={{ left: "4%", width: "1px", background: "repeating-linear-gradient(to bottom, rgba(148,163,184,0.45) 0 4px, transparent 4px 8px)" }} />
+              <div className="absolute inset-y-0 pointer-events-none z-30" style={{ right: "4%", width: "1px", background: "repeating-linear-gradient(to bottom, rgba(148,163,184,0.45) 0 4px, transparent 4px 8px)" }} />
+              <div className="absolute inset-x-0 pointer-events-none z-30" style={{ top: "5%", height: "1px", background: "repeating-linear-gradient(to right, rgba(148,163,184,0.45) 0 4px, transparent 4px 8px)" }} />
+            </>
+          )}
+          <DraggableTextBlock el={textElements.headline} onUpdate={(u) => onUpdateTextEl?.("headline", u)} fontClass="font-bold tracking-tight leading-snug" label="Headline" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)}>
+            {form.title || "Your Resource Title"}
+          </DraggableTextBlock>
+          <DraggableTextBlock el={textElements.description} onUpdate={(u) => onUpdateTextEl?.("description", u)} fontClass="leading-relaxed" label="Description" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)}>
+            {form.description || "A short description of what they'll get and why it helps."}
+          </DraggableTextBlock>
+          {form.bulletsEnabled && (
+            <DraggableTextBlock el={textElements.bullets} onUpdate={(u) => onUpdateTextEl?.("bullets", u)} label="Benefits" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)}>
+              <div className="space-y-1.5">
+                {displayBullets.slice(0, 3).map((b, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <div className="w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${accent}22` }}>
+                      <Check className="h-2 w-2" style={{ color: accent }} />
+                    </div>
+                    <span>{b}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
-        <div className="border-t pt-2.5 space-y-1.5">
-          <div className="h-5 rounded-md border text-[9px] text-muted-foreground flex items-center px-2">
-            Enter your email address
-          </div>
-          <div
-            className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium"
-            style={{ backgroundColor: accent }}
-          >
-            {form.ctaLabel || "Get the resource"}
-          </div>
-          <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
+            </DraggableTextBlock>
+          )}
+          <DraggableTextBlock el={textElements.form} onUpdate={(u) => onUpdateTextEl?.("form", u)} label="Form" onDragStart={() => setIsDragging(true)} onDragEnd={() => setIsDragging(false)}>
+            <div className="space-y-1.5">
+              <div className="h-5 rounded-md border border-slate-200 text-[9px] text-muted-foreground flex items-center px-2 bg-white">Enter your email address</div>
+              <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>{form.ctaLabel || "Get the resource"}</div>
+              <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
+            </div>
+          </DraggableTextBlock>
         </div>
-      </div>
+      ) : (
+        <div className="flex-1 overflow-hidden px-5 py-4 flex flex-col justify-center">
+          <h2 className="text-sm font-bold tracking-tight mb-1 text-foreground leading-snug">
+            {form.title || "Your Resource Title"}
+          </h2>
+          <p className="text-[11px] text-muted-foreground mb-2.5 leading-relaxed">
+            {form.description || "A short description of what they'll get and why it helps."}
+          </p>
+          {form.bulletsEnabled && (
+            <div className="space-y-1.5 mb-3">
+              {displayBullets.slice(0, 3).map((b, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <div className="w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${accent}22` }}>
+                    <Check className="h-2 w-2" style={{ color: accent }} />
+                  </div>
+                  <span className="text-[10px] text-foreground/80">{b}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="border-t pt-2.5 space-y-1.5">
+            <div className="h-5 rounded-md border text-[9px] text-muted-foreground flex items-center px-2">Enter your email address</div>
+            <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>{form.ctaLabel || "Get the resource"}</div>
+            <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1138,9 +1219,33 @@ export default function TemplatePicker() {
                   className="w-full h-full"
                 >
                   {layout === "simple" ? (
-                    <SimplePreview form={form} />
+                    <SimplePreview
+                      form={form}
+                      interactive={mode === "edit"}
+                      onUpdateTextEl={(key, u) =>
+                        setForm((f) => ({
+                          ...f,
+                          textElements: {
+                            ...f.textElements,
+                            [key]: { ...f.textElements[key], ...u },
+                          },
+                        }))
+                      }
+                    />
                   ) : layout === "stacked" ? (
-                    <StackedPreview form={form} />
+                    <StackedPreview
+                      form={form}
+                      interactive={mode === "edit"}
+                      onUpdateTextEl={(key, u) =>
+                        setForm((f) => ({
+                          ...f,
+                          textElements: {
+                            ...f.textElements,
+                            [key]: { ...f.textElements[key], ...u },
+                          },
+                        }))
+                      }
+                    />
                   ) : (
                     <SplitPreview
                       form={form}
