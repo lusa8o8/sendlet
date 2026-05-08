@@ -1629,8 +1629,8 @@ export default function TemplatePicker() {
         ...f,
         textElements: {
           headline:    { ...f.textElements.headline,    backdrop: "glass", color: "#ffffff", x: 5, y: 7,  w: 90, size: 15 },
-          description: { ...f.textElements.description, backdrop: "glass", color: "#f1f5f9", x: 5, y: 26, w: 90 },
-          bullets:     { ...f.textElements.bullets,     backdrop: "glass", color: "#f1f5f9", x: 5, y: 45, w: 90 },
+          description: { ...f.textElements.description, backdrop: "glass", color: "#ffffff", x: 5, y: 26, w: 90 },
+          bullets:     { ...f.textElements.bullets,     backdrop: "glass", color: "#ffffff", x: 5, y: 45, w: 90 },
           form:        { ...f.textElements.form,        backdrop: "glass", color: "#ffffff", x: 5, y: 67, w: 90 },
         },
       }));
