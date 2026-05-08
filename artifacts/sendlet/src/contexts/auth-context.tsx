@@ -3,6 +3,7 @@ import { createContext, useContext, useState, ReactNode } from "react";
 interface AuthContextType {
   isSignedIn: boolean;
   email: string | null;
+  name: string;
   signIn: (email: string) => void;
   signOut: () => void;
 }
@@ -10,8 +11,9 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isSignedIn, setIsSignedIn] = useState(true); // Default signed in
-  const [email, setEmail] = useState<string | null>("user@example.com");
+  const [isSignedIn, setIsSignedIn] = useState(true);
+  const [email, setEmail] = useState<string | null>("sarah@example.com");
+  const name = "Sarah Chen";
 
   const signIn = (newEmail: string) => {
     setEmail(newEmail);
@@ -24,7 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isSignedIn, email, signIn, signOut }}>
+    <AuthContext.Provider value={{ isSignedIn, email, name, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

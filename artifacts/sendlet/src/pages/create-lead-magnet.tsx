@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { ChevronRight, ArrowLeft, Upload, Link as LinkIcon, Check, Plus, X } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useAuth } from "@/contexts/auth-context";
 
 interface FormData {
   title: string;
@@ -16,6 +17,8 @@ interface FormData {
   bullets: string[];
   bulletsEnabled: boolean;
   ctaLabel: string;
+  creatorOverride: boolean;
+  creatorName: string;
   deliveryType: string;
   externalUrl: string;
   accentColor: string;
@@ -26,7 +29,7 @@ interface FormData {
   slug: string;
 }
 
-function OptInPreview({ formData }: { formData: FormData }) {
+function OptInPreview({ formData, accountName }: { formData: FormData; accountName: string }) {
   const title = formData.title || "Your resource title";
   const description = formData.description || "A short description of what they'll get.";
   const activeBullets = formData.bulletsEnabled ? formData.bullets.filter(Boolean) : [];
@@ -35,7 +38,9 @@ function OptInPreview({ formData }: { formData: FormData }) {
       ? ["Key benefit one", "Key benefit two", "Key benefit three"]
       : activeBullets;
   const ctaLabel = formData.ctaLabel || "Get the resource";
-  const creatorName = formData.senderName || "Your name";
+  const effectiveName = formData.creatorOverride && formData.creatorName.trim()
+    ? formData.creatorName.trim()
+    : accountName;
   const accentColor = formData.accentColor || "#0F766E";
 
   return (
@@ -48,9 +53,9 @@ function OptInPreview({ formData }: { formData: FormData }) {
       <div className="bg-[hsl(var(--background))] rounded-lg border flex-1 overflow-hidden">
         <div className="flex flex-col items-center pt-7 pb-5 px-6">
           <div className="w-14 h-14 rounded-full bg-secondary flex items-center justify-center text-base font-semibold text-foreground mb-2">
-            {creatorName.charAt(0).toUpperCase()}
+            {effectiveName.charAt(0).toUpperCase()}
           </div>
-          <p className="text-sm text-muted-foreground font-medium">{creatorName}</p>
+          <p className="text-sm text-muted-foreground font-medium">{effectiveName}</p>
         </div>
 
         <div className="bg-card border-t mx-5 rounded-t-lg overflow-hidden shadow-sm">
@@ -110,6 +115,7 @@ function OptInPreview({ formData }: { formData: FormData }) {
 
 export default function CreateLeadMagnet() {
   const [, setLocation] = useLocation();
+  const { name: accountName } = useAuth();
   const [step, setStep] = useState(1);
   const totalSteps = 4;
 
@@ -119,10 +125,12 @@ export default function CreateLeadMagnet() {
     bullets: [""],
     bulletsEnabled: true,
     ctaLabel: "Get the resource",
+    creatorOverride: false,
+    creatorName: "",
     deliveryType: "upload",
     externalUrl: "",
     accentColor: "#0F766E",
-    senderName: "",
+    senderName: accountName,
     senderEmail: "",
     emailSubject: "",
     emailBody: "",
@@ -285,6 +293,58 @@ export default function CreateLeadMagnet() {
                   onChange={(e) => updateForm("ctaLabel", e.target.value)}
                   data-testid="input-cta-label"
                 />
+              </div>
+
+              <div className="pt-2 border-t space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className={!formData.creatorOverride ? "" : "text-muted-foreground"}>
+                      Creator identity
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Shown at the top of your opt-in page.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs text-muted-foreground">
+                      {formData.creatorOverride ? "Override" : "Account default"}
+                    </span>
+                    <Switch
+                      checked={formData.creatorOverride}
+                      onCheckedChange={(val) => updateForm("creatorOverride", val)}
+                      data-testid="toggle-creator-override"
+                    />
+                  </div>
+                </div>
+
+                {!formData.creatorOverride ? (
+                  <div className="flex items-center gap-3 px-3 py-2.5 rounded-md bg-muted/60 border">
+                    <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-xs font-semibold shrink-0">
+                      {accountName.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium leading-tight">{accountName}</p>
+                      <p className="text-xs text-muted-foreground">From your account profile</p>
+                    </div>
+                  </div>
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.15 }}
+                    className="space-y-2"
+                  >
+                    <Input
+                      placeholder={accountName}
+                      value={formData.creatorName}
+                      onChange={(e) => updateForm("creatorName", e.target.value)}
+                      data-testid="input-creator-name"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Leave blank to fall back to your account name.
+                    </p>
+                  </motion.div>
+                )}
               </div>
             </div>
           </div>
@@ -530,7 +590,7 @@ export default function CreateLeadMagnet() {
               {stepNav}
             </div>
             <div className="lg:sticky lg:top-6">
-              <OptInPreview formData={formData} />
+              <OptInPreview formData={formData} accountName={accountName} />
             </div>
           </div>
         ) : (
