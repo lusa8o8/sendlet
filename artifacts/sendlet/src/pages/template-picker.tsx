@@ -1375,7 +1375,7 @@ function PickerPanel({
   onStart: () => void;
 }) {
   return (
-    <div className="px-8 py-8 flex flex-col h-full">
+    <div className="px-8 py-8 flex flex-col min-h-full">
       <div className="mb-8">
         <p className="text-xs font-medium text-primary uppercase tracking-widest mb-1.5">
           New lead magnet
@@ -2038,7 +2038,7 @@ export default function TemplatePicker() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.2 }}
-              className="w-full lg:w-[420px] xl:w-[460px] shrink-0 border-r overflow-hidden"
+              className="w-full lg:w-[420px] xl:w-[460px] shrink-0 border-r overflow-y-auto"
             >
               <PickerPanel
                 layout={layout}
