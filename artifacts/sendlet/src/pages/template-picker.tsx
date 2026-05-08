@@ -1964,38 +1964,74 @@ export default function TemplatePicker() {
   const [activePreset, setActivePreset] = useState<string | null>(null);
 
   // ─── Undo / redo ────────────────────────────────────────────
-  const MAX_HISTORY = 5;
-  const historyStack = useRef<Form["textElements"][]>([]);
+  type FormSnapshot = {
+    textElements: Form["textElements"];
+    hiddenBlocks: Form["hiddenBlocks"];
+    bulletsEnabled: Form["bulletsEnabled"];
+    leftPanelWidth: Form["leftPanelWidth"];
+    bannerHeight: Form["bannerHeight"];
+    imagePosition: Form["imagePosition"];
+  };
+
+  const snapForm = (f: Form): FormSnapshot => ({
+    textElements:  f.textElements,
+    hiddenBlocks:  f.hiddenBlocks,
+    bulletsEnabled: f.bulletsEnabled,
+    leftPanelWidth: f.leftPanelWidth,
+    bannerHeight:   f.bannerHeight,
+    imagePosition:  f.imagePosition,
+  });
+
+  const applySnapshot = (snap: FormSnapshot) =>
+    setForm((f) => ({ ...f, ...snap }));
+
+  const MAX_HISTORY = 20;
+  const historyStack = useRef<FormSnapshot[]>([]);
   const historyIndex = useRef(-1);
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
-  const debounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastSerialized = useRef("");
+  // separate debounce refs so drag and discrete actions don't collide
+  const dragDebounceRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSerialized   = useRef("");
 
+  const pushSnapshot = (snap: FormSnapshot) => {
+    const s = JSON.stringify(snap);
+    if (s === lastSerialized.current) return;
+    lastSerialized.current = s;
+    const stack = historyStack.current.slice(0, historyIndex.current + 1);
+    stack.push(snap);
+    const capped = stack.length > MAX_HISTORY ? stack.slice(-MAX_HISTORY) : stack;
+    historyStack.current = capped;
+    historyIndex.current = capped.length - 1;
+    setCanUndo(capped.length > 1);
+    setCanRedo(false);
+  };
+
+  // debounced for continuous changes (dragging / resizing)
   useEffect(() => {
     if (mode !== "edit") return;
-    const s = JSON.stringify(form.textElements);
-    if (s === lastSerialized.current) return;
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      lastSerialized.current = s;
-      const stack = historyStack.current.slice(0, historyIndex.current + 1);
-      stack.push(form.textElements);
-      const capped = stack.length > MAX_HISTORY ? stack.slice(-MAX_HISTORY) : stack;
-      historyStack.current = capped;
-      historyIndex.current = capped.length - 1;
-      setCanUndo(capped.length > 1);
-      setCanRedo(false);
-    }, 350);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+    const snap = snapForm(form);
+    const s = JSON.stringify(snap.textElements);
+    if (s === JSON.stringify(JSON.parse(lastSerialized.current || "null")?.textElements ?? null)) return;
+    if (dragDebounceRef.current) clearTimeout(dragDebounceRef.current);
+    dragDebounceRef.current = setTimeout(() => pushSnapshot(snap), 200);
+    return () => { if (dragDebounceRef.current) clearTimeout(dragDebounceRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.textElements, mode]);
+
+  // immediate for discrete actions (hide/show, bullets, layout resizing)
+  useEffect(() => {
+    if (mode !== "edit") return;
+    pushSnapshot(snapForm(form));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.hiddenBlocks, form.bulletsEnabled, form.leftPanelWidth, form.bannerHeight, form.imagePosition, mode]);
 
   const handleUndo = () => {
     if (historyIndex.current <= 0) return;
     historyIndex.current -= 1;
-    const prev = historyStack.current[historyIndex.current];
-    lastSerialized.current = JSON.stringify(prev);
-    setForm((f) => ({ ...f, textElements: prev }));
+    const snap = historyStack.current[historyIndex.current];
+    lastSerialized.current = JSON.stringify(snap);
+    applySnapshot(snap);
     setCanUndo(historyIndex.current > 0);
     setCanRedo(true);
   };
@@ -2003,24 +2039,30 @@ export default function TemplatePicker() {
   const handleRedo = () => {
     if (historyIndex.current >= historyStack.current.length - 1) return;
     historyIndex.current += 1;
-    const next = historyStack.current[historyIndex.current];
-    lastSerialized.current = JSON.stringify(next);
-    setForm((f) => ({ ...f, textElements: next }));
+    const snap = historyStack.current[historyIndex.current];
+    lastSerialized.current = JSON.stringify(snap);
+    applySnapshot(snap);
     setCanUndo(true);
     setCanRedo(historyIndex.current < historyStack.current.length - 1);
   };
+
+  // stable refs so the keyboard effect never goes stale
+  const handleUndoRef = useRef(handleUndo);
+  const handleRedoRef = useRef(handleRedo);
+  useEffect(() => { handleUndoRef.current = handleUndo; });
+  useEffect(() => { handleRedoRef.current = handleRedo; });
 
   useEffect(() => {
     if (mode !== "edit") return;
     const onKey = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey)) return;
-      if (e.key === "z" && !e.shiftKey) { e.preventDefault(); handleUndo(); }
-      if (e.key === "z" &&  e.shiftKey) { e.preventDefault(); handleRedo(); }
-      if (e.key === "y")                { e.preventDefault(); handleRedo(); }
+      if (e.key === "z" && !e.shiftKey) { e.preventDefault(); handleUndoRef.current(); }
+      if (e.key === "z" &&  e.shiftKey) { e.preventDefault(); handleRedoRef.current(); }
+      if (e.key === "y")                { e.preventDefault(); handleRedoRef.current(); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [mode, canUndo, canRedo]);
+  }, [mode]);
 
   // ─── Custom presets ──────────────────────────────────────────
   const [customPresets, setCustomPresets] = useState<CustomPreset[]>(() => {
