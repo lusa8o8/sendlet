@@ -262,7 +262,9 @@ export default function TemplatePicker() {
                 </p>
                 <h1 className="text-xl font-semibold tracking-tight">Choose a starting point</h1>
                 <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                  Pick a layout, then optionally a content type.
+                  {selectedLayout === "split"
+                    ? "Pick a layout, then optionally pre-fill your content."
+                    : "Pick a layout to get started."}
                 </p>
               </div>
               <Button
@@ -291,7 +293,10 @@ export default function TemplatePicker() {
                   return (
                     <button
                       key={layout.id}
-                      onClick={() => setSelectedLayout(layout.id)}
+                      onClick={() => {
+                        setSelectedLayout(layout.id);
+                        if (layout.id === "simple") setSelectedContent("blank");
+                      }}
                       className={`w-full text-left rounded-xl border-2 p-4 transition-all flex items-center gap-4 ${
                         isSelected
                           ? "border-primary bg-primary/5 ring-1 ring-primary/20"
@@ -323,61 +328,67 @@ export default function TemplatePicker() {
               </div>
             </motion.section>
 
-            {/* Content starter */}
-            <motion.section
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, delay: 0.1 }}
-              className="mb-8"
-            >
-              <div className="flex items-center gap-2 mb-3">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Content starter
-                </p>
-                <span className="text-[10px] font-medium text-muted-foreground border rounded-full px-1.5 py-0.5">
-                  Optional
-                </span>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {CONTENT_TEMPLATES.map((template) => {
-                  const Icon = template.icon;
-                  const isSelected = selectedContent === template.id;
-                  return (
-                    <button
-                      key={template.id}
-                      onClick={() => setSelectedContent(template.id)}
-                      className={`text-left rounded-lg border p-3 transition-all ${
-                        isSelected
-                          ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                          : "border-border hover:border-foreground/20 bg-card hover:bg-muted/30"
-                      }`}
-                    >
-                      <div
-                        className={`w-7 h-7 rounded-md flex items-center justify-center mb-2 ${
-                          isSelected ? "bg-primary/10" : "bg-muted"
-                        }`}
-                      >
-                        <Icon
-                          className={`h-3.5 w-3.5 ${
-                            isSelected ? "text-primary" : "text-muted-foreground"
+            {/* Content starter — only for Visual Split */}
+            <AnimatePresence>
+              {selectedLayout === "split" && (
+                <motion.section
+                  key="content-starter"
+                  initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                  animate={{ opacity: 1, height: "auto", marginBottom: 32 }}
+                  exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                  transition={{ duration: 0.22 }}
+                  className="overflow-hidden"
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Content starter
+                    </p>
+                    <span className="text-[10px] font-medium text-muted-foreground border rounded-full px-1.5 py-0.5">
+                      Optional
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {CONTENT_TEMPLATES.map((template) => {
+                      const Icon = template.icon;
+                      const isSelected = selectedContent === template.id;
+                      return (
+                        <button
+                          key={template.id}
+                          onClick={() => setSelectedContent(template.id)}
+                          className={`text-left rounded-lg border p-3 transition-all ${
+                            isSelected
+                              ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                              : "border-border hover:border-foreground/20 bg-card hover:bg-muted/30"
                           }`}
-                        />
-                      </div>
-                      <p
-                        className={`text-xs font-medium mb-0.5 ${
-                          isSelected ? "text-primary" : "text-foreground"
-                        }`}
-                      >
-                        {template.label}
-                      </p>
-                      <p className="text-[11px] text-muted-foreground leading-snug">
-                        {template.description}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
-            </motion.section>
+                        >
+                          <div
+                            className={`w-7 h-7 rounded-md flex items-center justify-center mb-2 ${
+                              isSelected ? "bg-primary/10" : "bg-muted"
+                            }`}
+                          >
+                            <Icon
+                              className={`h-3.5 w-3.5 ${
+                                isSelected ? "text-primary" : "text-muted-foreground"
+                              }`}
+                            />
+                          </div>
+                          <p
+                            className={`text-xs font-medium mb-0.5 ${
+                              isSelected ? "text-primary" : "text-foreground"
+                            }`}
+                          >
+                            {template.label}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground leading-snug">
+                            {template.description}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </motion.section>
+              )}
+            </AnimatePresence>
 
             {/* CTA */}
             <motion.div
@@ -387,10 +398,10 @@ export default function TemplatePicker() {
               className="flex items-center justify-between pt-6 border-t"
             >
               <p className="text-xs text-muted-foreground">
-                {selectedContent !== "blank"
-                  ? CONTENT_TEMPLATES.find((t) => t.id === selectedContent)?.label
-                  : "Blank"}{" "}
-                · {LAYOUTS.find((l) => l.id === selectedLayout)?.label}
+                {selectedLayout === "split" && selectedContent !== "blank"
+                  ? `${CONTENT_TEMPLATES.find((t) => t.id === selectedContent)?.label} · `
+                  : ""}
+                {LAYOUTS.find((l) => l.id === selectedLayout)?.label} layout
               </p>
               <Button onClick={handleStart} className="gap-2">
                 Start with this
