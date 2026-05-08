@@ -1,384 +1,167 @@
-import { useState } from "react";
-import { useLocation, Link } from "wouter";
+import { useState, useRef } from "react";
+import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
-  FileText,
-  Download,
-  ListOrdered,
-  Type,
+  ArrowLeft,
   ArrowRight,
   Check,
+  ChevronDown,
   Image,
+  Plus,
+  Type,
+  X,
 } from "lucide-react";
+import { leadMagnets } from "@/data/mock";
 
-const LAYOUTS = [
-  {
-    id: "simple",
-    label: "Simple",
-    description: "Centered card on a gradient. Great for any text resource.",
-  },
-  {
-    id: "split",
-    label: "Visual Split",
-    description: "Hero image panel left, opt-in form right.",
-  },
-];
-
-const CONTENT_TEMPLATES = [
-  {
-    id: "blank",
-    label: "Blank",
-    icon: FileText,
-    description: "Start from scratch",
-  },
-  {
-    id: "download",
-    label: "Free Download",
-    icon: Download,
-    description: "PDF, template, toolkit",
-  },
-  {
-    id: "steps",
-    label: "Step-by-Step",
-    icon: ListOrdered,
-    description: "Guide or checklist",
-  },
-  {
-    id: "bold",
-    label: "Bold Headline",
-    icon: Type,
-    description: "Photo-forward, punchy copy",
-  },
-];
+/* ─── Constants ────────────────────────────────────────────── */
 
 const ACCENT = "#0F766E";
 
-const CONTENT_FILLS: Record<
-  string,
-  { title: string; description: string; bullets: string[]; ctaLabel: string }
-> = {
-  blank: {
-    title: "Your Resource Title",
-    description: "A short description of what they'll get and why it helps.",
-    bullets: ["Benefit one", "Benefit two", "Benefit three"],
-    ctaLabel: "Get the resource",
-  },
-  download: {
-    title: "The [Topic] Guide",
-    description: "Everything you need to know about [topic] in one clear, free document.",
-    bullets: ["Plain-English explanations", "Real-world examples", "Instant PDF download"],
-    ctaLabel: "Download free",
-  },
-  steps: {
-    title: "The [Topic] Checklist",
-    description: "A simple, step-by-step process to help you [outcome] faster.",
-    bullets: ["Step-by-step process", "Ready-to-use format", "Saves hours of planning"],
-    ctaLabel: "Get the checklist",
-  },
-  bold: {
-    title: "The fastest way to [outcome]",
-    description: "Everything you need to [achieve result] — no fluff, no filler.",
-    bullets: [],
-    ctaLabel: "Get instant access",
-  },
+const GRADIENT_PRESETS = [
+  { id: "dusk",   label: "Dusk",   value: "linear-gradient(135deg,#fdd5c4 0%,#fef0d0 42%,#d5e5ff 75%,#e5d5ff 100%)" },
+  { id: "aurora", label: "Aurora", value: "linear-gradient(135deg,#c4f0e8 0%,#d5e8ff 55%,#e8d5ff 100%)" },
+  { id: "bloom",  label: "Bloom",  value: "linear-gradient(135deg,#fdd5e8 0%,#fdd5c4 42%,#fef0d0 100%)" },
+  { id: "slate",  label: "Slate",  value: "linear-gradient(135deg,#dde5f0 0%,#d5dff0 100%)" },
+  { id: "mint",   label: "Mint",   value: "linear-gradient(135deg,#c4f0e0 0%,#c4ecff 100%)" },
+];
+
+const ACCENT_COLORS = [
+  { label: "Teal",    value: "#0F766E" },
+  { label: "Indigo",  value: "#4338CA" },
+  { label: "Rose",    value: "#BE185D" },
+  { label: "Amber",   value: "#B45309" },
+  { label: "Violet",  value: "#7C3AED" },
+  { label: "Sky",     value: "#0369A1" },
+];
+
+const LAYOUTS = [
+  { id: "simple", label: "Simple",       desc: "Centered opt-in card on a gradient." },
+  { id: "split",  label: "Visual Split", desc: "Full-bleed panel left, form right."  },
+];
+
+const LEFT_TYPES = [
+  { id: "image", label: "Image",    desc: "Photo or graphic",   icon: Image },
+  { id: "text",  label: "Bold text", desc: "Headline on colour", icon: Type  },
+];
+
+/* ─── Form state ────────────────────────────────────────────── */
+
+interface Form {
+  title:          string;
+  description:    string;
+  bullets:        string[];
+  bulletsEnabled: boolean;
+  ctaLabel:       string;
+  accentColor:    string;
+  gradientPreset: string;
+  leftType:       "image" | "text";
+  slug:           string;
+}
+
+const defaultForm: Form = {
+  title:          "",
+  description:    "",
+  bullets:        ["", "", ""],
+  bulletsEnabled: true,
+  ctaLabel:       "Get the resource",
+  accentColor:    ACCENT,
+  gradientPreset: "dusk",
+  leftType:       "image",
+  slug:           "",
 };
 
-interface PreviewContent {
+/* ─── Accordion ─────────────────────────────────────────────── */
+
+function Accordion({
+  title,
+  open,
+  onToggle,
+  children,
+}: {
   title: string;
-  description: string;
-  bullets: string[];
-  ctaLabel: string;
-}
-
-/* ─── Left panel variants ────────────────────────────────────── */
-
-function LeftBlank() {
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex-1 flex items-center justify-center relative z-10">
-      <div className="w-16 h-16 rounded-xl border-2 border-white/20 flex items-center justify-center">
-        <Image className="h-6 w-6 text-white/25" />
-      </div>
-    </div>
-  );
-}
-
-function LeftDownload() {
-  return (
-    <div className="flex-1 flex items-center justify-center relative z-10">
-      <div className="bg-white rounded-lg shadow-lg w-16 h-20 flex flex-col overflow-hidden">
-        <div className="h-5 w-full flex items-center justify-center" style={{ backgroundColor: ACCENT }}>
-          <span className="text-[7px] font-bold text-white uppercase tracking-wide">PDF</span>
-        </div>
-        <div className="flex-1 p-1.5 space-y-1">
-          <div className="h-1 w-full bg-gray-200 rounded-full" />
-          <div className="h-1 w-4/5 bg-gray-200 rounded-full" />
-          <div className="h-1 w-3/5 bg-gray-200 rounded-full" />
-          <div className="h-1 w-4/5 bg-gray-200 rounded-full" />
-          <div className="h-1 w-2/3 bg-gray-200 rounded-full" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function LeftSteps() {
-  return (
-    <div className="flex-1 flex items-center justify-center relative z-10">
-      <div className="space-y-2">
-        {[1, 2, 3].map((n) => (
-          <div key={n} className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full border-2 border-white/40 flex items-center justify-center text-white font-bold text-[10px]">
-              {n}
-            </div>
-            <div className="h-1.5 w-14 bg-white/20 rounded-full" />
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function LeftBold() {
-  return (
-    <>
-      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent z-10" />
-      <div className="flex-1 flex items-center justify-center relative z-10">
-        <div className="w-16 h-16 rounded-xl border-2 border-white/20 flex items-center justify-center">
-          <Image className="h-6 w-6 text-white/25" />
-        </div>
-      </div>
-      <div className="relative z-20 px-5 pb-5">
-        <div className="h-2 w-4/5 bg-white/70 rounded-full mb-1.5" />
-        <div className="h-2 w-3/5 bg-white/50 rounded-full" />
-      </div>
-    </>
-  );
-}
-
-/* ─── Right panel variants ───────────────────────────────────── */
-
-function RightBlank({ content }: { content: PreviewContent }) {
-  return (
-    <>
-      <h2 className="text-sm font-bold tracking-tight mb-1 text-foreground leading-snug">
-        {content.title}
-      </h2>
-      <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
-        {content.description}
-      </p>
-      <div className="space-y-1.5 mb-3">
-        {content.bullets.map((b, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <div
-              className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
-              style={{ backgroundColor: `${ACCENT}22` }}
-            >
-              <Check className="h-2.5 w-2.5" style={{ color: ACCENT }} />
-            </div>
-            <span className="text-[11px] text-foreground/80">{b}</span>
-          </div>
-        ))}
-      </div>
-      <div className="border-t pt-2.5 space-y-1.5">
-        <div className="h-6 rounded-md border bg-background text-[10px] text-muted-foreground flex items-center px-2.5">
-          Enter your email address
-        </div>
-        <div
-          className="h-6 rounded-md text-[10px] text-white flex items-center justify-center font-medium"
-          style={{ backgroundColor: ACCENT }}
-        >
-          {content.ctaLabel}
-        </div>
-        <p className="text-center text-[9px] text-muted-foreground">
-          No spam. Unsubscribe anytime.
-        </p>
-      </div>
-    </>
-  );
-}
-
-function RightDownload({ content }: { content: PreviewContent }) {
-  return (
-    <>
-      <div
-        className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 mb-2 text-[9px] font-semibold uppercase tracking-wide"
-        style={{ backgroundColor: `${ACCENT}15`, color: ACCENT }}
+    <div className="border-b">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between py-3.5 text-sm font-semibold text-foreground hover:text-primary transition-colors"
       >
-        Free Resource
-      </div>
-      <h2 className="text-sm font-bold tracking-tight mb-1 text-foreground leading-snug">
-        {content.title}
-      </h2>
-      <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
-        {content.description}
-      </p>
-      <div className="space-y-1.5 mb-3">
-        {content.bullets.map((b, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <div
-              className="w-5 h-4 rounded text-[8px] font-bold flex items-center justify-center shrink-0"
-              style={{ backgroundColor: `${ACCENT}15`, color: ACCENT }}
-            >
-              {String(i + 1).padStart(2, "0")}
-            </div>
-            <span className="text-[11px] text-foreground/80">{b}</span>
-          </div>
-        ))}
-      </div>
-      <div className="border-t pt-2.5 space-y-1.5">
-        <div className="h-6 rounded-md border bg-background text-[10px] text-muted-foreground flex items-center px-2.5">
-          Enter your email address
-        </div>
-        <div
-          className="h-6 rounded-md text-[10px] text-white flex items-center justify-center gap-1 font-medium"
-          style={{ backgroundColor: ACCENT }}
-        >
-          <Download className="h-2.5 w-2.5" />
-          {content.ctaLabel}
-        </div>
-        <p className="text-center text-[9px] text-muted-foreground">
-          Instant access · No credit card
-        </p>
-      </div>
-    </>
+        {title}
+        <ChevronDown
+          className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="pb-5 space-y-4">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
-function RightSteps({ content }: { content: PreviewContent }) {
-  return (
-    <>
-      <h2 className="text-sm font-bold tracking-tight mb-1 text-foreground leading-snug">
-        {content.title}
-      </h2>
-      <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
-        {content.description}
-      </p>
-      <div className="space-y-2 mb-3">
-        {content.bullets.map((b, i) => (
-          <div key={i} className="flex items-start gap-2">
-            <div
-              className="w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 text-[8px] font-bold mt-px"
-              style={{ borderColor: ACCENT, color: ACCENT }}
-            >
-              {i + 1}
-            </div>
-            <span className="text-[11px] text-foreground/80 leading-snug">{b}</span>
-          </div>
-        ))}
-      </div>
-      <div className="border-t pt-2.5 space-y-1.5">
-        <div className="h-6 rounded-md border bg-background text-[10px] text-muted-foreground flex items-center px-2.5">
-          Enter your email address
-        </div>
-        <div
-          className="h-6 rounded-md text-[10px] text-white flex items-center justify-center font-medium"
-          style={{ backgroundColor: ACCENT }}
-        >
-          {content.ctaLabel}
-        </div>
-        <p className="text-center text-[9px] text-muted-foreground">
-          No spam. Unsubscribe anytime.
-        </p>
-      </div>
-    </>
-  );
-}
+/* ─── Live preview: Simple layout ──────────────────────────── */
 
-function RightBold({ content }: { content: PreviewContent }) {
-  return (
-    <>
-      <h2 className="text-base font-extrabold tracking-tight mb-2 text-foreground leading-tight">
-        {content.title}
-      </h2>
-      <p className="text-[11px] text-muted-foreground mb-4 leading-relaxed">
-        {content.description}
-      </p>
-      <div className="border-t pt-3 space-y-1.5">
-        <div className="h-6 rounded-md border bg-background text-[10px] text-muted-foreground flex items-center px-2.5">
-          Enter your email address
-        </div>
-        <div
-          className="h-7 rounded-md text-[10px] text-white flex items-center justify-center font-semibold tracking-wide"
-          style={{ backgroundColor: ACCENT }}
-        >
-          {content.ctaLabel}
-        </div>
-        <p className="text-center text-[9px] text-muted-foreground">
-          No spam. Unsubscribe anytime.
-        </p>
-      </div>
-    </>
-  );
-}
+function SimplePreview({ form }: { form: Form }) {
+  const gradient = GRADIENT_PRESETS.find((g) => g.id === form.gradientPreset)?.value
+    ?? GRADIENT_PRESETS[0].value;
+  const accent = form.accentColor || ACCENT;
+  const bullets = form.bulletsEnabled ? form.bullets.filter(Boolean) : [];
+  const displayBullets = bullets.length ? bullets : ["Key benefit one", "Key benefit two", "Key benefit three"];
 
-/* ─── Assembled preview panels ───────────────────────────────── */
-
-const LEFT_PANELS: Record<string, React.ReactNode> = {
-  blank: <LeftBlank />,
-  download: <LeftDownload />,
-  steps: <LeftSteps />,
-  bold: <LeftBold />,
-};
-
-function RightPanel({ variant, content }: { variant: string; content: PreviewContent }) {
-  const map: Record<string, React.ReactNode> = {
-    blank: <RightBlank content={content} />,
-    download: <RightDownload content={content} />,
-    steps: <RightSteps content={content} />,
-    bold: <RightBold content={content} />,
-  };
-  return <>{map[variant] ?? map.blank}</>;
-}
-
-function SimplePreview() {
   return (
     <div
       className="w-full h-full flex flex-col items-center justify-center px-6 py-8"
-      style={{
-        background:
-          "linear-gradient(135deg, #fdd5c4 0%, #fef0d0 42%, #d5e5ff 75%, #e5d5ff 100%)",
-      }}
+      style={{ background: gradient }}
     >
-      <div className="w-12 h-12 rounded-full bg-white shadow-md ring-4 ring-white/50 flex items-center justify-center font-semibold text-sm text-foreground mb-2">
+      <div className="w-10 h-10 rounded-full bg-white shadow-md ring-4 ring-white/50 flex items-center justify-center font-semibold text-sm text-foreground mb-1.5">
         S
       </div>
-      <p className="text-[11px] text-foreground/60 mb-5">Sarah Chen</p>
+      <p className="text-[11px] text-foreground/50 mb-4">Sarah Chen</p>
       <div className="w-full max-w-[280px] bg-white rounded-2xl shadow-md overflow-hidden">
         <div className="p-5">
           <h2 className="text-sm font-bold tracking-tight mb-1 text-foreground leading-snug">
-            Your Resource Title
+            {form.title || "Your Resource Title"}
           </h2>
-          <p className="text-[11px] text-muted-foreground mb-4 leading-relaxed">
-            A short description of what they'll get and why it helps.
+          <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
+            {form.description || "A short description of what they'll get and why it helps."}
           </p>
-          <div className="space-y-2 mb-4">
-            {["Benefit one", "Benefit two", "Benefit three"].map((b, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <div
-                  className="w-4 h-4 rounded-full flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: `${ACCENT}22` }}
-                >
-                  <Check className="h-2.5 w-2.5" style={{ color: ACCENT }} />
+          {form.bulletsEnabled && (
+            <div className="space-y-1.5 mb-3">
+              {displayBullets.slice(0, 4).map((b, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <div className="w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${accent}22` }}>
+                    <Check className="h-2 w-2" style={{ color: accent }} />
+                  </div>
+                  <span className="text-[10px] text-foreground/80">{b}</span>
                 </div>
-                <span className="text-[11px] text-foreground/80">{b}</span>
-              </div>
-            ))}
-          </div>
-          <div className="border-t pt-3 space-y-2">
-            <div className="h-7 rounded-md border bg-background text-[10px] text-muted-foreground flex items-center px-2.5">
+              ))}
+            </div>
+          )}
+          <div className="border-t pt-2.5 space-y-1.5">
+            <div className="h-5 rounded-md border text-[9px] text-muted-foreground flex items-center px-2">
               Enter your email address
             </div>
-            <div
-              className="h-7 rounded-md text-[10px] text-white flex items-center justify-center font-medium"
-              style={{ backgroundColor: ACCENT }}
-            >
-              Get the resource
+            <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>
+              {form.ctaLabel || "Get the resource"}
             </div>
-            <p className="text-center text-[9px] text-muted-foreground">
-              No spam. Unsubscribe anytime.
-            </p>
+            <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
           </div>
         </div>
       </div>
@@ -386,279 +169,542 @@ function SimplePreview() {
   );
 }
 
-function SplitPreview({ variant, content }: { variant: string; content: PreviewContent }) {
+/* ─── Live preview: Visual Split layout ─────────────────────── */
+
+function SplitPreview({ form }: { form: Form }) {
+  const accent = form.accentColor || ACCENT;
+  const bullets = form.bulletsEnabled ? form.bullets.filter(Boolean) : [];
+  const displayBullets = bullets.length ? bullets : ["Key benefit one", "Key benefit two", "Key benefit three"];
+
   return (
     <div className="w-full h-full flex">
       {/* Left panel */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={variant + "-left"}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.18 }}
-          className="w-[50%] h-full flex flex-col justify-between p-5 relative overflow-hidden shrink-0"
-          style={{ backgroundColor: ACCENT }}
-        >
-          <div
-            className="absolute inset-0 opacity-[0.05]"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle at 30% 20%, white 1px, transparent 1px), radial-gradient(circle at 70% 60%, white 1px, transparent 1px)",
-              backgroundSize: "60px 60px, 90px 90px",
-            }}
-          />
-          {LEFT_PANELS[variant] ?? LEFT_PANELS.blank}
-          <div className="relative z-10 flex items-center gap-2 shrink-0">
-            <div className="w-6 h-6 rounded-full bg-white/20 ring-2 ring-white/30 flex items-center justify-center text-white font-semibold text-[10px]">
-              S
+      <div
+        className="w-[48%] h-full flex flex-col relative overflow-hidden shrink-0"
+        style={{ backgroundColor: accent }}
+      >
+        {/* Subtle texture */}
+        <div
+          className="absolute inset-0 opacity-[0.06]"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 25% 25%, white 1px, transparent 1px)",
+            backgroundSize: "48px 48px",
+          }}
+        />
+
+        {form.leftType === "image" ? (
+          <div className="flex-1 flex items-center justify-center relative z-10">
+            <div className="w-20 h-20 rounded-xl border-2 border-white/20 flex items-center justify-center">
+              <Image className="h-7 w-7 text-white/25" />
             </div>
-            <span className="text-white/70 text-[10px]">Sarah Chen</span>
           </div>
-        </motion.div>
-      </AnimatePresence>
+        ) : (
+          <>
+            <div className="flex-1" />
+            <div className="relative z-10 px-6 pb-6">
+              <p className="text-white font-extrabold text-xl leading-tight">
+                {form.title || "Your bold headline goes here"}
+              </p>
+            </div>
+          </>
+        )}
+
+        {/* Creator identity */}
+        <div className="relative z-10 px-4 pb-4 flex items-center gap-2 shrink-0">
+          <div className="w-6 h-6 rounded-full bg-white/20 ring-2 ring-white/30 flex items-center justify-center text-white font-semibold text-[10px]">
+            S
+          </div>
+          <span className="text-white/60 text-[10px]">Sarah Chen</span>
+        </div>
+      </div>
 
       {/* Right panel */}
       <div className="flex-1 bg-white flex items-center overflow-hidden">
-        <div className="px-4 py-5 w-full">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={variant + "-right"}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.18 }}
-            >
-              <RightPanel variant={variant} content={content} />
-            </motion.div>
-          </AnimatePresence>
+        <div className="px-5 py-5 w-full">
+          <h2 className="text-sm font-bold tracking-tight mb-1 text-foreground leading-snug">
+            {form.title || "Your Resource Title"}
+          </h2>
+          <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
+            {form.description || "A short description of what they'll get and why it helps."}
+          </p>
+          {form.bulletsEnabled && (
+            <div className="space-y-1.5 mb-3">
+              {displayBullets.slice(0, 3).map((b, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <div className="w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${accent}22` }}>
+                    <Check className="h-2 w-2" style={{ color: accent }} />
+                  </div>
+                  <span className="text-[10px] text-foreground/80">{b}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="border-t pt-2.5 space-y-1.5">
+            <div className="h-5 rounded-md border text-[9px] text-muted-foreground flex items-center px-2">
+              Enter your email address
+            </div>
+            <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>
+              {form.ctaLabel || "Get the resource"}
+            </div>
+            <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-/* ─── Page ───────────────────────────────────────────────────── */
+/* ─── Picker panel (left, mode === 'pick') ──────────────────── */
+
+function PickerPanel({
+  layout,
+  setLayout,
+  form,
+  setForm,
+  onStart,
+}: {
+  layout: string;
+  setLayout: (v: string) => void;
+  form: Form;
+  setForm: (f: Form) => void;
+  onStart: () => void;
+}) {
+  return (
+    <div className="px-8 py-8 flex flex-col h-full">
+      <div className="mb-8">
+        <p className="text-xs font-medium text-primary uppercase tracking-widest mb-1.5">
+          New lead magnet
+        </p>
+        <h1 className="text-xl font-semibold tracking-tight">Choose a starting point</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Pick a layout to get started. You'll edit everything next.
+        </p>
+      </div>
+
+      {/* Layout */}
+      <div className="mb-7">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Layout</p>
+        <div className="space-y-2.5">
+          {LAYOUTS.map((l) => {
+            const active = layout === l.id;
+            return (
+              <button
+                key={l.id}
+                onClick={() => setLayout(l.id)}
+                className={`w-full text-left rounded-xl border-2 p-4 transition-all flex items-center gap-4 ${
+                  active
+                    ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                    : "border-border hover:border-foreground/20 bg-card"
+                }`}
+              >
+                <div
+                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                    active ? "border-primary bg-primary" : "border-muted-foreground/30"
+                  }`}
+                >
+                  {active && <div className="w-2 h-2 rounded-full bg-white" />}
+                </div>
+                <div>
+                  <p className={`text-sm font-semibold ${active ? "text-primary" : "text-foreground"}`}>
+                    {l.label}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{l.desc}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Left panel type (only for split) */}
+      <AnimatePresence>
+        {layout === "split" && (
+          <motion.div
+            key="left-type"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden mb-7"
+          >
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+              Left panel
+            </p>
+            <div className="grid grid-cols-2 gap-2.5">
+              {LEFT_TYPES.map((t) => {
+                const Icon = t.icon;
+                const active = form.leftType === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => setForm({ ...form, leftType: t.id as "image" | "text" })}
+                    className={`text-left rounded-xl border-2 p-4 transition-all flex flex-col gap-2.5 ${
+                      active
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-foreground/20 bg-card"
+                    }`}
+                  >
+                    <div
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                        active ? "bg-primary/10" : "bg-muted"
+                      }`}
+                    >
+                      <Icon className={`h-4 w-4 ${active ? "text-primary" : "text-muted-foreground"}`} />
+                    </div>
+                    <div>
+                      <p className={`text-sm font-semibold leading-tight ${active ? "text-primary" : "text-foreground"}`}>
+                        {t.label}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{t.desc}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="mt-auto pt-6 border-t flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">
+          {LAYOUTS.find((l) => l.id === layout)?.label}
+          {layout === "split" ? ` · ${LEFT_TYPES.find((t) => t.id === form.leftType)?.label}` : ""}
+        </p>
+        <Button onClick={onStart} className="gap-2">
+          Start with this
+          <ArrowRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Editor rail (left, mode === 'edit') ───────────────────── */
+
+function EditorRail({
+  layout,
+  form,
+  setForm,
+  onBack,
+  onSave,
+}: {
+  layout: string;
+  form: Form;
+  setForm: (f: Form) => void;
+  onBack: () => void;
+  onSave: () => void;
+}) {
+  const [open, setOpen] = useState({ content: true, design: false, settings: false });
+  const toggle = (k: keyof typeof open) => setOpen((o) => ({ ...o, [k]: !o[k] }));
+
+  const setBullet = (i: number, val: string) => {
+    const next = [...form.bullets];
+    next[i] = val;
+    setForm({ ...form, bullets: next });
+  };
+
+  const addBullet = () => setForm({ ...form, bullets: [...form.bullets, ""] });
+
+  const removeBullet = (i: number) =>
+    setForm({ ...form, bullets: form.bullets.filter((_, idx) => idx !== i) });
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="px-6 py-4 border-b flex items-center gap-3 shrink-0">
+        <button
+          onClick={onBack}
+          className="w-7 h-7 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4 text-muted-foreground" />
+        </button>
+        <div>
+          <p className="text-xs text-muted-foreground">New lead magnet</p>
+          <p className="text-sm font-semibold leading-tight">{form.title || "Untitled"}</p>
+        </div>
+      </div>
+
+      {/* Accordion sections */}
+      <div className="flex-1 overflow-y-auto px-6">
+        {/* Content */}
+        <Accordion title="Content" open={open.content} onToggle={() => toggle("content")}>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Headline</label>
+            <Input
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              placeholder="Your Resource Title"
+              className="h-8 text-sm"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Description</label>
+            <Textarea
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              placeholder="A short description of what they'll get and why it helps."
+              className="text-sm resize-none h-20"
+            />
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-muted-foreground">Benefits</label>
+              <button
+                onClick={() => setForm({ ...form, bulletsEnabled: !form.bulletsEnabled })}
+                className={`relative w-8 h-4 rounded-full transition-colors shrink-0 ${
+                  form.bulletsEnabled ? "bg-primary" : "bg-muted-foreground/30"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${
+                    form.bulletsEnabled ? "translate-x-4" : "translate-x-0.5"
+                  }`}
+                />
+              </button>
+            </div>
+            <AnimatePresence>
+              {form.bulletsEnabled && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="space-y-1.5 overflow-hidden"
+                >
+                  {form.bullets.map((b, i) => (
+                    <div key={i} className="flex items-center gap-1.5">
+                      <Input
+                        value={b}
+                        onChange={(e) => setBullet(i, e.target.value)}
+                        placeholder={`Benefit ${i + 1}`}
+                        className="h-7 text-xs flex-1"
+                      />
+                      {form.bullets.length > 1 && (
+                        <button
+                          onClick={() => removeBullet(i)}
+                          className="shrink-0 w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  {form.bullets.length < 5 && (
+                    <button
+                      onClick={addBullet}
+                      className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary transition-colors mt-1"
+                    >
+                      <Plus className="h-3 w-3" /> Add benefit
+                    </button>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Button label</label>
+            <Input
+              value={form.ctaLabel}
+              onChange={(e) => setForm({ ...form, ctaLabel: e.target.value })}
+              placeholder="Get the resource"
+              className="h-8 text-sm"
+            />
+          </div>
+        </Accordion>
+
+        {/* Design */}
+        <Accordion title="Design" open={open.design} onToggle={() => toggle("design")}>
+          {layout === "simple" && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Background</label>
+              <div className="grid grid-cols-5 gap-1.5">
+                {GRADIENT_PRESETS.map((g) => (
+                  <button
+                    key={g.id}
+                    onClick={() => setForm({ ...form, gradientPreset: g.id })}
+                    title={g.label}
+                    className={`h-8 rounded-lg transition-all ${
+                      form.gradientPreset === g.id
+                        ? "ring-2 ring-primary ring-offset-1 scale-105"
+                        : "hover:scale-105 opacity-80 hover:opacity-100"
+                    }`}
+                    style={{ background: g.value }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">Accent colour</label>
+            <div className="flex gap-2 flex-wrap">
+              {ACCENT_COLORS.map((c) => (
+                <button
+                  key={c.value}
+                  onClick={() => setForm({ ...form, accentColor: c.value })}
+                  title={c.label}
+                  className={`w-7 h-7 rounded-full transition-all ${
+                    form.accentColor === c.value
+                      ? "ring-2 ring-offset-1 ring-foreground scale-110"
+                      : "hover:scale-105"
+                  }`}
+                  style={{ backgroundColor: c.value }}
+                />
+              ))}
+            </div>
+          </div>
+        </Accordion>
+
+        {/* Settings */}
+        <Accordion title="Settings" open={open.settings} onToggle={() => toggle("settings")}>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Page URL</label>
+            <div className="flex items-center gap-0">
+              <span className="text-xs text-muted-foreground bg-muted border border-r-0 rounded-l-md px-2 h-8 flex items-center shrink-0">
+                /p/
+              </span>
+              <Input
+                value={form.slug}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
+                  })
+                }
+                placeholder="your-resource"
+                className="h-8 text-sm rounded-l-none"
+              />
+            </div>
+          </div>
+        </Accordion>
+      </div>
+
+      {/* Footer */}
+      <div className="px-6 py-4 border-t shrink-0 flex gap-2">
+        <Button variant="outline" size="sm" className="flex-1">
+          Save draft
+        </Button>
+        <Button size="sm" className="flex-1" onClick={onSave}>
+          Publish
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Page ──────────────────────────────────────────────────── */
 
 export default function TemplatePicker() {
   const [, setLocation] = useLocation();
-  const [selectedLayout, setSelectedLayout] = useState("simple");
-  const [selectedContent, setSelectedContent] = useState("blank");
+  const [mode, setMode] = useState<"pick" | "edit">("pick");
+  const [layout, setLayout] = useState("simple");
+  const [form, setForm] = useState<Form>(defaultForm);
 
   const handleStart = () => {
-    setLocation(`/lead-magnets/create?layout=${selectedLayout}&content=${selectedContent}`);
+    setMode("edit");
   };
 
-  const activeContent = CONTENT_FILLS[selectedContent] ?? CONTENT_FILLS.blank;
+  const handleBack = () => {
+    setMode("pick");
+  };
+
+  const handleSave = () => {
+    const slug = form.slug || `resource-${Date.now()}`;
+    const newMagnet = {
+      id: String(leadMagnets.length + 1),
+      title: form.title || "Untitled",
+      slug,
+      description: form.description,
+      status: "published" as const,
+      visits: 0,
+      weeklyVisits: 0,
+      leads: 0,
+      weeklyLeads: 0,
+      conversionRate: 0,
+      lastLead: null,
+      accentColor: form.accentColor,
+      backgroundPreset: form.gradientPreset,
+      layout,
+      createdAt: new Date().toISOString().split("T")[0],
+    };
+    (leadMagnets as typeof leadMagnets & { push: (v: (typeof leadMagnets)[0]) => void }).push(newMagnet);
+    setLocation("/dashboard");
+  };
+
+  const previewCaption =
+    layout === "simple"
+      ? "Simple layout — centered opt-in card on a gradient"
+      : `Visual Split — ${form.leftType === "image" ? "photo" : "bold text"} left · form right`;
 
   return (
     <AppLayout>
       <div className="flex h-[calc(100vh-57px)] overflow-hidden">
-        {/* Left: selection panel */}
-        <div className="w-full lg:w-[440px] xl:w-[480px] shrink-0 overflow-y-auto border-r">
-          <div className="px-8 py-8">
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25 }}
-              className="flex items-start justify-between mb-8"
-            >
-              <div>
-                <p className="text-xs font-medium text-primary uppercase tracking-widest mb-1.5">
-                  New lead magnet
-                </p>
-                <h1 className="text-xl font-semibold tracking-tight">Choose a starting point</h1>
-                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">
-                  {selectedLayout === "split"
-                    ? "Pick a layout, then optionally pre-fill your content."
-                    : "Pick a layout to get started."}
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                asChild
-                className="shrink-0 mt-0.5 text-muted-foreground"
+        {/* Left rail */}
+        <div className="w-full lg:w-[420px] xl:w-[460px] shrink-0 border-r overflow-hidden">
+          <AnimatePresence mode="wait">
+            {mode === "pick" ? (
+              <motion.div
+                key="pick"
+                initial={{ opacity: 0, x: -16 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -16 }}
+                transition={{ duration: 0.18 }}
+                className="h-full"
               >
-                <Link href="/lead-magnets/create">Skip</Link>
-              </Button>
-            </motion.div>
-
-            {/* Layout */}
-            <motion.section
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, delay: 0.05 }}
-              className="mb-7"
-            >
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-                Layout
-              </p>
-              <div className="space-y-2.5">
-                {LAYOUTS.map((layout) => {
-                  const isSelected = selectedLayout === layout.id;
-                  return (
-                    <button
-                      key={layout.id}
-                      onClick={() => {
-                        setSelectedLayout(layout.id);
-                        if (layout.id === "simple") setSelectedContent("blank");
-                      }}
-                      className={`w-full text-left rounded-xl border-2 p-4 transition-all flex items-center gap-4 ${
-                        isSelected
-                          ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                          : "border-border hover:border-foreground/20 bg-card"
-                      }`}
-                    >
-                      <div
-                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                          isSelected ? "border-primary bg-primary" : "border-muted-foreground/30"
-                        }`}
-                      >
-                        {isSelected && <div className="w-2 h-2 rounded-full bg-white" />}
-                      </div>
-                      <div>
-                        <p
-                          className={`text-sm font-semibold ${
-                            isSelected ? "text-primary" : "text-foreground"
-                          }`}
-                        >
-                          {layout.label}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {layout.description}
-                        </p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </motion.section>
-
-            {/* Content starter — only for Visual Split */}
-            <AnimatePresence>
-              {selectedLayout === "split" && (
-                <motion.section
-                  key="content-starter"
-                  initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                  animate={{ opacity: 1, height: "auto", marginBottom: 32 }}
-                  exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                  transition={{ duration: 0.22 }}
-                  className="overflow-hidden"
-                >
-                  <div className="flex items-center gap-2 mb-3">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Content starter
-                    </p>
-                    <span className="text-[10px] font-medium text-muted-foreground border rounded-full px-1.5 py-0.5">
-                      Optional
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2.5">
-                    {CONTENT_TEMPLATES.map((template) => {
-                      const Icon = template.icon;
-                      const isSelected = selectedContent === template.id;
-                      return (
-                        <button
-                          key={template.id}
-                          onClick={() => setSelectedContent(template.id)}
-                          className={`text-left rounded-lg border p-3 transition-all flex items-start gap-3 ${
-                            isSelected
-                              ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                              : "border-border hover:border-foreground/20 bg-card hover:bg-muted/30"
-                          }`}
-                        >
-                          <div
-                            className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 mt-0.5 ${
-                              isSelected ? "bg-primary/10" : "bg-muted"
-                            }`}
-                          >
-                            <Icon
-                              className={`h-3.5 w-3.5 ${
-                                isSelected ? "text-primary" : "text-muted-foreground"
-                              }`}
-                            />
-                          </div>
-                          <div>
-                            <p
-                              className={`text-xs font-semibold ${
-                                isSelected ? "text-primary" : "text-foreground"
-                              }`}
-                            >
-                              {template.label}
-                            </p>
-                            <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
-                              {template.description}
-                            </p>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </motion.section>
-              )}
-            </AnimatePresence>
-
-            {/* CTA */}
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, delay: 0.15 }}
-              className="flex items-center justify-between pt-6 border-t"
-            >
-              <p className="text-xs text-muted-foreground">
-                {selectedLayout === "split" && selectedContent !== "blank"
-                  ? `${CONTENT_TEMPLATES.find((t) => t.id === selectedContent)?.label} · `
-                  : ""}
-                {LAYOUTS.find((l) => l.id === selectedLayout)?.label} layout
-              </p>
-              <Button onClick={handleStart} className="gap-2">
-                Start with this
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </motion.div>
-          </div>
+                <PickerPanel
+                  layout={layout}
+                  setLayout={setLayout}
+                  form={form}
+                  setForm={setForm}
+                  onStart={handleStart}
+                />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="edit"
+                initial={{ opacity: 0, x: 16 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 16 }}
+                transition={{ duration: 0.18 }}
+                className="h-full"
+              >
+                <EditorRail
+                  layout={layout}
+                  form={form}
+                  setForm={setForm}
+                  onBack={handleBack}
+                  onSave={handleSave}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* Right: live preview panel */}
-        <div className="hidden lg:flex flex-1 items-center justify-center bg-muted/30 p-10">
+        {/* Right: live preview — always mounted, never unmounts */}
+        <div className="hidden lg:flex flex-1 flex-col items-center justify-center bg-muted/30 p-10">
           <div className="w-full max-w-2xl">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={selectedLayout}
-                initial={{ opacity: 0, y: 10, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -10, scale: 0.98 }}
-                transition={{ duration: 0.2 }}
-                className="rounded-2xl overflow-hidden shadow-xl border"
-                style={{ height: "480px" }}
-              >
-                {selectedLayout === "simple" ? (
-                  <SimplePreview />
-                ) : (
-                  <SplitPreview variant={selectedContent} content={activeContent} />
-                )}
-              </motion.div>
-            </AnimatePresence>
-            <motion.p
-              key={selectedLayout + selectedContent}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.2, delay: 0.1 }}
-              className="text-center text-xs text-muted-foreground mt-4"
+            <div
+              className="rounded-2xl overflow-hidden shadow-xl border"
+              style={{ height: "480px" }}
             >
-              {selectedLayout === "simple"
-                ? "Simple layout — gradient background, centered opt-in card"
-                : `${CONTENT_TEMPLATES.find((t) => t.id === selectedContent)?.label ?? "Visual Split"} — ${
-                    selectedContent === "blank"
-                      ? "image panel left, opt-in form right"
-                      : selectedContent === "download"
-                      ? "document mockup left, numbered benefits right"
-                      : selectedContent === "steps"
-                      ? "image panel left, numbered steps right"
-                      : "photo left with caption overlay, bold headline right"
-                  }`}
-            </motion.p>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={layout}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18 }}
+                  className="w-full h-full"
+                >
+                  {layout === "simple" ? (
+                    <SimplePreview form={form} />
+                  ) : (
+                    <SplitPreview form={form} />
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+            <p className="text-center text-xs text-muted-foreground mt-4">{previewCaption}</p>
           </div>
         </div>
       </div>
