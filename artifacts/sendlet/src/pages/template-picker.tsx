@@ -12,6 +12,7 @@ import {
   Check,
   ChevronDown,
   Image,
+  Layers2,
   Link,
   Palette,
   Plus,
@@ -57,11 +58,12 @@ const LEFT_TYPES = [
 /* ─── Form state ────────────────────────────────────────────── */
 
 interface TextEl {
-  x:     number; // 0-100 % from left of right panel
-  y:     number; // 0-100 % from top of right panel
-  w:     number; // 0-100 % width
-  size:  number; // font-size in px
-  color: string; // hex colour
+  x:        number; // 0-100 % from left of right panel
+  y:        number; // 0-100 % from top of right panel
+  w:        number; // 0-100 % width
+  size:     number; // font-size in px
+  color:    string; // hex colour
+  backdrop?: "none" | "glass" | "card"; // background panel style
 }
 
 type TextElKey = "headline" | "description" | "bullets" | "form";
@@ -98,10 +100,10 @@ const defaultForm: Form = {
   imagePosition:  { x: 50, y: 50 },
   bannerHeight:   44,
   textElements: {
-    headline:    { x: 4, y: 5,  w: 92, size: 14, color: "#0f172a" },
-    description: { x: 4, y: 27, w: 92, size: 11, color: "#64748b" },
-    bullets:     { x: 4, y: 50, w: 92, size: 10, color: "#374151" },
-    form:        { x: 4, y: 70, w: 92, size: 10, color: "#0f172a" },
+    headline:    { x: 4, y: 5,  w: 92, size: 14, color: "#0f172a", backdrop: "none" },
+    description: { x: 4, y: 27, w: 92, size: 11, color: "#64748b", backdrop: "none" },
+    bullets:     { x: 4, y: 50, w: 92, size: 10, color: "#374151", backdrop: "none" },
+    form:        { x: 4, y: 70, w: 92, size: 10, color: "#0f172a", backdrop: "none" },
   },
 };
 
@@ -363,6 +365,30 @@ function DraggableTextBlock({
 
   const safeColor = el.color || "#0f172a";
   const ac = accentColor || ACCENT;
+  const bdMode = el.backdrop ?? "none";
+
+  const backdropInlineStyle: React.CSSProperties =
+    bdMode === "glass"
+      ? {
+          backdropFilter: "blur(14px)",
+          WebkitBackdropFilter: "blur(14px)",
+          background: "rgba(255,255,255,0.18)",
+          border: "1px solid rgba(255,255,255,0.45)",
+          borderRadius: "10px",
+          padding: "8px 10px",
+        }
+      : bdMode === "card"
+      ? {
+          background: "rgba(255,255,255,0.92)",
+          boxShadow: "0 2px 14px rgba(0,0,0,0.10)",
+          borderRadius: "10px",
+          padding: "8px 10px",
+        }
+      : {};
+
+  const BACKDROP_CYCLE: Array<"none" | "glass" | "card"> = ["none", "glass", "card"];
+  const nextBackdrop = BACKDROP_CYCLE[(BACKDROP_CYCLE.indexOf(bdMode) + 1) % BACKDROP_CYCLE.length];
+  const backdropLabel = bdMode === "glass" ? "glass" : bdMode === "card" ? "card" : "bg";
 
   return (
     <div
@@ -374,6 +400,7 @@ function DraggableTextBlock({
         width: `${el.w}%`,
         fontSize: `${el.size}px`,
         color: safeColor,
+        ...backdropInlineStyle,
       }}
       className={`group ${editing ? "cursor-text" : "cursor-move"} ${editing ? "" : "select-none"} ${fontClass} ${
         selected
@@ -471,6 +498,18 @@ function DraggableTextBlock({
             <span className="text-[8px] font-mono text-slate-600 w-5 text-center">{el.size}</span>
             <button className="text-[9px] font-semibold text-slate-500 hover:text-slate-800 leading-none px-0.5" onClick={() => onUpdate({ size: Math.min(72, el.size + 1) })}>A+</button>
           </div>
+          {/* Backdrop style toggle */}
+          <button
+            onClick={() => onUpdate({ backdrop: nextBackdrop })}
+            className={`flex items-center gap-0.5 border-l border-slate-200 pl-1 text-[7px] font-medium transition-colors ${
+              bdMode !== "none" ? "text-sky-600" : "text-slate-400 hover:text-slate-700"
+            }`}
+            title={`Background: ${bdMode} → click to cycle (none / glass / card)`}
+          >
+            <Layers2 className="h-2.5 w-2.5" />
+            <span>{backdropLabel}</span>
+          </button>
+
           {editType && (
             <button
               onClick={enterEdit as unknown as React.MouseEventHandler<HTMLButtonElement>}
@@ -478,7 +517,6 @@ function DraggableTextBlock({
               title="Double-click to edit text"
             >✎ edit</button>
           )}
-          {!editType && <span className="text-[7px] text-slate-300 border-l border-slate-200 pl-1">⊞ corner</span>}
         </div>
       )}
 
