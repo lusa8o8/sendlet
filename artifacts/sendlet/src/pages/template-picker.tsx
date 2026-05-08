@@ -1914,9 +1914,9 @@ export default function TemplatePicker() {
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.22 }}
-                className="w-full max-w-3xl px-10 pb-20"
+                className={`w-full max-w-3xl px-10 ${barPosition === "bottom" ? "pb-20" : "pb-6"}`}
               >
-                <div className="rounded-2xl overflow-hidden shadow-xl border" style={{ height: "520px" }}>
+                <div className="rounded-2xl overflow-hidden shadow-xl border" style={{ height: "min(520px, calc(100dvh - 180px))" }}>
                   {previewBlock}
                 </div>
                 <p className="text-center text-xs text-muted-foreground mt-4">{previewCaption}</p>
