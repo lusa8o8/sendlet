@@ -51,7 +51,7 @@ A lean SaaS for publishing email-gated lead magnet opt-in pages.
 
 - `setForm` in FloatingBar expects `(f: Form) => void` (direct object), not a setter function.
 - The `barPosition` state lives in TemplatePicker (not FloatingBar) so the layout can flex between side/bottom modes.
-- When `barPosition === "side"`, the edit area renders as a flex row; FloatingBar returns a vertical div (not absolutely positioned).
+- Both bar modes float as `absolute` overlays over the canvas — bottom mode is `bottom-7 left-1/2 -translate-x-1/2`, side mode is `right-6 top-1/2 -translate-y-1/2`. Neither takes space in the layout flow.
 - `bulletsEnabled` controls bullet visibility separately from `hiddenBlocks` (for backward compat with public page rendering).
 
 ## Pointers

@@ -1613,7 +1613,7 @@ function FloatingBar({
       </button>
     );
     return (
-      <div className="h-full w-[64px] shrink-0 flex flex-col items-center gap-0.5 py-2.5 bg-white/95 backdrop-blur-xl border-l border-black/8 shadow-2xl z-50 overflow-y-auto">
+      <div className="absolute right-6 top-1/2 -translate-y-1/2 z-50 flex flex-col items-center gap-0.5 py-2.5 bg-white/95 backdrop-blur-xl rounded-2xl border border-black/8 shadow-2xl pointer-events-auto">
         <button onClick={onBack} title="Back" className="w-11 h-11 rounded-xl flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
           <ArrowLeft className="h-4 w-4" />
         </button>
@@ -1908,53 +1908,31 @@ export default function TemplatePicker() {
 
           {/* Edit mode: full-canvas preview + floating bar */}
           {mode === "edit" && (
-            barPosition === "side" ? (
-              <div className="flex w-full h-full">
-                <div className="flex-1 flex items-center justify-center px-6 py-4 overflow-hidden">
-                  <div className="w-full max-w-3xl">
-                    <div className="rounded-2xl overflow-hidden shadow-xl border" style={{ height: "min(520px, calc(100vh - 57px - 56px))" }}>
-                      {previewBlock}
-                    </div>
-                  </div>
+            <>
+              <motion.div
+                key="edit-canvas"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.22 }}
+                className="w-full max-w-3xl px-10 pb-20"
+              >
+                <div className="rounded-2xl overflow-hidden shadow-xl border" style={{ height: "520px" }}>
+                  {previewBlock}
                 </div>
-                <FloatingBar
-                  layout={layout}
-                  form={form}
-                  setForm={setForm}
-                  onBack={handleBack}
-                  onSave={handleSave}
-                  isEditing={!!editingMagnet}
-                  barPosition="side"
-                  onTogglePosition={() => setBarPosition("bottom")}
-                />
-              </div>
-            ) : (
-              <>
-                <motion.div
-                  key="edit-canvas"
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.22 }}
-                  className="w-full max-w-3xl px-10 pb-20"
-                >
-                  <div className="rounded-2xl overflow-hidden shadow-xl border" style={{ height: "520px" }}>
-                    {previewBlock}
-                  </div>
-                  <p className="text-center text-xs text-muted-foreground mt-4">{previewCaption}</p>
-                </motion.div>
+                <p className="text-center text-xs text-muted-foreground mt-4">{previewCaption}</p>
+              </motion.div>
 
-                <FloatingBar
-                  layout={layout}
-                  form={form}
-                  setForm={setForm}
-                  onBack={handleBack}
-                  onSave={handleSave}
-                  isEditing={!!editingMagnet}
-                  barPosition="bottom"
-                  onTogglePosition={() => setBarPosition("side")}
-                />
-              </>
-            )
+              <FloatingBar
+                layout={layout}
+                form={form}
+                setForm={setForm}
+                onBack={handleBack}
+                onSave={handleSave}
+                isEditing={!!editingMagnet}
+                barPosition={barPosition}
+                onTogglePosition={() => setBarPosition(barPosition === "bottom" ? "side" : "bottom")}
+              />
+            </>
           )}
         </div>
 
