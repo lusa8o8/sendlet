@@ -1070,9 +1070,12 @@ function FloatingBar({
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
-        <span className="text-sm font-semibold max-w-[110px] truncate text-foreground mr-1.5">
-          {form.title || "Untitled"}
-        </span>
+        <input
+          value={form.title}
+          onChange={(e) => setForm({ ...form, title: e.target.value })}
+          placeholder="Untitled"
+          className="text-sm font-semibold w-[120px] bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground/50 mr-1.5 focus:ring-1 focus:ring-primary/30 focus:bg-muted rounded px-1 -mx-1 transition-all"
+        />
 
         {sep}
 
