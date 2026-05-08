@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from "@/contexts/auth-context";
 import NotFound from "@/pages/not-found";
 import SignIn from "@/pages/sign-in";
 import Dashboard from "@/pages/dashboard";
+import TemplatePicker from "@/pages/template-picker";
 import CreateLeadMagnet from "@/pages/create-lead-magnet";
 import LeadMagnetDetail from "@/pages/lead-magnet-detail";
 import Leads from "@/pages/leads";
@@ -33,7 +34,8 @@ function Router() {
       <Route path="/" component={RootRoute} />
       <Route path="/sign-in" component={SignIn} />
       <Route path="/dashboard" component={Dashboard} />
-      <Route path="/lead-magnets/new" component={CreateLeadMagnet} />
+      <Route path="/lead-magnets/new" component={TemplatePicker} />
+      <Route path="/lead-magnets/create" component={CreateLeadMagnet} />
       <Route path="/lead-magnets/:id" component={LeadMagnetDetail} />
       <Route path="/leads" component={Leads} />
       <Route path="/p/:slug" component={PublicPage} />

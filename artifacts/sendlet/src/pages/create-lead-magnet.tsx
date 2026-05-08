@@ -11,6 +11,50 @@ import { ChevronRight, ArrowLeft, Upload, Link as LinkIcon, Check, Plus, X } fro
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuth } from "@/contexts/auth-context";
 
+const CONTENT_FILLS: Record<string, { title: string; description: string; bullets: string[]; ctaLabel: string; emailSubject: string; emailBody: string }> = {
+  blank: { title: "", description: "", bullets: [""], ctaLabel: "Get the resource", emailSubject: "", emailBody: "" },
+  checklist: {
+    title: "The [Topic] Checklist",
+    description: "A simple, step-by-step guide to help you [outcome] faster.",
+    bullets: ["Step-by-step process", "Ready-to-use format", "Saves hours of planning"],
+    ctaLabel: "Get the checklist",
+    emailSubject: "Here's your checklist!",
+    emailBody: "Hey [First name],\n\nHere's the checklist you signed up for.\n\nI hope it saves you time and makes the process a lot cleaner.\n\n[Download link]\n\nLet me know if you have questions.\n\n— [Your name]",
+  },
+  "email-course": {
+    title: "[Topic] in 5 Days",
+    description: "A free email course that walks you through [topic] one step at a time.",
+    bullets: ["One focused lesson a day", "Actionable exercises", "Built for busy people"],
+    ctaLabel: "Start the course",
+    emailSubject: "Your first lesson is here",
+    emailBody: "Hey [First name],\n\nWelcome — Day 1 of your course starts now.\n\n[Lesson content or link]\n\nSee you tomorrow for Day 2.\n\n— [Your name]",
+  },
+  "pdf-guide": {
+    title: "The [Topic] Guide",
+    description: "Everything you need to know about [topic] in one clear, concise document.",
+    bullets: ["Plain-English explanations", "Real-world examples", "Instant PDF download"],
+    ctaLabel: "Download the guide",
+    emailSubject: "Your free guide is ready",
+    emailBody: "Hey [First name],\n\nHere's your free guide — [Guide title].\n\n[Download link]\n\nHope it's useful. Reply anytime if you have questions.\n\n— [Your name]",
+  },
+  "swipe-file": {
+    title: "[Topic] Swipe File",
+    description: "[N] proven [templates/examples] you can copy and adapt right away.",
+    bullets: ["Ready to use immediately", "Battle-tested examples", "Saves hours of research"],
+    ctaLabel: "Get the swipe file",
+    emailSubject: "Your swipe file is inside",
+    emailBody: "Hey [First name],\n\nHere's your swipe file.\n\n[Download link]\n\nFeel free to copy, adapt, and make it yours.\n\n— [Your name]",
+  },
+  "mini-audit": {
+    title: "Free [Topic] Audit",
+    description: "Find out exactly what's holding your [area] back — in under 10 minutes.",
+    bullets: ["Quick self-assessment", "Clear scoring system", "Actionable next steps"],
+    ctaLabel: "Get the audit",
+    emailSubject: "Your audit results + next steps",
+    emailBody: "Hey [First name],\n\nHere's your audit — go through each section and score yourself honestly.\n\n[Download link]\n\nReply if you want to talk through your results.\n\n— [Your name]",
+  },
+};
+
 const GRADIENT_PRESETS = [
   { id: "none", label: "None", gradient: null },
   { id: "dusk", label: "Dusk", gradient: "linear-gradient(135deg, #fdd5c4 0%, #fef0d0 42%, #d5e5ff 75%, #e5d5ff 100%)" },
@@ -33,6 +77,7 @@ interface FormData {
   externalUrl: string;
   accentColor: string;
   backgroundPreset: string;
+  layout: string;
   senderName: string;
   senderEmail: string;
   emailSubject: string;
@@ -151,12 +196,17 @@ export default function CreateLeadMagnet() {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const totalSteps = 4;
 
+  const urlParams = new URLSearchParams(window.location.search);
+  const layoutParam = urlParams.get("layout") || "simple";
+  const contentParam = urlParams.get("content") || "blank";
+  const fill = CONTENT_FILLS[contentParam] ?? CONTENT_FILLS.blank;
+
   const [formData, setFormData] = useState<FormData>({
-    title: "",
-    description: "",
-    bullets: [""],
+    title: fill.title,
+    description: fill.description,
+    bullets: fill.bullets,
     bulletsEnabled: true,
-    ctaLabel: "Get the resource",
+    ctaLabel: fill.ctaLabel,
     creatorOverride: false,
     creatorName: "",
     creatorAvatarUrl: "",
@@ -164,10 +214,11 @@ export default function CreateLeadMagnet() {
     externalUrl: "",
     accentColor: "#0F766E",
     backgroundPreset: "dusk",
+    layout: layoutParam,
     senderName: accountName,
     senderEmail: "",
-    emailSubject: "",
-    emailBody: "",
+    emailSubject: fill.emailSubject,
+    emailBody: fill.emailBody,
     slug: "",
   });
 
