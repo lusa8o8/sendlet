@@ -298,7 +298,10 @@ export default function CreateLeadMagnet() {
             </div>
             <div className="space-y-5">
               <div className="space-y-3">
-                <Label>Resource delivery</Label>
+                <div>
+                  <Label>How do you want to deliver it?</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">This is what gets sent to someone after they opt in.</p>
+                </div>
                 <RadioGroup
                   value={formData.deliveryType}
                   onValueChange={(val) => updateForm("deliveryType", val)}
