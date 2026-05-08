@@ -40,8 +40,9 @@ const ACCENT_COLORS = [
 ];
 
 const LAYOUTS = [
-  { id: "simple", label: "Simple",       desc: "Centered opt-in card on a gradient." },
-  { id: "split",  label: "Visual Split", desc: "Full-bleed panel left, form right."  },
+  { id: "simple",  label: "Simple",       desc: "Centered opt-in card on a gradient." },
+  { id: "split",   label: "Visual Split", desc: "Full-bleed panel left, form right."  },
+  { id: "stacked", label: "Stacked",      desc: "Image banner on top, form below."    },
 ];
 
 const LEFT_TYPES = [
@@ -270,6 +271,97 @@ function SplitPreview({ form }: { form: Form }) {
   );
 }
 
+/* ─── Live preview: Stacked layout ─────────────────────────── */
+
+function StackedPreview({ form }: { form: Form }) {
+  const accent = form.accentColor || ACCENT;
+  const bullets = form.bulletsEnabled ? form.bullets.filter(Boolean) : [];
+  const displayBullets = bullets.length ? bullets : ["Key benefit one", "Key benefit two", "Key benefit three"];
+
+  return (
+    <div className="w-full h-full flex flex-col bg-white">
+      {/* Top: image banner */}
+      <div
+        className="relative shrink-0 overflow-hidden"
+        style={{ height: "44%", backgroundColor: accent }}
+      >
+        <div
+          className="absolute inset-0 opacity-[0.06]"
+          style={{
+            backgroundImage: "radial-gradient(circle at 25% 25%, white 1px, transparent 1px)",
+            backgroundSize: "48px 48px",
+          }}
+        />
+        {form.imageDataUrl ? (
+          <>
+            <img
+              src={form.imageDataUrl}
+              alt="Banner"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/25" />
+          </>
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-16 h-16 rounded-xl border-2 border-white/20 flex items-center justify-center">
+              <Image className="h-6 w-6 text-white/25" />
+            </div>
+          </div>
+        )}
+        {/* Creator identity — bottom-left of image */}
+        <div className="absolute bottom-3 left-4 flex items-center gap-1.5 z-10">
+          <div className="w-6 h-6 rounded-full bg-white/90 shadow flex items-center justify-center font-semibold text-foreground text-[9px]">
+            S
+          </div>
+          <span
+            className="text-[10px] font-medium drop-shadow"
+            style={{ color: form.imageDataUrl ? "white" : "rgba(255,255,255,0.7)" }}
+          >
+            Sarah Chen
+          </span>
+        </div>
+      </div>
+
+      {/* Bottom: form content */}
+      <div className="flex-1 overflow-hidden px-5 py-4 flex flex-col justify-center">
+        <h2 className="text-sm font-bold tracking-tight mb-1 text-foreground leading-snug">
+          {form.title || "Your Resource Title"}
+        </h2>
+        <p className="text-[11px] text-muted-foreground mb-2.5 leading-relaxed">
+          {form.description || "A short description of what they'll get and why it helps."}
+        </p>
+        {form.bulletsEnabled && (
+          <div className="space-y-1.5 mb-3">
+            {displayBullets.slice(0, 3).map((b, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <div
+                  className="w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: `${accent}22` }}
+                >
+                  <Check className="h-2 w-2" style={{ color: accent }} />
+                </div>
+                <span className="text-[10px] text-foreground/80">{b}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="border-t pt-2.5 space-y-1.5">
+          <div className="h-5 rounded-md border text-[9px] text-muted-foreground flex items-center px-2">
+            Enter your email address
+          </div>
+          <div
+            className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium"
+            style={{ backgroundColor: accent }}
+          >
+            {form.ctaLabel || "Get the resource"}
+          </div>
+          <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Picker panel (left, mode === 'pick') ──────────────────── */
 
 function PickerPanel({
@@ -332,7 +424,7 @@ function PickerPanel({
         </div>
       </div>
 
-      {/* Left panel type (only for split) */}
+      {/* Left panel type (only for visual split) */}
       <AnimatePresence>
         {layout === "split" && (
           <motion.div
@@ -458,8 +550,8 @@ function EditorRail({
       <div className="flex-1 overflow-y-auto px-6">
         {/* Content */}
         <Accordion title="Content" open={open.content} onToggle={() => toggle("content")}>
-          {/* Image upload — only for split + image panel */}
-          {layout === "split" && form.leftType === "image" && (
+          {/* Image upload — for split+image or stacked */}
+          {(layout === "stacked" || (layout === "split" && form.leftType === "image")) && (
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">Panel image</label>
               {form.imageDataUrl ? (
@@ -711,6 +803,8 @@ export default function TemplatePicker() {
   const previewCaption =
     layout === "simple"
       ? "Simple layout — centered opt-in card on a gradient"
+      : layout === "stacked"
+      ? "Stacked layout — image banner on top, form below"
       : `Visual Split — ${form.leftType === "image" ? "photo" : "bold text"} left · form right`;
 
   return (
@@ -775,6 +869,8 @@ export default function TemplatePicker() {
                 >
                   {layout === "simple" ? (
                     <SimplePreview form={form} />
+                  ) : layout === "stacked" ? (
+                    <StackedPreview form={form} />
                   ) : (
                     <SplitPreview form={form} />
                   )}
