@@ -47,6 +47,7 @@ export function TopNav() {
   const [imgMeta, setImgMeta] = useState<ImgMeta | null>(null);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
+  const [bgColor, setBgColor] = useState<"white" | "dark">("white");
   const dragStart = useRef({ mx: 0, my: 0, ox: 0, oy: 0 });
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
@@ -58,6 +59,7 @@ export function TopNav() {
     setRawSrc("");
     setImgMeta(null);
     setOffset({ x: 0, y: 0 });
+    setBgColor("white");
     setProfileOpen(false);
     setTimeout(() => setProfileOpen(true), 0);
   };
@@ -109,6 +111,8 @@ export function TopNav() {
         canvas.width = CROP_SIZE;
         canvas.height = CROP_SIZE;
         const ctx = canvas.getContext("2d")!;
+        ctx.fillStyle = bgColor === "white" ? "#ffffff" : "#111111";
+        ctx.fillRect(0, 0, CROP_SIZE, CROP_SIZE);
         const { x, y, w, h } = computeDraw(imgMeta, offset.x, offset.y);
         ctx.drawImage(img, x, y, w, h);
         resolve(canvas.toDataURL("image/jpeg", 0.82));
@@ -230,11 +234,14 @@ export function TopNav() {
 
             {/* Crop circle */}
             <div
-              className="relative rounded-full overflow-hidden border-2 border-primary/30 bg-secondary select-none"
+              className="relative rounded-full overflow-hidden border-2 border-primary/30 select-none"
               style={{
                 width: CROP_SIZE,
                 height: CROP_SIZE,
                 cursor: rawSrc ? (dragging ? "grabbing" : "grab") : "default",
+                background: rawSrc
+                  ? bgColor === "white" ? "#ffffff" : "#111111"
+                  : undefined,
               }}
               onPointerDown={onPointerDown}
               onPointerMove={onPointerMove}
@@ -260,6 +267,29 @@ export function TopNav() {
                 </div>
               )}
             </div>
+
+            {/* Background color picker — only shown when a new image is loaded */}
+            {rawSrc && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Background:</span>
+                <button
+                  type="button"
+                  onClick={() => setBgColor("white")}
+                  className={`w-6 h-6 rounded-full border-2 bg-white transition-all ${
+                    bgColor === "white" ? "border-primary shadow-sm scale-110" : "border-border"
+                  }`}
+                  title="White background"
+                />
+                <button
+                  type="button"
+                  onClick={() => setBgColor("dark")}
+                  className={`w-6 h-6 rounded-full border-2 bg-[#111111] transition-all ${
+                    bgColor === "dark" ? "border-primary shadow-sm scale-110" : "border-border"
+                  }`}
+                  title="Dark background"
+                />
+              </div>
+            )}
 
             {/* Upload + remove buttons */}
             <div className="flex items-center gap-2">
