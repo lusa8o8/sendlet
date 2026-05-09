@@ -435,7 +435,7 @@ function SimplePreview({
               <DraggableTextBlock el={textElements.form} onUpdate={(u) => onUpdateTextEl?.("form", u)} label="Form" onSnapMove={makeSnapMove("form")} onDragEnd={() => setGuides([])} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "form"] })} locked={locked}>
                 <div className="space-y-1.5">
                   <div className="h-5 rounded-md border border-slate-200 text-[9px] text-muted-foreground flex items-center px-2 bg-white">Enter your email address</div>
-                  <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>{form.ctaLabel || "Get the resource"}</div>
+                  <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium truncate px-1" style={{ backgroundColor: accent }}>{form.ctaLabel || "Get the resource"}</div>
                   <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
                 </div>
               </DraggableTextBlock>
@@ -463,7 +463,7 @@ function SimplePreview({
             )}
             <div className="border-t pt-2.5 space-y-1.5">
               <div className="h-5 rounded-md border text-[9px] text-muted-foreground flex items-center px-2">Enter your email address</div>
-              <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>{form.ctaLabel || "Get the resource"}</div>
+              <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium truncate px-1" style={{ backgroundColor: accent }}>{form.ctaLabel || "Get the resource"}</div>
               <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
             </div>
           </div>
@@ -1035,7 +1035,7 @@ function SplitPreview({
                   Enter your email address
                 </div>
                 <div
-                  className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium"
+                  className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium truncate px-1"
                   style={{ backgroundColor: accent }}
                 >
                   {form.ctaLabel || "Get the resource"}
@@ -1071,7 +1071,7 @@ function SplitPreview({
               <div className="h-5 rounded-md border text-[9px] text-muted-foreground flex items-center px-2">
                 Enter your email address
               </div>
-              <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>
+              <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium truncate px-1" style={{ backgroundColor: accent }}>
                 {form.ctaLabel || "Get the resource"}
               </div>
               <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
@@ -1268,7 +1268,7 @@ function StackedPreview({
             <DraggableTextBlock el={textElements.form} onUpdate={(u) => onUpdateTextEl?.("form", u)} label="Form" onSnapMove={makeSnapMove("form")} onDragEnd={() => setGuides([])} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "form"] })} locked={locked}>
               <div className="space-y-1.5">
                 <div className="h-5 rounded-md border border-slate-200 text-[9px] text-muted-foreground flex items-center px-2 bg-white">Enter your email address</div>
-                <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>{form.ctaLabel || "Get the resource"}</div>
+                <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium truncate px-1" style={{ backgroundColor: accent }}>{form.ctaLabel || "Get the resource"}</div>
                 <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
               </div>
             </DraggableTextBlock>
@@ -1296,7 +1296,7 @@ function StackedPreview({
           )}
           <div className="border-t pt-2.5 space-y-1.5">
             <div className="h-5 rounded-md border text-[9px] text-muted-foreground flex items-center px-2">Enter your email address</div>
-            <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>{form.ctaLabel || "Get the resource"}</div>
+            <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium truncate px-1" style={{ backgroundColor: accent }}>{form.ctaLabel || "Get the resource"}</div>
             <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
           </div>
         </div>
@@ -1465,7 +1465,7 @@ function FullImagePreview({
                 <div className="h-5 rounded-md border border-white/30 text-[9px] text-white/70 flex items-center px-2 bg-white/10">
                   Enter your email address
                 </div>
-                <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>
+                <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium truncate px-1" style={{ backgroundColor: accent }}>
                   {form.ctaLabel || "Get the resource"}
                 </div>
                 <p className="text-center text-[8px] text-white/60">No spam. Unsubscribe anytime.</p>
@@ -1514,7 +1514,7 @@ function FullImagePreview({
               <div className="h-5 rounded-md border border-white/30 text-[9px] text-white/70 flex items-center px-2 bg-white/10">
                 Enter your email address
               </div>
-              <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium" style={{ backgroundColor: accent }}>
+              <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium truncate px-1" style={{ backgroundColor: accent }}>
                 {form.ctaLabel || "Get the resource"}
               </div>
               <p className="text-center text-[8px] text-white/60">No spam. Unsubscribe anytime.</p>
