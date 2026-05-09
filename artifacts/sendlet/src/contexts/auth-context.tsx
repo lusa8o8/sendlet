@@ -1,6 +1,11 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import type { Session } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabase";
+import type { User } from "firebase/auth";
+import {
+  completeFirebaseMagicLinkIfPresent,
+  sendFirebaseMagicLink,
+  signOutFirebase,
+  watchFirebaseAuth,
+} from "@/lib/firebase";
 
 const PROFILE_KEY = "sendlet_profile";
 const AUTH_KEY    = "sendlet_signed_in";
@@ -27,7 +32,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [name, setNameState]   = useState(() => loadProfile().name);
   const [avatar, setAvatarState] = useState(() => loadProfile().avatar);
@@ -35,21 +40,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    void supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      setSession(data.session);
-      setEmail(data.session?.user.email ?? null);
+    void completeFirebaseMagicLinkIfPresent().catch((error) => {
+      console.error("Could not complete Firebase magic link", error);
     });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setEmail(nextSession?.user.email ?? null);
+    const unsubscribe = watchFirebaseAuth((nextUser) => {
+      if (!mounted) return;
+      setUser(nextUser);
+      setEmail(nextUser?.email ?? null);
       try {
-        if (nextSession?.user.email) {
+        if (nextUser?.email) {
           localStorage.setItem(AUTH_KEY, "true");
-          localStorage.setItem(EMAIL_KEY, nextSession.user.email);
+          localStorage.setItem(EMAIL_KEY, nextUser.email);
         } else {
           localStorage.removeItem(AUTH_KEY);
           localStorage.removeItem(EMAIL_KEY);
@@ -59,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      unsubscribe();
     };
   }, []);
 
@@ -70,18 +72,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (newEmail: string, redirectTo?: string) => {
-    const { error } = await supabase.auth.signInWithOtp({
-      email: newEmail,
-      options: {
-        emailRedirectTo: redirectTo ?? `${window.location.origin}/dashboard`,
-      },
-    });
-    if (error) throw error;
+    await sendFirebaseMagicLink(newEmail, redirectTo ?? `${window.location.origin}/dashboard`);
     setEmail(newEmail);
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    await signOutFirebase();
     setEmail(null);
     try {
       localStorage.removeItem(AUTH_KEY);
@@ -90,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isSignedIn: !!session, email, name, avatar, updateProfile, signIn, signOut }}>
+    <AuthContext.Provider value={{ isSignedIn: !!user, email, name, avatar, updateProfile, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

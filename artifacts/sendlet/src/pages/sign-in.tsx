@@ -27,6 +27,7 @@ export default function SignIn() {
   const { isSignedIn, signIn } = useAuth();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState("");
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isSignedIn) {
@@ -40,9 +41,19 @@ export default function SignIn() {
   });
 
   async function onSubmit(data: SignInFormValues) {
+    setAuthError(null);
     setSubmittedEmail(data.email);
-    await signIn(data.email, `${window.location.origin}/dashboard`);
-    setIsSubmitted(true);
+    try {
+      await signIn(data.email, `${window.location.origin}/dashboard`);
+      setIsSubmitted(true);
+    } catch (error) {
+      const message = error instanceof Error && error.message.toLowerCase().includes("rate limit")
+        ? "Too many magic links were requested. Wait a few minutes, then try again."
+        : error instanceof Error
+        ? error.message
+        : "Could not send a magic link.";
+      setAuthError(message);
+    }
   }
 
   return (
@@ -137,6 +148,12 @@ export default function SignIn() {
                   </Button>
                 </form>
               </Form>
+
+              {authError ? (
+                <p className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                  {authError}
+                </p>
+              ) : null}
 
               <p className="text-xs text-muted-foreground">
                 No password needed. No spam — ever.

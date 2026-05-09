@@ -2420,6 +2420,7 @@ export default function TemplatePicker() {
   const [authGateOpen, setAuthGateOpen] = useState(false);
   const [gateEmail, setGateEmail] = useState("");
   const [gateSubmitting, setGateSubmitting] = useState(false);
+  const [gateError, setGateError] = useState<string | null>(null);
 
   // ─── Undo / redo ────────────────────────────────────────────
   type FormSnapshot = {
@@ -2902,11 +2903,20 @@ export default function TemplatePicker() {
                 onSubmit={(e) => {
                   e.preventDefault();
                   if (!gateEmail || gateSubmitting) return;
+                  setGateError(null);
                   setGateSubmitting(true);
                   try { sessionStorage.setItem(PENDING_PUBLISH_KEY, "true"); } catch { /* ignore */ }
                   void signIn(gateEmail, `${window.location.origin}/lead-magnets/new`)
                     .then(() => {
                       setAuthGateOpen(false);
+                    })
+                    .catch((error) => {
+                      const message = error instanceof Error && error.message.toLowerCase().includes("rate limit")
+                        ? "Too many magic links were requested. Wait a few minutes, then try again."
+                        : error instanceof Error
+                        ? error.message
+                        : "Could not send a magic link.";
+                      setGateError(message);
                     })
                     .finally(() => {
                       setGateSubmitting(false);
@@ -2937,6 +2947,11 @@ export default function TemplatePicker() {
                     <>Send magic link <ArrowRight className="h-4 w-4" /></>
                   )}
                 </Button>
+                {gateError ? (
+                  <p className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                    {gateError}
+                  </p>
+                ) : null}
               </form>
 
               <p className="text-[11px] text-muted-foreground/70 text-center mt-4">
