@@ -37,7 +37,15 @@ Deno.serve(async (req) => {
 
   try {
     const identity = await verifyFirebaseToken(req);
-    const body = await req.json().catch(() => ({})) as { id?: string; status?: Status };
+    const body = await req.json().catch(() => ({})) as {
+      id?: string;
+      status?: Status;
+      delivery?: {
+        deliveryEmailEnabled?: boolean;
+        deliveryEmailSubject?: string | null;
+        deliveryEmailBody?: string | null;
+      };
+    };
 
     if (!body.id || !body.status) {
       return jsonResponse({ error: "Missing id or status" }, { status: 400 });
@@ -48,12 +56,25 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
+    const delivery = body.delivery ?? {};
+    const updatePayload: Record<string, unknown> = {
+      status: body.status,
+      published_at: body.status === "published" ? new Date().toISOString() : null,
+    };
+
+    if (typeof delivery.deliveryEmailEnabled === "boolean") {
+      updatePayload.delivery_email_enabled = delivery.deliveryEmailEnabled;
+    }
+    if ("deliveryEmailSubject" in delivery) {
+      updatePayload.delivery_email_subject = delivery.deliveryEmailSubject?.trim() || null;
+    }
+    if ("deliveryEmailBody" in delivery) {
+      updatePayload.delivery_email_body = delivery.deliveryEmailBody?.trim() || null;
+    }
+
     const { data, error } = await supabase
       .from("lead_magnets")
-      .update({
-        status: body.status,
-        published_at: body.status === "published" ? new Date().toISOString() : null,
-      })
+      .update(updatePayload)
       .eq("id", body.id)
       .eq("owner_external_id", identity.uid)
       .select()

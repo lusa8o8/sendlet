@@ -1,286 +1,208 @@
 import { useState } from "react";
 import { useParams, useLocation } from "wouter";
-import { Copy, Check, Send, ExternalLink, ChevronRight, CheckCircle2 } from "lucide-react";
+import { ChevronRight, ExternalLink, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { leadMagnets, updateMagnet, saveBroadcast } from "@/data/mock";
-import { PROVIDERS, integrationConnections } from "@/data/integrations";
-import { useAuth } from "@/contexts/auth-context";
+import { leadMagnets, updateMagnet } from "@/data/mock";
 import { AppLayout } from "@/components/layout/app-layout";
 import { updateLeadMagnetStatusInSupabase } from "@/services/sendlet-service";
 
-const BROADCAST_PROVIDER_IDS = ["resend", "kit", "mailchimp", "beehiiv"];
+type DeliveryMode = "default" | "custom";
+
+function defaultSubject(title: string) {
+  return `Your copy of ${title}`;
+}
+
+function defaultCustomBody(title: string, description: string) {
+  return [
+    "Hi,",
+    "",
+    `Thanks for signing up. Your copy of ${title} is ready.`,
+    "",
+    description,
+    "",
+    "{{resource_link}}",
+    "",
+    "Hope it helps.",
+  ].filter((line, index, arr) => line || arr[index - 1] !== "").join("\n");
+}
 
 export default function EmailDraftPage() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
-  const { name } = useAuth();
-
   const magnet = leadMagnets.find((m) => m.id === id);
-  const publicUrl = magnet ? `${window.location.origin}/p/${magnet.slug}` : "";
-  const firstName = name.split(" ")[0] || name;
 
-  const defaultSubject = magnet ? `${magnet.title} — it's free` : "";
-  const defaultBody = magnet
-    ? [
-        `Hey there,`,
-        ``,
-        `I just published something I think you'll love — and it's completely free.`,
-        ``,
-        `📎 ${magnet.title}`,
-        ...(magnet.description ? [``, magnet.description] : []),
-        ``,
-        `👉 ${publicUrl}`,
-        ``,
-        `Just enter your email there and I'll send it over straight away.`,
-        ``,
-        `Hope you find it useful!`,
-        ``,
-        firstName,
-      ].join("\n")
-    : "";
-
-  const [subject, setSubject] = useState(defaultSubject);
-  const [body, setBody] = useState(defaultBody);
-  const [copied, setCopied] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
-
-  // Detect connected email providers that support broadcasting
-  const [connections] = useState(() => ({ ...integrationConnections }));
-  const connectedProviders = BROADCAST_PROVIDER_IDS
-    .map((pid) => PROVIDERS.find((p) => p.id === pid))
-    .filter((p) => p && !!connections[p.id]) as (typeof PROVIDERS)[number][];
-
-  const [selectedProviderId, setSelectedProviderId] = useState<string | null>(
-    () => connectedProviders[0]?.id ?? null
-  );
-
-  const selectedProvider = connectedProviders.find((p) => p.id === selectedProviderId) ?? null;
-
-  const publish = async () => {
-    if (magnet) {
-      updateMagnet(magnet.id, { status: "published" });
-      await updateLeadMagnetStatusInSupabase(magnet.id, "published");
-    }
-    setLocation("/dashboard");
-  };
-
-  const copyAndPublish = async () => {
-    const text = `Subject: ${subject}\n\n${body}`;
-    try { await navigator.clipboard.writeText(text); } catch { /* ignore */ }
-    setCopied(true);
-      setTimeout(() => void publish(), 800);
-  };
-
-  const sendBroadcast = () => {
-    if (!magnet || !selectedProvider) return;
-    setSending(true);
-    setTimeout(() => {
-      saveBroadcast({
-        id: String(Date.now()),
-        magnetId: magnet.id,
-        subject,
-        sentAt: new Date().toISOString().split("T")[0],
-        recipientCount: Math.max(magnet.leads, 1),
-        provider: selectedProvider.id,
-      });
-      updateMagnet(magnet.id, { status: "published" });
-      void updateLeadMagnetStatusInSupabase(magnet.id, "published");
-      setSending(false);
-      setSent(true);
-      setTimeout(() => setLocation("/dashboard"), 1200);
-    }, 1600);
-  };
+  const [deliveryEnabled, setDeliveryEnabled] = useState(magnet?.deliveryEmailEnabled ?? true);
+  const [mode, setMode] = useState<DeliveryMode>(magnet?.deliveryEmailBody ? "custom" : "default");
+  const [subject, setSubject] = useState(() => magnet ? (magnet.deliveryEmailSubject || defaultSubject(magnet.title)) : "");
+  const [body, setBody] = useState(() => magnet ? (magnet.deliveryEmailBody || defaultCustomBody(magnet.title, magnet.description)) : "");
+  const [publishing, setPublishing] = useState(false);
 
   if (!magnet) {
     setLocation("/dashboard");
     return null;
   }
 
-  /* ── Sent confirmation overlay ── */
-  if (sent) {
-    return (
-      <AppLayout>
-        <div className="max-w-2xl mx-auto px-6 py-10 flex flex-col items-center justify-center min-h-[60vh] text-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-            <CheckCircle2 className="h-7 w-7 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-xl font-semibold">Email sent!</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Sent via {selectedProvider?.name} · redirecting to your dashboard…
-            </p>
-          </div>
-        </div>
-      </AppLayout>
-    );
-  }
+  const publicUrl = `${window.location.origin}/p/${magnet.slug}`;
+  const usingCustom = deliveryEnabled && mode === "custom";
+
+  const publish = async () => {
+    setPublishing(true);
+    const delivery = {
+      deliveryEmailEnabled: deliveryEnabled,
+      deliveryEmailSubject: usingCustom ? subject : null,
+      deliveryEmailBody: usingCustom ? body : null,
+    };
+
+    try {
+      updateMagnet(magnet.id, {
+        status: "published",
+        ...delivery,
+      });
+      await updateLeadMagnetStatusInSupabase(magnet.id, "published", delivery);
+      setLocation("/dashboard");
+    } catch (error) {
+      setPublishing(false);
+      alert(error instanceof Error ? error.message : "Could not publish lead magnet");
+    }
+  };
 
   return (
     <AppLayout>
       <div className="max-w-2xl mx-auto px-6 py-10">
-
-        {/* Step indicator */}
         <div className="flex items-center gap-2 text-xs text-muted-foreground mb-6">
           <span className="text-foreground font-medium">Lead magnet</span>
           <ChevronRight className="h-3 w-3" />
-          <span className="text-foreground font-medium">Email</span>
+          <span className="text-foreground font-medium">Delivery email</span>
           <ChevronRight className="h-3 w-3" />
           <span>Publish</span>
         </div>
 
-        {/* Header */}
         <div className="mb-7">
-          <h1 className="text-2xl font-semibold tracking-tight">Draft an announcement email</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Set up delivery email</h1>
           <p className="text-sm text-muted-foreground mt-1.5">
-            {connectedProviders.length > 0
-              ? "Edit your email below, then send it directly to your audience."
-              : "Edit this template and paste it into your email tool, or connect an email provider to send directly."}
+            Sendlet can send a clean resource email automatically when someone opts in.
           </p>
         </div>
 
-        {/* Provider selector (if multiple connected) */}
-        {connectedProviders.length > 1 && (
-          <div className="flex items-center gap-2 mb-5">
-            <span className="text-xs text-muted-foreground shrink-0">Send via</span>
-            <div className="flex gap-1.5 flex-wrap">
-              {connectedProviders.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => setSelectedProviderId(p.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
-                    selectedProviderId === p.id
-                      ? "border-primary/40 bg-primary/5 text-foreground shadow-sm"
-                      : "border-border text-muted-foreground hover:text-foreground hover:border-border/80"
-                  }`}
-                >
-                  <span
-                    className="w-4 h-4 rounded flex items-center justify-center text-[8px] font-bold"
-                    style={{ backgroundColor: p.brandColor, color: "#fff" }}
-                  >
-                    {p.initials.charAt(0)}
-                  </span>
-                  {p.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Email composer card */}
         <div className="rounded-2xl border bg-card shadow-sm overflow-hidden mb-6">
+          <div className="px-5 py-4 border-b flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium">Send the resource by email</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                The thank-you page still shows the download button either way.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDeliveryEnabled((value) => !value)}
+              className={`h-6 w-11 rounded-full p-0.5 transition-colors ${deliveryEnabled ? "bg-primary" : "bg-muted"}`}
+              aria-pressed={deliveryEnabled}
+            >
+              <span className={`block h-5 w-5 rounded-full bg-white shadow transition-transform ${deliveryEnabled ? "translate-x-5" : ""}`} />
+            </button>
+          </div>
 
-          <div className="divide-y">
-            <div className="flex items-center px-5 py-3">
-              <span className="w-16 text-xs font-medium text-muted-foreground shrink-0">From</span>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-foreground">{name}</span>
-                {selectedProvider && (
-                  <span
-                    className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded"
-                    style={{ backgroundColor: `${selectedProvider.brandColor}18`, color: selectedProvider.brandColor }}
+          {deliveryEnabled ? (
+            <>
+              <div className="p-5 border-b">
+                <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/40 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setMode("default")}
+                    className={`rounded-lg px-3 py-2 text-sm font-medium transition ${mode === "default" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}
                   >
-                    via {selectedProvider.name}
-                  </span>
-                )}
+                    Clean default
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode("custom")}
+                    className={`rounded-lg px-3 py-2 text-sm font-medium transition ${mode === "custom" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}
+                  >
+                    Custom copy
+                  </button>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center px-5 py-3">
-              <span className="w-16 text-xs font-medium text-muted-foreground shrink-0">To</span>
-              <span className="text-sm text-muted-foreground italic">
-                {magnet.leads > 0 ? `${magnet.leads} leads` : "Your audience"}
-              </span>
-            </div>
-            <div className="flex items-center px-5 py-3 gap-3">
-              <span className="w-16 text-xs font-medium text-muted-foreground shrink-0">Subject</span>
-              <input
-                value={subject}
-                onChange={(e) => setSubject(e.target.value)}
-                placeholder="Your subject line"
-                className="flex-1 text-sm font-medium text-foreground bg-transparent border-none outline-none placeholder:text-muted-foreground/50"
-              />
-            </div>
-          </div>
 
-          <div className="border-t px-5 py-4">
-            <textarea
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              rows={13}
-              className="w-full text-sm text-foreground bg-transparent border-none outline-none resize-none leading-relaxed placeholder:text-muted-foreground/50"
-              placeholder="Write your email..."
-            />
-          </div>
+              {mode === "default" ? (
+                <div className="p-5 space-y-4">
+                  <div className="rounded-xl border bg-background px-4 py-4">
+                    <p className="text-xs text-muted-foreground mb-3">Preview</p>
+                    <p className="text-sm text-muted-foreground">Your resource is ready.</p>
+                    <h2 className="text-lg font-semibold leading-snug mt-3">{magnet.title}</h2>
+                    {magnet.description ? (
+                      <p className="text-sm text-muted-foreground leading-relaxed mt-2">{magnet.description}</p>
+                    ) : null}
+                    <div className="inline-flex rounded-lg bg-[#0A8CFF] px-4 py-2 text-sm font-semibold text-white mt-5">
+                      Open resource
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Recommended for deliverability. No custom copy is saved for this lead magnet.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="divide-y">
+                    <div className="flex items-center px-5 py-3 gap-3">
+                      <span className="w-16 text-xs font-medium text-muted-foreground shrink-0">Subject</span>
+                      <input
+                        value={subject}
+                        onChange={(event) => setSubject(event.target.value)}
+                        placeholder="Your subject line"
+                        className="flex-1 text-sm font-medium text-foreground bg-transparent border-none outline-none placeholder:text-muted-foreground/50"
+                      />
+                    </div>
+                  </div>
 
-          <div className="border-t bg-muted/30 px-5 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="text-[11px] font-medium text-muted-foreground shrink-0">Live page:</span>
-              <a
-                href={publicUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[11px] text-primary hover:underline truncate flex items-center gap-1"
-              >
-                {publicUrl}
-                <ExternalLink className="h-2.5 w-2.5 shrink-0" />
-              </a>
+                  <div className="border-t px-5 py-4">
+                    <textarea
+                      value={body}
+                      onChange={(event) => setBody(event.target.value)}
+                      rows={12}
+                      className="w-full text-sm text-foreground bg-transparent border-none outline-none resize-none leading-relaxed placeholder:text-muted-foreground/50"
+                      placeholder="Write the email people receive after opting in..."
+                    />
+                  </div>
+
+                  <div className="border-t bg-muted/30 px-5 py-3 text-xs text-muted-foreground">
+                    Use <span className="font-medium text-foreground">{"{{resource_link}}"}</span> where the download button should appear.
+                  </div>
+                </>
+              )}
+            </>
+          ) : (
+            <div className="p-5">
+              <p className="text-sm text-muted-foreground">
+                Email delivery is off. Leads will only get the resource from the thank-you page.
+              </p>
             </div>
-          </div>
+          )}
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center justify-between gap-3">
-          <button
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors whitespace-nowrap"
-            onClick={publish}
-          >
-            Skip — just publish
-          </button>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={copyAndPublish} className="gap-1.5" disabled={copied || sending}>
-              {copied
-                ? <><Check className="h-3.5 w-3.5 text-primary" /> Copied!</>
-                : <><Copy className="h-3.5 w-3.5" /> Copy</>}
-            </Button>
-
-            {selectedProvider ? (
-              <Button onClick={sendBroadcast} disabled={sending || !subject.trim()} className="gap-1.5 min-w-[160px]">
-                {sending ? (
-                  <>
-                    <span className="inline-block w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Sending…
-                  </>
-                ) : (
-                  <>
-                    <span
-                      className="w-4 h-4 rounded flex items-center justify-center text-[9px] font-bold shrink-0"
-                      style={{ backgroundColor: "rgba(255,255,255,0.25)" }}
-                    >
-                      {selectedProvider.initials.charAt(0)}
-                    </span>
-                    Send via {selectedProvider.name}
-                  </>
-                )}
-              </Button>
-            ) : (
-              <Button onClick={publish} className="gap-1.5">
-                <Send className="h-3.5 w-3.5" />
-                Publish
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* No provider nudge */}
-        {connectedProviders.length === 0 && (
-          <p className="text-xs text-muted-foreground mt-4 text-right">
-            Want to send directly?{" "}
-            <a href="/settings/integrations" className="text-primary hover:underline">
-              Connect Resend, Kit or Mailchimp →
+        <div className="rounded-xl border bg-muted/20 px-4 py-3 mb-6 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-muted-foreground">Live page</p>
+            <a
+              href={publicUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-primary hover:underline truncate flex items-center gap-1 mt-1"
+            >
+              {publicUrl}
+              <ExternalLink className="h-3 w-3 shrink-0" />
             </a>
-          </p>
-        )}
+          </div>
+        </div>
 
+        <div className="flex items-center justify-end gap-2">
+          <Button variant="outline" onClick={() => setLocation("/dashboard")} disabled={publishing}>
+            Save draft
+          </Button>
+          <Button onClick={publish} disabled={publishing || (usingCustom && !subject.trim())} className="gap-1.5">
+            <Send className="h-3.5 w-3.5" />
+            {publishing ? "Publishing..." : "Publish"}
+          </Button>
+        </div>
       </div>
     </AppLayout>
   );

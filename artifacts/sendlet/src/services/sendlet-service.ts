@@ -37,7 +37,17 @@ export async function saveLeadMagnetToSupabase(
   return payload.magnet;
 }
 
-export async function updateLeadMagnetStatusInSupabase(id: string, status: LeadMagnet["status"]) {
+export type DeliverySettings = {
+  deliveryEmailEnabled?: boolean;
+  deliveryEmailSubject?: string | null;
+  deliveryEmailBody?: string | null;
+};
+
+export async function updateLeadMagnetStatusInSupabase(
+  id: string,
+  status: LeadMagnet["status"],
+  delivery?: DeliverySettings,
+) {
   if (!isUuid(id)) return;
 
   const token = await getFirebaseIdToken();
@@ -48,7 +58,7 @@ export async function updateLeadMagnetStatusInSupabase(id: string, status: LeadM
       apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ id, status }),
+    body: JSON.stringify({ id, status, delivery }),
   });
 
   const payload = await response.json().catch(() => ({}));

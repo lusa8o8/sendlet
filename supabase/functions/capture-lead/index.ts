@@ -20,13 +20,55 @@ function deliverySubject(title: string, custom?: string | null) {
   return custom?.trim() || `Your copy of ${title}`;
 }
 
-function deliveryHtml(title: string, description: string, accessUrl: string) {
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function linkHtml(accessUrl: string) {
+  return `<a href="${accessUrl}" style="display:inline-block;background:#0A8CFF;color:#fff;text-decoration:none;padding:13px 18px;border-radius:12px;font-weight:600">Open resource</a>`;
+}
+
+function customDeliveryHtml(body: string, accessUrl: string) {
+  const escapedLink = escapeHtml(accessUrl);
+  const rendered = escapeHtml(body)
+    .replaceAll("{{resource_link}}", linkHtml(accessUrl))
+    .replaceAll("{{ resource_link }}", linkHtml(accessUrl))
+    .replaceAll("{{resource_url}}", `<a href="${accessUrl}">${escapedLink}</a>`)
+    .replaceAll("{{ resource_url }}", `<a href="${accessUrl}">${escapedLink}</a>`)
+    .split("\n")
+    .map((line) => line.trim() ? `<p style="font-size:15px;line-height:1.6;margin:0 0 14px">${line}</p>` : `<div style="height:8px"></div>`)
+    .join("");
+
+  const hasLinkToken = body.includes("{{resource_link}}")
+    || body.includes("{{ resource_link }}")
+    || body.includes("{{resource_url}}")
+    || body.includes("{{ resource_url }}");
+
+  return `
+    <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:40px 20px;color:#0f172a">
+      ${rendered}
+      ${hasLinkToken ? "" : `<div style="margin-top:24px">${linkHtml(accessUrl)}</div>`}
+      <p style="font-size:12px;color:#94a3b8;margin:28px 0 0">You received this because you requested this resource.</p>
+    </div>
+  `;
+}
+
+function deliveryHtml(title: string, description: string, accessUrl: string, customBody?: string | null) {
+  if (customBody?.trim()) {
+    return customDeliveryHtml(customBody.trim(), accessUrl);
+  }
+
   return `
     <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:40px 20px;color:#0f172a">
       <p style="font-size:13px;color:#64748b;margin:0 0 18px">Your resource is ready.</p>
-      <h1 style="font-size:24px;line-height:1.2;margin:0 0 12px">${title}</h1>
-      ${description ? `<p style="font-size:15px;line-height:1.6;color:#475569;margin:0 0 28px">${description}</p>` : ""}
-      <a href="${accessUrl}" style="display:inline-block;background:#0A8CFF;color:#fff;text-decoration:none;padding:13px 18px;border-radius:12px;font-weight:600">Open resource</a>
+      <h1 style="font-size:24px;line-height:1.2;margin:0 0 12px">${escapeHtml(title)}</h1>
+      ${description ? `<p style="font-size:15px;line-height:1.6;color:#475569;margin:0 0 28px">${escapeHtml(description)}</p>` : ""}
+      ${linkHtml(accessUrl)}
       <p style="font-size:12px;color:#94a3b8;margin:28px 0 0">You received this because you requested this resource.</p>
     </div>
   `;
@@ -137,7 +179,7 @@ Deno.serve(async (req) => {
         from: fromEmail,
         to: email,
         subject,
-        html: deliveryHtml(magnet.title, magnet.description ?? "", accessUrl),
+        html: deliveryHtml(magnet.title, magnet.description ?? "", accessUrl, magnet.delivery_email_body),
       }),
     });
 

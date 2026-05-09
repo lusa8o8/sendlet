@@ -41,6 +41,9 @@ export type LeadMagnet = {
   fileSize?: number;
   resourceUrl?: string | null;
   resourceType?: "file" | "external_url" | "none";
+  deliveryEmailEnabled?: boolean;
+  deliveryEmailSubject?: string | null;
+  deliveryEmailBody?: string | null;
   tagline?: string;
   activeIntegrations?: string[];
 };
