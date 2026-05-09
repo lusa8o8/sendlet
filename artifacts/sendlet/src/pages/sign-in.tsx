@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
@@ -24,9 +24,15 @@ const features = [
 
 export default function SignIn() {
   const [, setLocation] = useLocation();
-  const { signIn } = useAuth();
+  const { isSignedIn, signIn } = useAuth();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState("");
+
+  useEffect(() => {
+    if (isSignedIn) {
+      setLocation("/dashboard");
+    }
+  }, [isSignedIn, setLocation]);
 
   const form = useForm<SignInFormValues>({
     resolver: zodResolver(signInSchema),
