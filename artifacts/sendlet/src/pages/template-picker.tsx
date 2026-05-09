@@ -2283,10 +2283,18 @@ function magnetToForm(m: LeadMagnet): Form {
 /* ─── Page ──────────────────────────────────────────────────── */
 
 const NEW_DRAFT_KEY = "sendlet-new-draft";
+const UPLOAD_KEY = "sendlet-upload";
 
 function readNewDraft(): { mode: "pick" | "edit"; layout: string; form: Form } | null {
   try {
     const raw = sessionStorage.getItem(NEW_DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function readUploadDraft(): { title: string; fileName: string; fileSize: number } | null {
+  try {
+    const raw = sessionStorage.getItem(UPLOAD_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch { return null; }
 }
@@ -2306,7 +2314,11 @@ export default function TemplatePicker() {
   });
   const [form, setForm] = useState<Form>(() => {
     if (editingMagnet) return magnetToForm(editingMagnet);
-    return readNewDraft()?.form ?? defaultForm;
+    const draft = readNewDraft();
+    if (draft) return draft.form;
+    const upload = readUploadDraft();
+    if (upload?.title) return { ...defaultForm, title: upload.title };
+    return defaultForm;
   });
   const [barPosition, setBarPosition] = useState<"bottom" | "side">("bottom");
   const [locked, setLocked] = useState(false);
@@ -2529,7 +2541,7 @@ export default function TemplatePicker() {
         layout,
         ...formState,
       });
-      try { sessionStorage.removeItem(NEW_DRAFT_KEY); } catch { /* ignore */ }
+      try { sessionStorage.removeItem(NEW_DRAFT_KEY); sessionStorage.removeItem(UPLOAD_KEY); } catch { /* ignore */ }
       setLocation("/dashboard");
     } else {
       const newId = String(Date.now());
@@ -2551,7 +2563,7 @@ export default function TemplatePicker() {
         createdAt:        new Date().toISOString().split("T")[0],
         ...formState,
       });
-      try { sessionStorage.removeItem(NEW_DRAFT_KEY); } catch { /* ignore */ }
+      try { sessionStorage.removeItem(NEW_DRAFT_KEY); sessionStorage.removeItem(UPLOAD_KEY); } catch { /* ignore */ }
       setLocation(`/lead-magnets/${newId}/email`);
     }
   };

@@ -199,7 +199,7 @@ export default function Dashboard() {
         </p>
       </div>
       <Button asChild size="sm">
-        <Link href="/lead-magnets/new">
+        <Link href="/lead-magnets/upload">
           <Plus className="mr-2 h-4 w-4" />
           Create lead magnet
         </Link>
@@ -225,7 +225,7 @@ export default function Dashboard() {
             </p>
           </div>
           <Button asChild className="shrink-0 w-full sm:w-auto">
-            <Link href="/lead-magnets/new" data-testid="button-create-lead-magnet">
+            <Link href="/lead-magnets/upload" data-testid="button-create-lead-magnet">
               <Plus className="mr-2 h-4 w-4" />
               Create lead magnet
             </Link>

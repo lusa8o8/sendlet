@@ -9,6 +9,7 @@ import Dashboard from "@/pages/dashboard";
 import TemplatePicker from "@/pages/template-picker";
 import LeadMagnetDetail from "@/pages/lead-magnet-detail";
 import EmailDraftPage from "@/pages/email-draft";
+import UploadPage from "@/pages/upload";
 import Leads from "@/pages/leads";
 import PublicPage from "@/pages/public-page";
 import SuccessPage from "@/pages/success-page";
@@ -34,6 +35,7 @@ function Router() {
       <Route path="/" component={RootRoute} />
       <Route path="/sign-in" component={SignIn} />
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/lead-magnets/upload" component={UploadPage} />
       <Route path="/lead-magnets/new" component={TemplatePicker} />
       <Route path="/lead-magnets/:id/edit" component={TemplatePicker} />
       <Route path="/lead-magnets/:id/email" component={EmailDraftPage} />
