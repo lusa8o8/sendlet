@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import { leadMagnets, saveMagnet, updateMagnet, type LeadMagnet } from "@/data/mock";
 import { useAuth } from "@/contexts/auth-context";
+import { saveLeadMagnetToSupabase, updateLeadMagnetInSupabase } from "@/services/sendlet-service";
 
 /* ─── Image compression util ───────────────────────────────── */
 
@@ -2383,7 +2384,7 @@ function readNewDraft(): { mode: "pick" | "edit"; layout: string; form: Form } |
   } catch { return null; }
 }
 
-function readUploadDraft(): { title: string; fileName: string; fileSize: number } | null {
+function readUploadDraft(): { title: string; fileName: string; fileSize: number; fileType?: string; fileDataUrl?: string | null; linkUrl?: string } | null {
   try {
     const raw = sessionStorage.getItem(UPLOAD_KEY);
     return raw ? JSON.parse(raw) : null;
@@ -2613,8 +2614,9 @@ export default function TemplatePicker() {
     }
   };
 
-  const doSave = () => {
+  const doSave = async () => {
     const slug = form.slug || `resource-${Date.now()}`;
+    const upload = readUploadDraft();
     const formState = {
       bullets:        form.bullets,
       bulletsEnabled: form.bulletsEnabled,
@@ -2630,7 +2632,8 @@ export default function TemplatePicker() {
     };
 
     if (editingMagnet) {
-      updateMagnet(editingMagnet.id, {
+      const nextMagnet: LeadMagnet = {
+        ...editingMagnet,
         title:            form.title || "Untitled",
         slug,
         description:      form.description,
@@ -2638,12 +2641,14 @@ export default function TemplatePicker() {
         backgroundPreset: form.gradientPreset,
         layout,
         ...formState,
-      });
+      };
+      updateMagnet(editingMagnet.id, nextMagnet);
+      await updateLeadMagnetInSupabase(nextMagnet);
       try { sessionStorage.removeItem(NEW_DRAFT_KEY); sessionStorage.removeItem(UPLOAD_KEY); } catch { /* ignore */ }
       setLocation("/dashboard");
     } else {
-      const newId = String(Date.now());
-      saveMagnet({
+      const newId = crypto.randomUUID();
+      const nextMagnet: LeadMagnet = {
         id:               newId,
         title:            form.title || "Untitled",
         slug,
@@ -2659,8 +2664,14 @@ export default function TemplatePicker() {
         backgroundPreset: form.gradientPreset,
         layout,
         createdAt:        new Date().toISOString().split("T")[0],
+        fileName:         upload?.fileName,
+        fileSize:         upload?.fileSize,
+        resourceUrl:      upload?.linkUrl ?? null,
+        resourceType:     upload?.linkUrl ? "external_url" : upload?.fileName ? "file" : "none",
         ...formState,
-      });
+      };
+      saveMagnet(nextMagnet);
+      await saveLeadMagnetToSupabase(nextMagnet, upload);
       try { sessionStorage.removeItem(NEW_DRAFT_KEY); sessionStorage.removeItem(UPLOAD_KEY); } catch { /* ignore */ }
       setLocation(`/lead-magnets/${newId}/email`);
     }
@@ -2671,7 +2682,7 @@ export default function TemplatePicker() {
       setAuthGateOpen(true);
       return;
     }
-    doSave();
+    void doSave();
   };
 
   const previewCaption =
@@ -2876,12 +2887,13 @@ export default function TemplatePicker() {
                   e.preventDefault();
                   if (!gateEmail || gateSubmitting) return;
                   setGateSubmitting(true);
-                  setTimeout(() => {
-                    signIn(gateEmail);
-                    doSave();
-                    setAuthGateOpen(false);
-                    setGateSubmitting(false);
-                  }, 1200);
+                  void signIn(gateEmail, `${window.location.origin}/lead-magnets/new`)
+                    .then(() => {
+                      setAuthGateOpen(false);
+                    })
+                    .finally(() => {
+                      setGateSubmitting(false);
+                    });
                 }}
                 className="space-y-3"
               >
@@ -2903,15 +2915,15 @@ export default function TemplatePicker() {
                   disabled={gateSubmitting || !gateEmail}
                 >
                   {gateSubmitting ? (
-                    <>Publishing…</>
+                    <>Sending link...</>
                   ) : (
-                    <>Publish now <ArrowRight className="h-4 w-4" /></>
+                    <>Send magic link <ArrowRight className="h-4 w-4" /></>
                   )}
                 </Button>
               </form>
 
               <p className="text-[11px] text-muted-foreground/70 text-center mt-4">
-                No password needed · No spam, ever.
+                No password needed. Your draft stays here after sign-in.
               </p>
               <div className="text-center mt-2">
                 <button

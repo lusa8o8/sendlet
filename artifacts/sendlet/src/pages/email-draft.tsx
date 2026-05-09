@@ -6,6 +6,7 @@ import { leadMagnets, updateMagnet, saveBroadcast } from "@/data/mock";
 import { PROVIDERS, integrationConnections } from "@/data/integrations";
 import { useAuth } from "@/contexts/auth-context";
 import { AppLayout } from "@/components/layout/app-layout";
+import { updateLeadMagnetStatusInSupabase } from "@/services/sendlet-service";
 
 const BROADCAST_PROVIDER_IDS = ["resend", "kit", "mailchimp", "beehiiv"];
 
@@ -56,8 +57,11 @@ export default function EmailDraftPage() {
 
   const selectedProvider = connectedProviders.find((p) => p.id === selectedProviderId) ?? null;
 
-  const publish = () => {
-    if (magnet) updateMagnet(magnet.id, { status: "published" });
+  const publish = async () => {
+    if (magnet) {
+      updateMagnet(magnet.id, { status: "published" });
+      await updateLeadMagnetStatusInSupabase(magnet.id, "published");
+    }
     setLocation("/dashboard");
   };
 
@@ -65,7 +69,7 @@ export default function EmailDraftPage() {
     const text = `Subject: ${subject}\n\n${body}`;
     try { await navigator.clipboard.writeText(text); } catch { /* ignore */ }
     setCopied(true);
-    setTimeout(() => publish(), 800);
+      setTimeout(() => void publish(), 800);
   };
 
   const sendBroadcast = () => {
@@ -81,6 +85,7 @@ export default function EmailDraftPage() {
         provider: selectedProvider.id,
       });
       updateMagnet(magnet.id, { status: "published" });
+      void updateLeadMagnetStatusInSupabase(magnet.id, "published");
       setSending(false);
       setSent(true);
       setTimeout(() => setLocation("/dashboard"), 1200);

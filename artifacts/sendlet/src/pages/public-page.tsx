@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useLocation } from "wouter";
-import { leadMagnets } from "@/data/mock";
+import { leadMagnets, type LeadMagnet } from "@/data/mock";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 import NotFound from "./not-found";
+import { captureLead, fetchPublicMagnet } from "@/services/sendlet-service";
 
 function renderRichText(text: string): React.ReactNode {
   const regex = /\[#([0-9a-fA-F]{3,6})\]([\s\S]*?)\[\/\]/g;
@@ -38,6 +39,40 @@ const FALLBACK_BULLETS = [
   "Templates for client communication",
   "Avoid common pitfalls and delays",
 ];
+
+function remoteToLeadMagnet(remote: any): LeadMagnet {
+  const config = remote.page_config ?? {};
+  return {
+    id: remote.id,
+    title: remote.title,
+    slug: remote.slug,
+    description: remote.description ?? "",
+    status: remote.status ?? "published",
+    visits: 0,
+    weeklyVisits: 0,
+    leads: 0,
+    weeklyLeads: 0,
+    conversionRate: 0,
+    lastLead: null,
+    accentColor: remote.accent_color ?? "#0F766E",
+    backgroundPreset: remote.background_preset ?? "dusk",
+    layout: remote.layout ?? "simple",
+    createdAt: "",
+    bullets: config.bullets ?? [],
+    bulletsEnabled: config.bulletsEnabled ?? true,
+    ctaLabel: remote.cta_label ?? "Get the resource",
+    imageDataUrl: config.imageDataUrl ?? null,
+    leftType: config.leftType ?? "image",
+    leftPanelWidth: config.leftPanelWidth ?? 48,
+    imagePosition: config.imagePosition ?? { x: 50, y: 50 },
+    bannerHeight: config.bannerHeight ?? 44,
+    textElements: config.textElements ?? {},
+    hiddenBlocks: config.hiddenBlocks ?? [],
+    fileName: remote.file_name ?? undefined,
+    resourceType: remote.resource_type ?? "none",
+    tagline: config.tagline ?? "",
+  };
+}
 
 function OptInForm({
   onSubmit,
@@ -567,8 +602,29 @@ export default function PublicPage() {
   const [, setLocation] = useLocation();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [remoteMagnet, setRemoteMagnet] = useState<LeadMagnet | null>(null);
+  const [checkedRemote, setCheckedRemote] = useState(false);
 
-  const magnet = leadMagnets.find((m) => m.slug === slug);
+  useEffect(() => {
+    if (!slug) return;
+    let cancelled = false;
+    void fetchPublicMagnet(slug)
+      .then((remote) => {
+        if (!cancelled && remote) setRemoteMagnet(remoteToLeadMagnet(remote));
+      })
+      .finally(() => {
+        if (!cancelled) setCheckedRemote(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
+  const magnet = remoteMagnet ?? leadMagnets.find((m) => m.slug === slug);
+
+  if (!magnet && !checkedRemote) {
+    return null;
+  }
 
   if (!magnet) {
     return <NotFound />;
@@ -591,14 +647,28 @@ export default function PublicPage() {
     if (!email) return;
     setIsLoading(true);
 
+    try {
+      const result = await captureLead(magnet.slug, email);
+      try {
+        sessionStorage.setItem(`sendlet_access_${magnet.slug}`, JSON.stringify(result));
+      } catch {}
+      setIsLoading(false);
+      setLocation(`/p/${magnet.slug}/success`);
+      return;
+    } catch (error) {
+      setIsLoading(false);
+      alert(error instanceof Error ? error.message : "Could not submit email");
+      return;
+    }
+
     // Fire delivery email via Resend if connected — best-effort, never blocks opt-in
     try {
       const raw = localStorage.getItem("sendlet_integrations");
       if (raw) {
-        const conns = JSON.parse(raw) as Record<string, { config: Record<string, string> }>;
+        const conns = JSON.parse(raw ?? "{}") as Record<string, { config: Record<string, string> }>;
         const rc = conns["resend"];
         if (rc?.config?.apiKey && rc?.config?.fromEmail) {
-          const magnetUrl = `${window.location.origin}/p/${magnet.slug}`;
+          const magnetUrl = `${window.location.origin}/p/${magnet!.slug}`;
           await fetch("/api/deliver", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -607,8 +677,8 @@ export default function PublicPage() {
               fromEmail: rc.config.fromEmail,
               fromName: rc.config.fromName || creatorName,
               apiKey: rc.config.apiKey,
-              magnetTitle: magnet.title,
-              magnetDescription: magnet.description,
+              magnetTitle: magnet!.title,
+              magnetDescription: magnet!.description,
               magnetUrl,
             }),
           });

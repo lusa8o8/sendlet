@@ -39,6 +39,8 @@ export type LeadMagnet = {
   hiddenBlocks?: string[];
   fileName?: string;
   fileSize?: number;
+  resourceUrl?: string | null;
+  resourceType?: "file" | "external_url" | "none";
   tagline?: string;
   activeIntegrations?: string[];
 };

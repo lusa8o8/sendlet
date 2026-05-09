@@ -33,13 +33,10 @@ export default function SignIn() {
     defaultValues: { email: "" },
   });
 
-  function onSubmit(data: SignInFormValues) {
+  async function onSubmit(data: SignInFormValues) {
     setSubmittedEmail(data.email);
+    await signIn(data.email, `${window.location.origin}/dashboard`);
     setIsSubmitted(true);
-    setTimeout(() => {
-      signIn(data.email);
-      setLocation("/dashboard");
-    }, 1500);
   }
 
   return (

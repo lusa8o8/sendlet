@@ -33,6 +33,15 @@ function titleFromUrl(url: string): string {
 
 type Mode = "file" | "link";
 
+function readFileDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function UploadPage() {
   const [, setLocation] = useLocation();
   const [mode, setMode] = useState<Mode>("file");
@@ -77,10 +86,16 @@ export default function UploadPage() {
   };
 
   /* ── Actions ── */
-  const proceed = () => {
+  const proceed = async () => {
     const payload =
       mode === "file"
-        ? { title: fileTitle.trim(), fileName: file?.name ?? "", fileSize: file?.size ?? 0 }
+        ? {
+            title: fileTitle.trim(),
+            fileName: file?.name ?? "",
+            fileSize: file?.size ?? 0,
+            fileType: file?.type ?? "application/octet-stream",
+            fileDataUrl: file ? await readFileDataUrl(file) : null,
+          }
         : { title: linkTitle.trim(), fileName: "", fileSize: 0, linkUrl: linkUrl.trim() };
     try { sessionStorage.setItem(UPLOAD_KEY, JSON.stringify(payload)); } catch { /* ignore */ }
     setLocation("/lead-magnets/new");

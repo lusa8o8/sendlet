@@ -18,11 +18,13 @@ function SuccessCard({
   title,
   slug,
   accent,
+  accessUrl,
   align = "center",
 }: {
   title: string;
   slug: string;
   accent: string;
+  accessUrl?: string | null;
   align?: "center" | "left";
 }) {
   return (
@@ -57,9 +59,9 @@ function SuccessCard({
         className="w-full h-12 text-[15px] font-semibold shadow-sm gap-2 mb-4"
         style={{ backgroundColor: accent, color: "#fff" }}
       >
-        <a href="#" download>
+        <a href={accessUrl ?? `/p/${slug}`} target={accessUrl ? "_blank" : undefined} rel={accessUrl ? "noopener noreferrer" : undefined}>
           <Download className="h-4 w-4" />
-          Download Resource
+          {accessUrl ? "Open Resource" : "Back to Resource"}
         </a>
       </Button>
 
@@ -156,6 +158,7 @@ function SplitSuccess({
   creatorName,
   creatorAvatar,
   slug,
+  accessUrl,
 }: {
   magnet: (typeof leadMagnets)[0];
   accent: string;
@@ -164,6 +167,7 @@ function SplitSuccess({
   creatorName: string;
   creatorAvatar: string;
   slug: string;
+  accessUrl?: string | null;
 }) {
   const panelWidth = magnet.leftPanelWidth ?? 50;
 
@@ -188,7 +192,7 @@ function SplitSuccess({
         transition={{ duration: 0.45 }}
         className="flex-1 bg-background flex items-center justify-center px-8 py-14 lg:py-0"
       >
-        <SuccessCard title={magnet.title} slug={slug} accent={accent} align="left" />
+        <SuccessCard title={magnet.title} slug={slug} accent={accent} accessUrl={accessUrl} align="left" />
       </motion.div>
     </div>
   );
@@ -203,6 +207,7 @@ function StackedSuccess({
   creatorName,
   creatorAvatar,
   slug,
+  accessUrl,
 }: {
   magnet: (typeof leadMagnets)[0];
   accent: string;
@@ -211,6 +216,7 @@ function StackedSuccess({
   creatorName: string;
   creatorAvatar: string;
   slug: string;
+  accessUrl?: string | null;
 }) {
   return (
     <div className="min-h-[100dvh] flex flex-col">
@@ -224,7 +230,7 @@ function StackedSuccess({
         style={{ height: "38vh", minHeight: 200 }}
       />
       <div className="flex-1 flex flex-col items-center justify-center bg-background px-5 py-10">
-        <SuccessCard title={magnet.title} slug={slug} accent={accent} />
+        <SuccessCard title={magnet.title} slug={slug} accent={accent} accessUrl={accessUrl} />
       </div>
     </div>
   );
@@ -248,7 +254,17 @@ export default function SuccessPage() {
       magnet.leftType === "text"
     );
 
-  const shared = { magnet, accent, showImage, imgPos, creatorName, creatorAvatar, slug: slug! };
+  const accessUrl = (() => {
+    try {
+      const raw = sessionStorage.getItem(`sendlet_access_${slug}`);
+      if (!raw) return null;
+      return (JSON.parse(raw) as { accessUrl?: string | null }).accessUrl ?? null;
+    } catch {
+      return null;
+    }
+  })();
+
+  const shared = { magnet, accent, showImage, imgPos, creatorName, creatorAvatar, slug: slug!, accessUrl };
 
   if (magnet.layout === "split") return <SplitSuccess {...shared} />;
   return <StackedSuccess {...shared} />;
