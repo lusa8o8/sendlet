@@ -8,6 +8,7 @@ import SignIn from "@/pages/sign-in";
 import Dashboard from "@/pages/dashboard";
 import TemplatePicker from "@/pages/template-picker";
 import LeadMagnetDetail from "@/pages/lead-magnet-detail";
+import EmailDraftPage from "@/pages/email-draft";
 import Leads from "@/pages/leads";
 import PublicPage from "@/pages/public-page";
 import SuccessPage from "@/pages/success-page";
@@ -35,6 +36,7 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/lead-magnets/new" component={TemplatePicker} />
       <Route path="/lead-magnets/:id/edit" component={TemplatePicker} />
+      <Route path="/lead-magnets/:id/email" component={EmailDraftPage} />
       <Route path="/lead-magnets/:id" component={LeadMagnetDetail} />
       <Route path="/leads" component={Leads} />
       <Route path="/p/:slug" component={PublicPage} />

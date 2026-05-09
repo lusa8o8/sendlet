@@ -1808,7 +1808,6 @@ function FloatingBar({
   const [panel, setPanel] = useState<string | null>(null);
   const [savingPreset, setSavingPreset] = useState(false);
   const [presetName, setPresetName] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const presetInputRef = useRef<HTMLInputElement>(null);
   const toggle = (p: string) => setPanel((cur) => (cur === p ? null : p));
 
@@ -1854,10 +1853,14 @@ function FloatingBar({
           <button onClick={() => setForm({ ...form, imageDataUrl: null })} className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center transition-colors">
             <X className="h-3 w-3 text-white" />
           </button>
-          <button onClick={() => fileInputRef.current?.click()} className="absolute bottom-2 right-2 text-[10px] bg-black/50 hover:bg-black/70 text-white rounded-md px-2 py-1 transition-colors">Replace</button>
+          <label className="absolute bottom-2 right-2 text-[10px] bg-black/50 hover:bg-black/70 text-white rounded-md px-2 py-1 transition-colors cursor-pointer">
+            Replace
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="sr-only" onChange={handleImageUpload} />
+          </label>
         </div>
       ) : (
-        <button onClick={() => fileInputRef.current?.click()} className="w-full border-2 border-dashed border-border rounded-lg p-4 flex flex-col items-center gap-2 hover:border-primary/40 hover:bg-primary/5 transition-all group">
+        <label className="w-full border-2 border-dashed border-border rounded-lg p-4 flex flex-col items-center gap-2 hover:border-primary/40 hover:bg-primary/5 transition-all group cursor-pointer">
+          <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="sr-only" onChange={handleImageUpload} />
           <div className="w-8 h-8 rounded-lg bg-muted group-hover:bg-primary/10 flex items-center justify-center transition-colors">
             <Upload className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
@@ -1865,7 +1868,7 @@ function FloatingBar({
             <p className="text-xs font-medium">Click to upload</p>
             <p className="text-[10px] text-muted-foreground mt-0.5">JPG, PNG, WebP</p>
           </div>
-        </button>
+        </label>
       )}
     </PopoverContent>
   );
@@ -2047,7 +2050,6 @@ function FloatingBar({
     </PopoverContent>
   );
 
-  const fileInput = <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="hidden" onChange={handleImageUpload} />;
 
   /* ── Mobile bottom bar ── */
   if (isMobile && !isSide) {
@@ -2132,7 +2134,6 @@ function FloatingBar({
             </Button>
           </div>
         </motion.div>
-        {fileInput}
       </div>
     );
   }
@@ -2195,7 +2196,6 @@ function FloatingBar({
         <Button size="sm" className="w-12 h-9 text-[11px] font-semibold rounded-xl px-0" onClick={onSave}>
           {isEditing ? "Upd" : "Pub"}
         </Button>
-        {fileInput}
       </div>
     );
   }
@@ -2254,7 +2254,6 @@ function FloatingBar({
         <Button variant="outline" size="sm" className="h-7 px-3 text-xs rounded-lg">Save draft</Button>
         <Button size="sm" className="h-7 px-3 text-xs rounded-lg" onClick={onSave}>{isEditing ? "Update" : "Publish"}</Button>
       </motion.div>
-      {fileInput}
     </div>
   );
 }
@@ -2530,9 +2529,12 @@ export default function TemplatePicker() {
         layout,
         ...formState,
       });
+      try { sessionStorage.removeItem(NEW_DRAFT_KEY); } catch { /* ignore */ }
+      setLocation("/dashboard");
     } else {
+      const newId = String(Date.now());
       saveMagnet({
-        id:               String(Date.now()),
+        id:               newId,
         title:            form.title || "Untitled",
         slug,
         description:      form.description,
@@ -2549,9 +2551,9 @@ export default function TemplatePicker() {
         createdAt:        new Date().toISOString().split("T")[0],
         ...formState,
       });
+      try { sessionStorage.removeItem(NEW_DRAFT_KEY); } catch { /* ignore */ }
+      setLocation(`/lead-magnets/${newId}/email`);
     }
-    try { sessionStorage.removeItem(NEW_DRAFT_KEY); } catch { /* ignore */ }
-    setLocation("/dashboard");
   };
 
   const previewCaption =
