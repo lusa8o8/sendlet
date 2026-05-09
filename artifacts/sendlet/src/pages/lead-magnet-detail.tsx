@@ -1,9 +1,17 @@
+import { useState } from "react";
 import { useParams, Link } from "wouter";
 import { useAuth } from "@/contexts/auth-context";
 import { AppLayout } from "@/components/layout/app-layout";
-import { leadMagnets, leads } from "@/data/mock";
+import { leadMagnets, leads, updateMagnet } from "@/data/mock";
+import {
+  PROVIDERS,
+  integrationConnections,
+  type IntegrationProvider,
+  type IntegrationConnection,
+} from "@/data/integrations";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Copy, Download, ExternalLink, Settings } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { ArrowLeft, Copy, Download, ExternalLink, Plug, Settings } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -112,9 +120,88 @@ function MiniOptInPreview({ magnet }: { magnet: typeof leadMagnets[0] }) {
   );
 }
 
+/* ── Per-magnet integrations panel ──────────────────────────── */
+
+function IntegrationsPanel({
+  magnetId,
+  initialActive,
+  connections,
+}: {
+  magnetId: string;
+  initialActive: string[];
+  connections: Record<string, IntegrationConnection>;
+}) {
+  const [active, setActive] = useState<string[]>(initialActive);
+
+  const connectedProviders: IntegrationProvider[] = PROVIDERS.filter(
+    (p) => !!connections[p.id]
+  );
+
+  const toggle = (providerId: string, checked: boolean) => {
+    const next = checked
+      ? [...active, providerId]
+      : active.filter((id) => id !== providerId);
+    setActive(next);
+    updateMagnet(magnetId, { activeIntegrations: next });
+  };
+
+  if (connectedProviders.length === 0) {
+    return (
+      <div className="border border-dashed rounded-xl p-8 text-center bg-card">
+        <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center mx-auto mb-3">
+          <Plug className="h-5 w-5 text-muted-foreground" />
+        </div>
+        <p className="text-sm font-medium mb-1">No integrations connected yet</p>
+        <p className="text-xs text-muted-foreground mb-4 leading-relaxed max-w-xs mx-auto">
+          Connect Kit, Mailchimp, Google Sheets, Zapier and more to automatically sync
+          every new lead.
+        </p>
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/settings/integrations">
+            Set up integrations →
+          </Link>
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border rounded-xl bg-card overflow-hidden divide-y">
+      {connectedProviders.map((provider) => (
+        <div key={provider.id} className="flex items-center justify-between px-5 py-4 gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-bold shrink-0"
+              style={{
+                backgroundColor: provider.brandColor,
+                color: provider.textColor === "dark" ? "#111" : "#fff",
+              }}
+            >
+              {provider.initials}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium truncate">{provider.name}</p>
+              <p className="text-xs text-muted-foreground truncate">{provider.tagline}</p>
+            </div>
+          </div>
+          <Switch
+            checked={active.includes(provider.id)}
+            onCheckedChange={(checked) => toggle(provider.id, checked)}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── Page ────────────────────────────────────────────────────── */
+
 export default function LeadMagnetDetail() {
   const { id } = useParams();
   const { toast } = useToast();
+  const [connections] = useState<Record<string, IntegrationConnection>>(
+    () => ({ ...integrationConnections })
+  );
 
   const magnet = leadMagnets.find((m) => m.id === id) || leadMagnets[0];
   const magnetLeads = leads.filter((l) => l.leadMagnet === magnet.title);
@@ -188,7 +275,7 @@ export default function LeadMagnetDetail() {
         </div>
 
         {/* Leads + Preview */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
           <div className="lg:col-span-2 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-semibold">Recent leads</h2>
@@ -239,6 +326,31 @@ export default function LeadMagnetDetail() {
             <MiniOptInPreview magnet={magnet} />
           </div>
         </div>
+
+        {/* Integrations */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-base font-semibold">Integrations</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Toggle which connected tools receive leads from this page.
+              </p>
+            </div>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/settings/integrations">
+                <Plug className="mr-1.5 h-3.5 w-3.5" />
+                Manage
+              </Link>
+            </Button>
+          </div>
+
+          <IntegrationsPanel
+            magnetId={magnet.id}
+            initialActive={magnet.activeIntegrations ?? []}
+            connections={connections}
+          />
+        </div>
+
       </div>
     </AppLayout>
   );

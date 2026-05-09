@@ -14,6 +14,7 @@ import Leads from "@/pages/leads";
 import PublicPage from "@/pages/public-page";
 import SuccessPage from "@/pages/success-page";
 import LandingPage from "@/pages/landing";
+import SettingsIntegrationsPage from "@/pages/settings-integrations";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +43,9 @@ function Router() {
       <Route path="/lead-magnets/:id" component={LeadMagnetDetail} />
       <Route path="/leads">
         {() => <ProtectedRoute component={Leads} />}
+      </Route>
+      <Route path="/settings/integrations">
+        {() => <ProtectedRoute component={SettingsIntegrationsPage} />}
       </Route>
       <Route path="/p/:slug" component={PublicPage} />
       <Route path="/p/:slug/success" component={SuccessPage} />

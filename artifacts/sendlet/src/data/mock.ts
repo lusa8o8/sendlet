@@ -39,6 +39,7 @@ export type LeadMagnet = {
   fileName?: string;
   fileSize?: number;
   tagline?: string;
+  activeIntegrations?: string[];
 };
 
 const SEED: LeadMagnet[] = [
