@@ -17,11 +17,13 @@ import {
   Layers2,
   Link,
   Lock,
+  Mail,
   Palette,
   PanelBottom,
   PanelRight,
   Plus,
   Redo2,
+  Send as SendIcon,
   Settings,
   Type,
   Undo2,
@@ -30,6 +32,7 @@ import {
   X,
 } from "lucide-react";
 import { leadMagnets, saveMagnet, updateMagnet, type LeadMagnet } from "@/data/mock";
+import { useAuth } from "@/contexts/auth-context";
 
 /* ─── Image compression util ───────────────────────────────── */
 
@@ -2391,6 +2394,7 @@ export default function TemplatePicker() {
   const [, setLocation] = useLocation();
   const { id } = useParams<{ id?: string }>();
   const editingMagnet = id ? leadMagnets.find((m) => m.id === id) : undefined;
+  const { isSignedIn, signIn } = useAuth();
 
   const [mode, setMode] = useState<"pick" | "edit">(() => {
     if (editingMagnet) return "edit";
@@ -2411,6 +2415,9 @@ export default function TemplatePicker() {
   const [barPosition, setBarPosition] = useState<"bottom" | "side">("bottom");
   const [locked, setLocked] = useState(false);
   const [activePreset, setActivePreset] = useState<string | null>(null);
+  const [authGateOpen, setAuthGateOpen] = useState(false);
+  const [gateEmail, setGateEmail] = useState("");
+  const [gateSubmitting, setGateSubmitting] = useState(false);
 
   // ─── Undo / redo ────────────────────────────────────────────
   type FormSnapshot = {
@@ -2606,7 +2613,7 @@ export default function TemplatePicker() {
     }
   };
 
-  const handleSave = () => {
+  const doSave = () => {
     const slug = form.slug || `resource-${Date.now()}`;
     const formState = {
       bullets:        form.bullets,
@@ -2657,6 +2664,14 @@ export default function TemplatePicker() {
       try { sessionStorage.removeItem(NEW_DRAFT_KEY); sessionStorage.removeItem(UPLOAD_KEY); } catch { /* ignore */ }
       setLocation(`/lead-magnets/${newId}/email`);
     }
+  };
+
+  const handleSave = () => {
+    if (!isSignedIn && !editingMagnet) {
+      setAuthGateOpen(true);
+      return;
+    }
+    doSave();
   };
 
   const previewCaption =
@@ -2817,6 +2832,101 @@ export default function TemplatePicker() {
         </div>
 
       </div>
+
+      {/* ── Auth gate — intercepts Publish for guests ── */}
+      {authGateOpen && createPortal(
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            className="w-full max-w-sm bg-card rounded-2xl shadow-2xl overflow-hidden border border-border/40"
+          >
+            {/* Brand strip */}
+            <div className="bg-[#0C4A44] px-6 pt-5 pb-6">
+              <div className="flex items-center gap-1.5 mb-4">
+                <SendIcon className="h-3.5 w-3.5 text-white/50" />
+                <span className="text-white/50 text-xs font-medium tracking-wide">Sendlet</span>
+              </div>
+              <p className="text-white font-bold text-xl leading-snug mb-3">
+                {form.title || "Your lead magnet"}
+              </p>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-white/50 bg-white/10 px-2 py-0.5 rounded-full">
+                  {LAYOUTS.find((l) => l.id === layout)?.label ?? layout}
+                </span>
+                <div
+                  className="w-4 h-4 rounded-full border-2 border-white/25"
+                  style={{ backgroundColor: form.accentColor }}
+                />
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-6">
+              <h2 className="text-lg font-bold tracking-tight text-foreground mb-1">
+                Your page is ready to go live
+              </h2>
+              <p className="text-sm text-muted-foreground leading-relaxed mb-5">
+                Create your free Sendlet account to publish it and start collecting leads.
+              </p>
+
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!gateEmail || gateSubmitting) return;
+                  setGateSubmitting(true);
+                  setTimeout(() => {
+                    signIn(gateEmail);
+                    doSave();
+                    setAuthGateOpen(false);
+                    setGateSubmitting(false);
+                  }, 1200);
+                }}
+                className="space-y-3"
+              >
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <input
+                    type="email"
+                    required
+                    value={gateEmail}
+                    onChange={(e) => setGateEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    autoFocus
+                    className="w-full pl-9 pr-3 h-10 text-sm bg-muted/50 border border-border rounded-lg outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full h-11 text-sm font-semibold gap-2"
+                  disabled={gateSubmitting || !gateEmail}
+                >
+                  {gateSubmitting ? (
+                    <>Publishing…</>
+                  ) : (
+                    <>Publish now <ArrowRight className="h-4 w-4" /></>
+                  )}
+                </Button>
+              </form>
+
+              <p className="text-[11px] text-muted-foreground/70 text-center mt-4">
+                No password needed · No spam, ever.
+              </p>
+              <div className="text-center mt-2">
+                <button
+                  onClick={() => { setAuthGateOpen(false); setGateEmail(""); }}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Cancel and keep editing
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>,
+        document.body
+      )}
+
     </AppLayout>
   );
 }
