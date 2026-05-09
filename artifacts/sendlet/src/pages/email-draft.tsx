@@ -1,11 +1,8 @@
 import { useState } from "react";
 import { useParams, useLocation } from "wouter";
-import { Copy, Check, Mail, ArrowRight, ExternalLink } from "lucide-react";
+import { Copy, Check, Send, ExternalLink, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { leadMagnets } from "@/data/mock";
+import { leadMagnets, updateMagnet } from "@/data/mock";
 import { useAuth } from "@/contexts/auth-context";
 import { AppLayout } from "@/components/layout/app-layout";
 
@@ -32,7 +29,7 @@ export default function EmailDraftPage() {
         ``,
         `Just enter your email there and I'll send it over straight away.`,
         ``,
-        `Hope it's useful!`,
+        `Hope you find it useful!`,
         ``,
         firstName,
       ].join("\n")
@@ -40,16 +37,20 @@ export default function EmailDraftPage() {
 
   const [subject, setSubject] = useState(defaultSubject);
   const [body, setBody] = useState(defaultBody);
-  const [copied, setCopied] = useState<"subject" | "body" | "all" | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  const copy = async (what: "subject" | "body" | "all") => {
-    const text =
-      what === "subject" ? subject
-      : what === "body" ? body
-      : `Subject: ${subject}\n\n${body}`;
+  const publish = () => {
+    if (magnet) updateMagnet(magnet.id, { status: "published" });
+    setLocation("/dashboard");
+  };
+
+  const copyAndPublish = async () => {
+    const text = `Subject: ${subject}\n\n${body}`;
     try { await navigator.clipboard.writeText(text); } catch { /* ignore */ }
-    setCopied(what);
-    setTimeout(() => setCopied(null), 2000);
+    setCopied(true);
+    setTimeout(() => {
+      publish();
+    }, 800);
   };
 
   if (!magnet) {
@@ -57,109 +58,108 @@ export default function EmailDraftPage() {
     return null;
   }
 
-  const CopyBtn = ({ what }: { what: "subject" | "body" | "all" }) => (
-    <button
-      onClick={() => copy(what)}
-      className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-    >
-      {copied === what
-        ? <><Check className="h-3 w-3 text-primary" /> Copied</>
-        : <><Copy className="h-3 w-3" /> Copy</>}
-    </button>
-  );
-
   return (
     <AppLayout>
       <div className="max-w-2xl mx-auto px-6 py-10">
 
+        {/* Step indicator */}
+        <div className="flex items-center gap-2 text-xs text-muted-foreground mb-6">
+          <span className="text-foreground font-medium">Lead magnet</span>
+          <ChevronRight className="h-3 w-3" />
+          <span className="text-foreground font-medium">Email</span>
+          <ChevronRight className="h-3 w-3" />
+          <span>Publish</span>
+        </div>
+
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 text-xs font-medium text-primary uppercase tracking-widest mb-2">
-            <Mail className="h-3.5 w-3.5" />
-            Draft announcement email
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Your page is live — let people know
-          </h1>
+        <div className="mb-7">
+          <h1 className="text-2xl font-semibold tracking-tight">Draft an announcement email</h1>
           <p className="text-sm text-muted-foreground mt-1.5">
-            Edit this draft and paste it into your email tool. No sending happens here.
+            Optional — edit this template and paste it into your email tool. No sending happens here.
           </p>
         </div>
 
-        {/* Published URL callout */}
-        <div className="flex items-center gap-3 rounded-xl border bg-muted/40 px-4 py-3 mb-8">
-          <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5">Live URL</p>
-            <a
-              href={publicUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm font-medium text-primary hover:underline truncate flex items-center gap-1"
-            >
-              {publicUrl}
-              <ExternalLink className="h-3 w-3 shrink-0" />
-            </a>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="shrink-0 gap-1.5"
-            onClick={() => copy("all")}
-          >
-            {copied === "all" ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
-            Copy full email
-          </Button>
-        </div>
+        {/* Email composer card */}
+        <div className="rounded-2xl border bg-card shadow-sm overflow-hidden mb-6">
 
-        {/* Subject */}
-        <div className="space-y-1.5 mb-5">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="email-subject">Subject line</Label>
-            <CopyBtn what="subject" />
+          {/* Header rows */}
+          <div className="divide-y">
+            {/* From */}
+            <div className="flex items-center px-5 py-3">
+              <span className="w-16 text-xs font-medium text-muted-foreground shrink-0">From</span>
+              <span className="text-sm text-foreground">{name}</span>
+            </div>
+            {/* To */}
+            <div className="flex items-center px-5 py-3">
+              <span className="w-16 text-xs font-medium text-muted-foreground shrink-0">To</span>
+              <span className="text-sm text-muted-foreground italic">Your audience</span>
+            </div>
+            {/* Subject */}
+            <div className="flex items-center px-5 py-3 gap-3">
+              <span className="w-16 text-xs font-medium text-muted-foreground shrink-0">Subject</span>
+              <input
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="Your subject line"
+                className="flex-1 text-sm font-medium text-foreground bg-transparent border-none outline-none placeholder:text-muted-foreground/50"
+              />
+            </div>
           </div>
-          <Input
-            id="email-subject"
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            placeholder="Your subject line"
-            className="font-medium"
-          />
-        </div>
 
-        {/* Body */}
-        <div className="space-y-1.5 mb-8">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="email-body">Email body</Label>
-            <CopyBtn what="body" />
+          {/* Body */}
+          <div className="border-t px-5 py-4">
+            <textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              rows={13}
+              className="w-full text-sm text-foreground bg-transparent border-none outline-none resize-none leading-relaxed placeholder:text-muted-foreground/50"
+              placeholder="Write your email..."
+            />
           </div>
-          <Textarea
-            id="email-body"
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            rows={14}
-            className="font-mono text-sm resize-none leading-relaxed"
-          />
+
+          {/* Live URL footer */}
+          <div className="border-t bg-muted/30 px-5 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-[11px] font-medium text-muted-foreground shrink-0">Live page:</span>
+              <a
+                href={publicUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] text-primary hover:underline truncate flex items-center gap-1"
+              >
+                {publicUrl}
+                <ExternalLink className="h-2.5 w-2.5 shrink-0" />
+              </a>
+            </div>
+          </div>
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-between pt-6 border-t">
+        <div className="flex items-center justify-between">
           <button
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-            onClick={() => setLocation("/dashboard")}
+            onClick={publish}
           >
-            Skip for now
+            Skip — just publish
           </button>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => copy("all")} className="gap-1.5">
-              {copied === "all" ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
-              Copy email
+            <Button
+              variant="outline"
+              onClick={copyAndPublish}
+              className="gap-1.5"
+              disabled={copied}
+            >
+              {copied
+                ? <><Check className="h-3.5 w-3.5 text-primary" /> Copied!</>
+                : <><Copy className="h-3.5 w-3.5" /> Copy &amp; publish</>}
             </Button>
-            <Button onClick={() => setLocation("/dashboard")} className="gap-1.5">
-              Go to dashboard
-              <ArrowRight className="h-3.5 w-3.5" />
+            <Button onClick={publish} className="gap-1.5">
+              <Send className="h-3.5 w-3.5" />
+              Publish
             </Button>
           </div>
         </div>
+
       </div>
     </AppLayout>
   );

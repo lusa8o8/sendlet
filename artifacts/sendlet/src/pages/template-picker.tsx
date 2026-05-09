@@ -2538,7 +2538,7 @@ export default function TemplatePicker() {
         title:            form.title || "Untitled",
         slug,
         description:      form.description,
-        status:           "published",
+        status:           "draft",
         visits:           0,
         weeklyVisits:     0,
         leads:            0,
