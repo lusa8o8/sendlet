@@ -30,6 +30,43 @@ export type IntegrationConnection = {
 
 export const PROVIDERS: IntegrationProvider[] = [
   {
+    id: "resend",
+    name: "Resend",
+    tagline: "Send emails from your own domain",
+    description:
+      "Connect Resend to send broadcast emails directly from Sendlet using your own domain. Set up in under 2 minutes.",
+    category: "email",
+    brandColor: "#000000",
+    textColor: "white",
+    initials: "Re",
+    connectType: "apikey",
+    fields: [
+      {
+        key: "apiKey",
+        label: "API key",
+        placeholder: "re_...",
+        type: "password",
+        hint: "Create a key at resend.com/api-keys",
+        required: true,
+      },
+      {
+        key: "fromEmail",
+        label: "From email",
+        placeholder: "hello@yourdomain.com",
+        type: "email",
+        hint: "Must be a verified domain in your Resend account",
+        required: true,
+      },
+      {
+        key: "fromName",
+        label: "From name (optional)",
+        placeholder: "Your Name or Brand",
+        type: "text",
+        required: false,
+      },
+    ],
+  },
+  {
     id: "kit",
     name: "Kit",
     tagline: "Creator-first email marketing",
@@ -286,8 +323,8 @@ export const PROVIDERS: IntegrationProvider[] = [
 export const DISPLAY_GROUPS: { label: string; description: string; ids: string[] }[] = [
   {
     label: "Email marketing",
-    description: "Automatically add new leads to your email list.",
-    ids: ["kit", "mailchimp", "beehiiv"],
+    description: "Send broadcasts and automatically add new leads to your email list.",
+    ids: ["resend", "kit", "mailchimp", "beehiiv"],
   },
   {
     label: "Spreadsheets & CRMs",

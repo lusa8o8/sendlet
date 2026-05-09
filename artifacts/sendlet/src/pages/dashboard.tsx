@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { Link } from "wouter";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { leadMagnets } from "@/data/mock";
+import { leadMagnets, broadcasts } from "@/data/mock";
+import { PROVIDERS, integrationConnections } from "@/data/integrations";
 import { AppLayout } from "@/components/layout/app-layout";
 import { Plus, Copy, Eye, Edit2, Send, TrendingUp, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +18,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import type { LeadMagnet } from "@/data/mock";
+
+const BROADCAST_PROVIDER_IDS = ["resend", "kit", "mailchimp", "beehiiv"];
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -73,7 +77,6 @@ function StatusBadge({ status }: { status: string }) {
 function MagnetCard({ magnet, onCopy }: { magnet: LeadMagnet; onCopy: (slug: string) => void }) {
   return (
     <div className="bg-card border rounded-xl p-4 space-y-3">
-      {/* Title row */}
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <Link
@@ -87,7 +90,6 @@ function MagnetCard({ magnet, onCopy }: { magnet: LeadMagnet; onCopy: (slug: str
         <StatusBadge status={magnet.status} />
       </div>
 
-      {/* Stats row */}
       <div className="flex items-center gap-4 text-sm">
         <div className="flex flex-col">
           <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Visits</span>
@@ -116,7 +118,6 @@ function MagnetCard({ magnet, onCopy }: { magnet: LeadMagnet; onCopy: (slug: str
         )}
       </div>
 
-      {/* Actions row */}
       <div className="flex items-center gap-1 pt-1 border-t">
         <Button
           variant="ghost"
@@ -127,34 +128,19 @@ function MagnetCard({ magnet, onCopy }: { magnet: LeadMagnet; onCopy: (slug: str
           <Copy className="h-3.5 w-3.5" />
           Copy link
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-9 px-3 text-xs text-muted-foreground gap-1.5 flex-1"
-          asChild
-        >
+        <Button variant="ghost" size="sm" className="h-9 px-3 text-xs text-muted-foreground gap-1.5 flex-1" asChild>
           <Link href={`/p/${magnet.slug}`}>
             <Eye className="h-3.5 w-3.5" />
             Preview
           </Link>
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-9 px-3 text-xs text-muted-foreground gap-1.5 flex-1"
-          asChild
-        >
+        <Button variant="ghost" size="sm" className="h-9 px-3 text-xs text-muted-foreground gap-1.5 flex-1" asChild>
           <Link href={`/lead-magnets/${magnet.id}/edit`}>
             <Edit2 className="h-3.5 w-3.5" />
             Edit
           </Link>
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-9 w-9 text-muted-foreground"
-          asChild
-        >
+        <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" asChild>
           <Link href={`/lead-magnets/${magnet.id}`}>
             <ChevronRight className="h-4 w-4" />
           </Link>
@@ -163,6 +149,130 @@ function MagnetCard({ magnet, onCopy }: { magnet: LeadMagnet; onCopy: (slug: str
     </div>
   );
 }
+
+/* ── Broadcasts summary card ─────────────────────────────────── */
+
+function BroadcastsCard() {
+  const recentBroadcasts = broadcasts.slice(0, 3);
+  const publishedMagnets = leadMagnets.filter((m) => m.status === "published");
+  const sendTarget = publishedMagnets[0];
+  const hasEmailProvider = BROADCAST_PROVIDER_IDS.some((id) => !!integrationConnections[id]);
+
+  return (
+    <div className="border rounded-xl bg-card overflow-hidden mb-7">
+      <div className="flex items-center justify-between px-5 py-4 border-b">
+        <div>
+          <h2 className="text-sm font-semibold">Broadcasts</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">Emails sent to your leads</p>
+        </div>
+        {sendTarget && (
+          <Button size="sm" variant="outline" asChild>
+            <Link href={`/lead-magnets/${sendTarget.id}/email`}>
+              <Send className="mr-1.5 h-3.5 w-3.5" />
+              New email
+            </Link>
+          </Button>
+        )}
+      </div>
+
+      {recentBroadcasts.length === 0 ? (
+        <div className="px-5 py-8 text-center">
+          <p className="text-sm text-muted-foreground mb-3">No emails sent yet.</p>
+          {!hasEmailProvider ? (
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/settings/integrations">Connect an email tool to start sending →</Link>
+            </Button>
+          ) : sendTarget ? (
+            <Button size="sm" asChild>
+              <Link href={`/lead-magnets/${sendTarget.id}/email`}>Send your first email →</Link>
+            </Button>
+          ) : null}
+        </div>
+      ) : (
+        <div className="divide-y">
+          {recentBroadcasts.map((bc) => {
+            const provider = PROVIDERS.find((p) => p.id === bc.provider);
+            const magnet = leadMagnets.find((m) => m.id === bc.magnetId);
+            return (
+              <div key={bc.id} className="flex items-center px-5 py-3.5 gap-3">
+                {provider && (
+                  <div
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0"
+                    style={{ backgroundColor: provider.brandColor, color: "#fff" }}
+                  >
+                    {provider.initials}
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{bc.subject}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {bc.sentAt} · {bc.recipientCount} recipients
+                    {magnet && <> · {magnet.title}</>}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Floating action button ──────────────────────────────────── */
+
+function FAB() {
+  const [open, setOpen] = useState(false);
+  const publishedMagnets = leadMagnets.filter((m) => m.status === "published");
+  const sendTarget = publishedMagnets[0];
+
+  const items = [
+    ...(sendTarget
+      ? [{ label: "Send email", Icon: Send, href: `/lead-magnets/${sendTarget.id}/email` }]
+      : []),
+    { label: "New lead magnet", Icon: Plus, href: "/lead-magnets/upload" },
+  ];
+
+  return (
+    <div className="fixed bottom-6 right-4 sm:right-6 z-50 flex flex-col items-end gap-2.5">
+      <AnimatePresence>
+        {open &&
+          items.map((item, i) => (
+            <motion.div
+              key={item.label}
+              initial={{ opacity: 0, y: 10, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 6, scale: 0.95 }}
+              transition={{ delay: i * 0.04, duration: 0.15 }}
+            >
+              <Link href={item.href} onClick={() => setOpen(false)}>
+                <div className="flex items-center gap-2 bg-card border shadow-lg rounded-full h-10 px-4 text-sm font-medium hover:bg-muted transition-colors whitespace-nowrap cursor-pointer">
+                  <item.Icon className="h-3.5 w-3.5 text-primary shrink-0" />
+                  {item.label}
+                </div>
+              </Link>
+            </motion.div>
+          ))}
+      </AnimatePresence>
+
+      {open && (
+        <div className="fixed inset-0 -z-10" onClick={() => setOpen(false)} />
+      )}
+
+      <motion.button
+        className="w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
+        onClick={() => setOpen((o) => !o)}
+        whileTap={{ scale: 0.92 }}
+      >
+        <motion.div animate={{ rotate: open ? 45 : 0 }} transition={{ duration: 0.18 }}>
+          <Plus className="h-5 w-5" />
+        </motion.div>
+      </motion.button>
+    </div>
+  );
+}
+
+/* ── Page ─────────────────────────────────────────────────────── */
 
 export default function Dashboard() {
   const { toast } = useToast();
@@ -209,7 +319,8 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
-      <div className="container max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+      <div className="container max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10 pb-24">
+
         {/* Page header */}
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-7">
           <div>
@@ -254,12 +365,15 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Lead magnets — mobile cards */}
+        {/* Broadcasts summary card */}
+        <BroadcastsCard />
+
+        {/* Lead magnets */}
         {leadMagnets.length === 0 ? (
           emptyState
         ) : (
           <>
-            {/* Mobile card list (hidden on sm+) */}
+            {/* Mobile card list */}
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -271,7 +385,7 @@ export default function Dashboard() {
               ))}
             </motion.div>
 
-            {/* Desktop table (hidden on mobile) */}
+            {/* Desktop table */}
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -313,9 +427,7 @@ export default function Dashboard() {
                         {magnet.leads > 0 ? (
                           <span className="flex items-center justify-end gap-1.5">
                             {magnet.leads}
-                            {magnet.weeklyLeads > 0 && (
-                              <TrendingUp className="h-3 w-3 text-primary" />
-                            )}
+                            {magnet.weeklyLeads > 0 && <TrendingUp className="h-3 w-3 text-primary" />}
                           </span>
                         ) : (
                           <span className="text-muted-foreground">—</span>
@@ -327,35 +439,17 @@ export default function Dashboard() {
                       <TableCell className="text-right py-4">
                         <div className="flex items-center justify-end gap-0.5">
                           <Button
-                            variant="ghost"
-                            size="icon"
+                            variant="ghost" size="icon"
                             className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                            onClick={() => copyLink(magnet.slug)}
-                            title="Copy link"
+                            onClick={() => copyLink(magnet.slug)} title="Copy link"
                           >
                             <Copy className="h-3.5 w-3.5" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            asChild
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                            title="View page"
-                          >
-                            <Link href={`/p/${magnet.slug}`}>
-                              <Eye className="h-3.5 w-3.5" />
-                            </Link>
+                          <Button variant="ghost" size="icon" asChild className="h-8 w-8 text-muted-foreground hover:text-foreground" title="View page">
+                            <Link href={`/p/${magnet.slug}`}><Eye className="h-3.5 w-3.5" /></Link>
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            asChild
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                            title="Edit"
-                          >
-                            <Link href={`/lead-magnets/${magnet.id}/edit`}>
-                              <Edit2 className="h-3.5 w-3.5" />
-                            </Link>
+                          <Button variant="ghost" size="icon" asChild className="h-8 w-8 text-muted-foreground hover:text-foreground" title="Edit">
+                            <Link href={`/lead-magnets/${magnet.id}/edit`}><Edit2 className="h-3.5 w-3.5" /></Link>
                           </Button>
                         </div>
                       </TableCell>
@@ -367,6 +461,8 @@ export default function Dashboard() {
           </>
         )}
       </div>
+
+      <FAB />
     </AppLayout>
   );
 }

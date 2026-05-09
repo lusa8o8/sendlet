@@ -1,4 +1,5 @@
 const STORAGE_KEY = "sendlet_magnets";
+const BROADCASTS_KEY = "sendlet_broadcasts";
 
 type TextEl = {
   x: number;
@@ -140,6 +141,55 @@ export function removeMagnet(id: string) {
     leadMagnets.splice(idx, 1);
     persistMagnets();
   }
+}
+
+export type Broadcast = {
+  id: string;
+  magnetId: string;
+  subject: string;
+  sentAt: string;
+  recipientCount: number;
+  provider: string;
+};
+
+const BROADCAST_SEED: Broadcast[] = [
+  {
+    id: "b1",
+    magnetId: "1",
+    subject: "Client Onboarding Checklist — it's free",
+    sentAt: "2026-05-01",
+    recipientCount: 89,
+    provider: "resend",
+  },
+  {
+    id: "b2",
+    magnetId: "3",
+    subject: "5-Day Email Course — grab it now",
+    sentAt: "2026-04-20",
+    recipientCount: 31,
+    provider: "kit",
+  },
+];
+
+function loadBroadcasts(): Broadcast[] {
+  try {
+    const raw = localStorage.getItem(BROADCASTS_KEY);
+    if (raw) return JSON.parse(raw) as Broadcast[];
+  } catch {}
+  return JSON.parse(JSON.stringify(BROADCAST_SEED));
+}
+
+function persistBroadcasts() {
+  try {
+    localStorage.setItem(BROADCASTS_KEY, JSON.stringify(broadcasts));
+  } catch {}
+}
+
+export const broadcasts: Broadcast[] = loadBroadcasts();
+
+export function saveBroadcast(broadcast: Broadcast) {
+  broadcasts.unshift(broadcast);
+  persistBroadcasts();
 }
 
 export const leads = [
