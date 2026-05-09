@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { leadMagnets, broadcasts } from "@/data/mock";
 import { PROVIDERS, integrationConnections } from "@/data/integrations";
 import { AppLayout } from "@/components/layout/app-layout";
-import { Plus, Copy, Eye, Edit2, Send, TrendingUp, ChevronRight } from "lucide-react";
+import { Plus, Copy, Eye, Edit2, Send, TrendingUp, ChevronRight, Radio } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -15,6 +15,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import type { LeadMagnet } from "@/data/mock";
@@ -120,8 +126,7 @@ function MagnetCard({ magnet, onCopy }: { magnet: LeadMagnet; onCopy: (slug: str
 
       <div className="flex items-center gap-1 pt-1 border-t">
         <Button
-          variant="ghost"
-          size="sm"
+          variant="ghost" size="sm"
           className="h-9 px-3 text-xs text-muted-foreground gap-1.5 flex-1"
           onClick={() => onCopy(magnet.slug)}
         >
@@ -150,83 +155,93 @@ function MagnetCard({ magnet, onCopy }: { magnet: LeadMagnet; onCopy: (slug: str
   );
 }
 
-/* ── Broadcasts summary card ─────────────────────────────────── */
+/* ── Broadcasts sheet ────────────────────────────────────────── */
 
-function BroadcastsCard() {
-  const recentBroadcasts = broadcasts.slice(0, 3);
-  const publishedMagnets = leadMagnets.filter((m) => m.status === "published");
-  const sendTarget = publishedMagnets[0];
+function BroadcastsSheet({
+  open,
+  onClose,
+  sendTarget,
+}: {
+  open: boolean;
+  onClose: () => void;
+  sendTarget?: LeadMagnet;
+}) {
   const hasEmailProvider = BROADCAST_PROVIDER_IDS.some((id) => !!integrationConnections[id]);
+  const recentBroadcasts = broadcasts.slice(0, 10);
 
   return (
-    <div className="border rounded-xl bg-card overflow-hidden mb-7">
-      <div className="flex items-center justify-between px-5 py-4 border-b">
-        <div>
-          <h2 className="text-sm font-semibold">Broadcasts</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">Emails sent to your leads</p>
-        </div>
-        {sendTarget && (
-          <Button size="sm" variant="outline" asChild>
-            <Link href={`/lead-magnets/${sendTarget.id}/email`}>
-              <Send className="mr-1.5 h-3.5 w-3.5" />
-              New email
-            </Link>
-          </Button>
-        )}
-      </div>
+    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
+      <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] overflow-y-auto">
+        <SheetHeader className="flex flex-row items-center justify-between pb-4 border-b mb-1">
+          <SheetTitle className="text-base">Broadcasts</SheetTitle>
+          {sendTarget && (
+            <Button size="sm" variant="outline" asChild onClick={onClose}>
+              <Link href={`/lead-magnets/${sendTarget.id}/email`}>
+                <Send className="mr-1.5 h-3.5 w-3.5" />
+                New email
+              </Link>
+            </Button>
+          )}
+        </SheetHeader>
 
-      {recentBroadcasts.length === 0 ? (
-        <div className="px-5 py-8 text-center">
-          <p className="text-sm text-muted-foreground mb-3">No emails sent yet.</p>
-          {!hasEmailProvider ? (
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/settings/integrations">Connect an email tool to start sending →</Link>
-            </Button>
-          ) : sendTarget ? (
-            <Button size="sm" asChild>
-              <Link href={`/lead-magnets/${sendTarget.id}/email`}>Send your first email →</Link>
-            </Button>
-          ) : null}
-        </div>
-      ) : (
-        <div className="divide-y">
-          {recentBroadcasts.map((bc) => {
-            const provider = PROVIDERS.find((p) => p.id === bc.provider);
-            const magnet = leadMagnets.find((m) => m.id === bc.magnetId);
-            return (
-              <div key={bc.id} className="flex items-center px-5 py-3.5 gap-3">
-                {provider && (
-                  <div
-                    className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0"
-                    style={{ backgroundColor: provider.brandColor, color: "#fff" }}
-                  >
-                    {provider.initials}
+        {recentBroadcasts.length === 0 ? (
+          <div className="py-10 text-center">
+            <p className="text-sm text-muted-foreground mb-4">No emails sent yet.</p>
+            {!hasEmailProvider ? (
+              <Button variant="outline" size="sm" asChild onClick={onClose}>
+                <Link href="/settings/integrations">Connect an email tool to start →</Link>
+              </Button>
+            ) : sendTarget ? (
+              <Button size="sm" asChild onClick={onClose}>
+                <Link href={`/lead-magnets/${sendTarget.id}/email`}>Send your first email →</Link>
+              </Button>
+            ) : null}
+          </div>
+        ) : (
+          <div className="divide-y">
+            {recentBroadcasts.map((bc) => {
+              const provider = PROVIDERS.find((p) => p.id === bc.provider);
+              const magnet = leadMagnets.find((m) => m.id === bc.magnetId);
+              return (
+                <div key={bc.id} className="flex items-center py-3.5 gap-3">
+                  {provider && (
+                    <div
+                      className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0"
+                      style={{ backgroundColor: provider.brandColor, color: "#fff" }}
+                    >
+                      {provider.initials}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{bc.subject}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {bc.sentAt} · {bc.recipientCount} recipients
+                      {magnet && <> · {magnet.title}</>}
+                    </p>
                   </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{bc.subject}</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {bc.sentAt} · {bc.recipientCount} recipients
-                    {magnet && <> · {magnet.title}</>}
-                  </p>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
+              );
+            })}
+          </div>
+        )}
+      </SheetContent>
+    </Sheet>
   );
 }
 
 /* ── Floating action button ──────────────────────────────────── */
 
-function FAB() {
+function FAB({ onBroadcasts }: { onBroadcasts: () => void }) {
   const [open, setOpen] = useState(false);
   const publishedMagnets = leadMagnets.filter((m) => m.status === "published");
   const sendTarget = publishedMagnets[0];
 
-  const items = [
+  const items: { label: string; Icon: React.ElementType; href?: string; onClick?: () => void }[] = [
+    {
+      label: "Broadcasts",
+      Icon: Radio,
+      onClick: () => { setOpen(false); onBroadcasts(); },
+    },
     ...(sendTarget
       ? [{ label: "Send email", Icon: Send, href: `/lead-magnets/${sendTarget.id}/email` }]
       : []),
@@ -245,19 +260,27 @@ function FAB() {
               exit={{ opacity: 0, y: 6, scale: 0.95 }}
               transition={{ delay: i * 0.04, duration: 0.15 }}
             >
-              <Link href={item.href} onClick={() => setOpen(false)}>
-                <div className="flex items-center gap-2 bg-card border shadow-lg rounded-full h-10 px-4 text-sm font-medium hover:bg-muted transition-colors whitespace-nowrap cursor-pointer">
+              {item.href ? (
+                <Link href={item.href} onClick={() => setOpen(false)}>
+                  <div className="flex items-center gap-2 bg-card border shadow-lg rounded-full h-10 px-4 text-sm font-medium hover:bg-muted transition-colors whitespace-nowrap cursor-pointer">
+                    <item.Icon className="h-3.5 w-3.5 text-primary shrink-0" />
+                    {item.label}
+                  </div>
+                </Link>
+              ) : (
+                <button
+                  onClick={item.onClick}
+                  className="flex items-center gap-2 bg-card border shadow-lg rounded-full h-10 px-4 text-sm font-medium hover:bg-muted transition-colors whitespace-nowrap"
+                >
                   <item.Icon className="h-3.5 w-3.5 text-primary shrink-0" />
                   {item.label}
-                </div>
-              </Link>
+                </button>
+              )}
             </motion.div>
           ))}
       </AnimatePresence>
 
-      {open && (
-        <div className="fixed inset-0 -z-10" onClick={() => setOpen(false)} />
-      )}
+      {open && <div className="fixed inset-0 -z-10" onClick={() => setOpen(false)} />}
 
       <motion.button
         className="w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
@@ -277,6 +300,7 @@ function FAB() {
 export default function Dashboard() {
   const { toast } = useToast();
   const { name } = useAuth();
+  const [broadcastsOpen, setBroadcastsOpen] = useState(false);
 
   const firstName = name.split(" ")[0];
 
@@ -291,6 +315,9 @@ export default function Dashboard() {
             leadMagnets.filter((m) => m.visits > 0).length
         )
       : 0;
+
+  const publishedMagnets = leadMagnets.filter((m) => m.status === "published");
+  const sendTarget = publishedMagnets[0];
 
   const copyLink = (slug: string) => {
     navigator.clipboard.writeText(`${window.location.origin}/p/${slug}`);
@@ -364,9 +391,6 @@ export default function Dashboard() {
             contextPositive={avgConv >= 20}
           />
         </div>
-
-        {/* Broadcasts summary card */}
-        <BroadcastsCard />
 
         {/* Lead magnets */}
         {leadMagnets.length === 0 ? (
@@ -462,7 +486,13 @@ export default function Dashboard() {
         )}
       </div>
 
-      <FAB />
+      <FAB onBroadcasts={() => setBroadcastsOpen(true)} />
+
+      <BroadcastsSheet
+        open={broadcastsOpen}
+        onClose={() => setBroadcastsOpen(false)}
+        sendTarget={sendTarget}
+      />
     </AppLayout>
   );
 }

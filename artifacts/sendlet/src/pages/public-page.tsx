@@ -586,14 +586,40 @@ export default function PublicPage() {
     ? (magnet.bullets?.filter(Boolean) ?? FALLBACK_BULLETS)
     : [];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      setLocation(`/p/${slug}/success`);
-    }, 1000);
+
+    // Fire delivery email via Resend if connected — best-effort, never blocks opt-in
+    try {
+      const raw = localStorage.getItem("sendlet_integrations");
+      if (raw) {
+        const conns = JSON.parse(raw) as Record<string, { config: Record<string, string> }>;
+        const rc = conns["resend"];
+        if (rc?.config?.apiKey && rc?.config?.fromEmail) {
+          const magnetUrl = `${window.location.origin}/p/${magnet.slug}`;
+          await fetch("/api/deliver", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              to: email,
+              fromEmail: rc.config.fromEmail,
+              fromName: rc.config.fromName || creatorName,
+              apiKey: rc.config.apiKey,
+              magnetTitle: magnet.title,
+              magnetDescription: magnet.description,
+              magnetUrl,
+            }),
+          });
+        }
+      }
+    } catch {
+      // Silently continue — email is best-effort
+    }
+
+    setIsLoading(false);
+    setLocation(`/p/${slug}/success`);
   };
 
   const sharedProps = {
