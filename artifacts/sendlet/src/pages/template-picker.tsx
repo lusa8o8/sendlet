@@ -2416,7 +2416,7 @@ export default function TemplatePicker() {
   const [, setLocation] = useLocation();
   const { id } = useParams<{ id?: string }>();
   const editingMagnet = id ? leadMagnets.find((m) => m.id === id) : undefined;
-  const { isSignedIn, signIn } = useAuth();
+  const { isSignedIn, signIn, signInWithGoogle } = useAuth();
 
   const [mode, setMode] = useState<"pick" | "edit">(() => {
     if (editingMagnet) return "edit";
@@ -2956,6 +2956,39 @@ export default function TemplatePicker() {
               >
                 {!gateLinkSent ? (
                   <>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full h-11 text-sm font-semibold"
+                      disabled={gateSubmitting}
+                      onClick={() => {
+                        setGateError(null);
+                        setGateSubmitting(true);
+                        writeBrowserStorage(PENDING_PUBLISH_KEY, "true");
+                        void signInWithGoogle()
+                          .then(() => {
+                            setAuthGateOpen(false);
+                          })
+                          .catch((error) => {
+                            setGateError(error instanceof Error ? error.message : "Could not sign in with Google.");
+                          })
+                          .finally(() => {
+                            setGateSubmitting(false);
+                          });
+                      }}
+                    >
+                      Continue with Google
+                    </Button>
+
+                    <div className="relative py-1">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                      </div>
+                      <div className="relative flex justify-center text-[10px] uppercase">
+                        <span className="bg-card px-2 text-muted-foreground">or email link</span>
+                      </div>
+                    </div>
+
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
                       <input

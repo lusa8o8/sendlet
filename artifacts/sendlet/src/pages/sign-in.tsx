@@ -24,7 +24,7 @@ const features = [
 
 export default function SignIn() {
   const [, setLocation] = useLocation();
-  const { isSignedIn, signIn } = useAuth();
+  const { isSignedIn, signIn, signInWithGoogle } = useAuth();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
@@ -53,6 +53,16 @@ export default function SignIn() {
         ? error.message
         : "Could not send a magic link.";
       setAuthError(message);
+    }
+  }
+
+  async function onGoogleSignIn() {
+    setAuthError(null);
+    try {
+      await signInWithGoogle();
+      setLocation("/dashboard");
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Could not sign in with Google.");
     }
   }
 
@@ -148,6 +158,19 @@ export default function SignIn() {
                   </Button>
                 </form>
               </Form>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">or</span>
+                </div>
+              </div>
+
+              <Button type="button" variant="outline" className="w-full h-10" onClick={onGoogleSignIn}>
+                Continue with Google
+              </Button>
 
               {authError ? (
                 <p className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">

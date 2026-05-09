@@ -3,6 +3,7 @@ import type { User } from "firebase/auth";
 import {
   completeFirebaseMagicLinkIfPresent,
   sendFirebaseMagicLink,
+  signInWithGooglePopup,
   signOutFirebase,
   watchFirebaseAuth,
 } from "@/lib/firebase";
@@ -27,6 +28,7 @@ interface AuthContextType {
   avatar: string;
   updateProfile: (name: string, avatar: string) => void;
   signIn: (email: string, redirectTo?: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -85,6 +87,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setEmail(newEmail);
   };
 
+  const signInWithGoogle = async () => {
+    const nextUser = await signInWithGooglePopup();
+    setUser(nextUser);
+    setEmail(nextUser.email ?? null);
+  };
+
   const signOut = async () => {
     await signOutFirebase();
     setEmail(null);
@@ -95,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isSignedIn: !!user, isAuthReady, email, name, avatar, updateProfile, signIn, signOut }}>
+    <AuthContext.Provider value={{ isSignedIn: !!user, isAuthReady, email, name, avatar, updateProfile, signIn, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );

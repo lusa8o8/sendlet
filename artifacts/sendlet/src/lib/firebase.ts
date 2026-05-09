@@ -1,9 +1,11 @@
 import { initializeApp, type FirebaseApp } from "firebase/app";
 import {
+  GoogleAuthProvider,
   getAuth,
   isSignInWithEmailLink,
   onAuthStateChanged,
   sendSignInLinkToEmail,
+  signInWithPopup,
   signInWithEmailLink,
   signOut as firebaseSignOut,
   type User,
@@ -43,6 +45,16 @@ export async function sendFirebaseMagicLink(email: string, redirectTo: string) {
     url: redirectTo,
     handleCodeInApp: true,
   });
+}
+
+export async function signInWithGooglePopup() {
+  if (!firebaseAuth) {
+    throw new Error(`Firebase Auth is not configured. Missing: ${missingConfig.join(", ")}`);
+  }
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+  const credential = await signInWithPopup(firebaseAuth, provider);
+  return credential.user;
 }
 
 export async function completeFirebaseMagicLinkIfPresent() {
