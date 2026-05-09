@@ -1,9 +1,11 @@
+import { useEffect, useState } from "react";
 import { useParams, Link } from "wouter";
-import { leadMagnets } from "@/data/mock";
+import { leadMagnets, type LeadMagnet } from "@/data/mock";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { Check, Download } from "lucide-react";
 import NotFound from "./not-found";
+import { fetchPublicMagnet } from "@/services/sendlet-service";
 
 function getProfile() {
   try {
@@ -11,6 +13,41 @@ function getProfile() {
     if (raw) return JSON.parse(raw) as { name: string; avatar: string };
   } catch {}
   return { name: "Sendlet creator", avatar: "" };
+}
+
+function remoteToLeadMagnet(remote: any): LeadMagnet {
+  const config = remote.page_config ?? {};
+  return {
+    id: remote.id,
+    title: remote.title,
+    slug: remote.slug,
+    description: remote.description ?? "",
+    status: remote.status ?? "published",
+    visits: 0,
+    weeklyVisits: 0,
+    leads: 0,
+    weeklyLeads: 0,
+    conversionRate: 0,
+    lastLead: null,
+    accentColor: remote.accent_color ?? "#0F766E",
+    backgroundPreset: remote.background_preset ?? "dusk",
+    layout: remote.layout ?? "simple",
+    createdAt: "",
+    bullets: config.bullets ?? [],
+    bulletsEnabled: config.bulletsEnabled ?? true,
+    ctaLabel: remote.cta_label ?? "Get the resource",
+    imageDataUrl: config.imageDataUrl ?? null,
+    leftType: config.leftType ?? "image",
+    leftPanelWidth: config.leftPanelWidth ?? 48,
+    imagePosition: config.imagePosition ?? { x: 50, y: 50 },
+    bannerHeight: config.bannerHeight ?? 44,
+    textElements: config.textElements ?? {},
+    hiddenBlocks: config.hiddenBlocks ?? [],
+    fileName: remote.file_name ?? undefined,
+    resourceType: remote.resource_type ?? "none",
+    resourceUrl: remote.resource_url ?? null,
+    tagline: config.tagline ?? "",
+  };
 }
 
 /* ── Shared success card content ─────────────────────────── */
@@ -171,7 +208,7 @@ function SplitSuccess({
   accessUrl,
   deliveryStatus,
 }: {
-  magnet: (typeof leadMagnets)[0];
+  magnet: LeadMagnet;
   accent: string;
   showImage: boolean;
   imgPos: { x: number; y: number };
@@ -222,7 +259,7 @@ function StackedSuccess({
   accessUrl,
   deliveryStatus,
 }: {
-  magnet: (typeof leadMagnets)[0];
+  magnet: LeadMagnet;
   accent: string;
   showImage: boolean;
   imgPos: { x: number; y: number };
@@ -253,7 +290,27 @@ function StackedSuccess({
 /* ── Page ────────────────────────────────────────────────── */
 export default function SuccessPage() {
   const { slug } = useParams();
-  const magnet = leadMagnets.find((m) => m.slug === slug);
+  const [remoteMagnet, setRemoteMagnet] = useState<LeadMagnet | null>(null);
+  const [checkedRemote, setCheckedRemote] = useState(false);
+
+  useEffect(() => {
+    if (!slug) return;
+    let cancelled = false;
+    void fetchPublicMagnet(slug)
+      .then((remote) => {
+        if (!cancelled && remote) setRemoteMagnet(remoteToLeadMagnet(remote));
+      })
+      .finally(() => {
+        if (!cancelled) setCheckedRemote(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
+  const magnet = remoteMagnet ?? leadMagnets.find((m) => m.slug === slug);
+
+  if (!magnet && !checkedRemote) return null;
 
   if (!magnet) return <NotFound />;
 
