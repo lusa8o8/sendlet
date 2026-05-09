@@ -210,6 +210,14 @@ function renderRichText(text: string): React.ReactNode {
   return <>{parts}</>;
 }
 
+function getProfile(): { name: string; avatar: string } {
+  try {
+    const raw = localStorage.getItem("sendlet_profile");
+    if (raw) return JSON.parse(raw) as { name: string; avatar: string };
+  } catch {}
+  return { name: "Sarah Chen", avatar: "" };
+}
+
 function computeSnap(
   rawX: number,
   rawY: number,
@@ -417,10 +425,12 @@ function SimplePreview({
       className="w-full h-full flex flex-col items-center justify-center px-6 py-8"
       style={{ background: gradient }}
     >
-      <div className="w-10 h-10 rounded-full bg-white shadow-md ring-4 ring-white/50 flex items-center justify-center font-semibold text-sm text-foreground mb-1.5">
-        S
-      </div>
-      <p className="text-[11px] text-foreground/50 mb-4">Sarah Chen</p>
+      {(() => { const p = getProfile(); return (<>
+        <div className="w-10 h-10 rounded-full bg-white shadow-md ring-4 ring-white/50 flex items-center justify-center font-semibold text-sm text-foreground mb-1.5 overflow-hidden">
+          {p.avatar ? <img src={p.avatar} className="w-full h-full object-cover" alt="" /> : p.name.charAt(0).toUpperCase()}
+        </div>
+        <p className="text-[11px] text-foreground/50 mb-4">{p.name}</p>
+      </>); })()}
       <div className="w-full max-w-[280px] bg-white rounded-2xl shadow-md overflow-hidden">
         {interactive ? (
           <div className="relative" style={{ height: "290px" }}>
@@ -1006,8 +1016,12 @@ function SplitPreview({
 
         {/* Creator identity */}
         <div className="relative z-10 px-4 pb-4 flex items-center gap-2 shrink-0">
-          <div className="w-6 h-6 rounded-full bg-white/20 ring-2 ring-white/30 flex items-center justify-center text-white font-semibold text-[10px]">S</div>
-          <span className="text-white/60 text-[10px]">Sarah Chen</span>
+          {(() => { const p = getProfile(); return (<>
+            <div className="w-6 h-6 rounded-full bg-white/20 ring-2 ring-white/30 flex items-center justify-center text-white font-semibold text-[10px] overflow-hidden">
+              {p.avatar ? <img src={p.avatar} className="w-full h-full object-cover" alt="" /> : p.name.charAt(0).toUpperCase()}
+            </div>
+            <span className="text-white/60 text-[10px]">{p.name}</span>
+          </>); })()}
         </div>
       </div>
 
@@ -1284,8 +1298,12 @@ function StackedPreview({
           </div>
         )}
         <div className="absolute bottom-3 left-4 flex items-center gap-1.5 z-10">
-          <div className="w-6 h-6 rounded-full bg-white/90 shadow flex items-center justify-center font-semibold text-foreground text-[9px]">S</div>
-          <span className="text-[10px] font-medium drop-shadow" style={{ color: form.imageDataUrl ? "white" : "rgba(255,255,255,0.7)" }}>Sarah Chen</span>
+          {(() => { const p = getProfile(); return (<>
+            <div className="w-6 h-6 rounded-full bg-white/90 shadow flex items-center justify-center font-semibold text-foreground text-[9px] overflow-hidden">
+              {p.avatar ? <img src={p.avatar} className="w-full h-full object-cover" alt="" /> : p.name.charAt(0).toUpperCase()}
+            </div>
+            <span className="text-[10px] font-medium drop-shadow" style={{ color: form.imageDataUrl ? "white" : "rgba(255,255,255,0.7)" }}>{p.name}</span>
+          </>); })()}
         </div>
         {/* Banner height drag handle */}
         {interactive && (

@@ -1,4 +1,5 @@
 import { useParams, Link } from "wouter";
+import { useAuth } from "@/contexts/auth-context";
 import { AppLayout } from "@/components/layout/app-layout";
 import { leadMagnets, leads } from "@/data/mock";
 import { Button } from "@/components/ui/button";
@@ -61,17 +62,20 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function MiniOptInPreview({ magnet }: { magnet: typeof leadMagnets[0] }) {
+  const { name, avatar } = useAuth();
   return (
     <div className="bg-background rounded-lg border overflow-hidden">
       {/* Creator identity */}
       <div className="flex flex-col items-center pt-5 pb-4 px-4">
         <div
-          className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-semibold text-white mb-1.5 ring-4 ring-white/60 shadow-md"
-          style={{ backgroundColor: magnet.accentColor }}
+          className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-semibold text-white mb-1.5 ring-4 ring-white/60 shadow-md overflow-hidden"
+          style={{ backgroundColor: avatar ? undefined : magnet.accentColor }}
         >
-          S
+          {avatar
+            ? <img src={avatar} className="w-full h-full object-cover" alt="" />
+            : name.charAt(0).toUpperCase()}
         </div>
-        <p className="text-xs text-muted-foreground">Sarah Chen</p>
+        <p className="text-xs text-muted-foreground">{name}</p>
       </div>
       {/* Card */}
       <div className="mx-3 mb-3 bg-card border rounded-xl overflow-hidden shadow-sm">

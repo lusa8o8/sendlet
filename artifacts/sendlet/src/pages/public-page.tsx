@@ -111,6 +111,7 @@ function BulletList({ bullets, accentColor, dark = false }: { bullets: string[];
 function SimpleLayout({
   magnet,
   creatorName,
+  creatorAvatar,
   bullets,
   gradient,
   onSubmit,
@@ -120,6 +121,7 @@ function SimpleLayout({
 }: {
   magnet: (typeof leadMagnets)[0];
   creatorName: string;
+  creatorAvatar: string;
   bullets: string[];
   gradient: string | null;
   onSubmit: (e: React.FormEvent) => void;
@@ -139,8 +141,8 @@ function SimpleLayout({
         className="w-full max-w-[480px]"
       >
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-white font-semibold text-lg text-foreground mb-3 shadow-md ring-4 ring-white/50">
-            {creatorName.charAt(0)}
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-white font-semibold text-lg text-foreground mb-3 shadow-md ring-4 ring-white/50 overflow-hidden">
+            {creatorAvatar ? <img src={creatorAvatar} className="w-full h-full object-cover" alt="" /> : creatorName.charAt(0)}
           </div>
           <p className="text-sm font-medium text-foreground/70">{creatorName}</p>
         </div>
@@ -181,6 +183,7 @@ function SimpleLayout({
 function SplitLayout({
   magnet,
   creatorName,
+  creatorAvatar,
   bullets,
   onSubmit,
   isLoading,
@@ -189,6 +192,7 @@ function SplitLayout({
 }: {
   magnet: (typeof leadMagnets)[0];
   creatorName: string;
+  creatorAvatar: string;
   bullets: string[];
   onSubmit: (e: React.FormEvent) => void;
   isLoading: boolean;
@@ -232,8 +236,8 @@ function SplitLayout({
         {magnet.imageDataUrl && <div className="absolute inset-0 bg-black/20" />}
         <div className="relative z-10 p-8 lg:p-10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-semibold text-sm ring-2 ring-white/30">
-              {creatorName.charAt(0)}
+            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-semibold text-sm ring-2 ring-white/30 overflow-hidden">
+              {creatorAvatar ? <img src={creatorAvatar} className="w-full h-full object-cover" alt="" /> : creatorName.charAt(0)}
             </div>
             <p className="text-sm font-medium text-white/80">{creatorName}</p>
           </div>
@@ -281,6 +285,7 @@ function SplitLayout({
 function StackedLayout({
   magnet,
   creatorName,
+  creatorAvatar,
   bullets,
   onSubmit,
   isLoading,
@@ -289,6 +294,7 @@ function StackedLayout({
 }: {
   magnet: (typeof leadMagnets)[0];
   creatorName: string;
+  creatorAvatar: string;
   bullets: string[];
   onSubmit: (e: React.FormEvent) => void;
   isLoading: boolean;
@@ -325,8 +331,8 @@ function StackedLayout({
         )}
         {magnet.imageDataUrl && <div className="absolute inset-0 bg-black/15" />}
         <div className="absolute bottom-5 left-6 z-10 flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white font-semibold text-sm ring-2 ring-white/30">
-            {creatorName.charAt(0)}
+          <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white font-semibold text-sm ring-2 ring-white/30 overflow-hidden">
+            {creatorAvatar ? <img src={creatorAvatar} className="w-full h-full object-cover" alt="" /> : creatorName.charAt(0)}
           </div>
           <p className="text-sm font-medium text-white/80">{creatorName}</p>
         </div>
@@ -393,6 +399,7 @@ function backdropStyle(bd?: "none" | "glass" | "card"): React.CSSProperties {
 function FullImageLayout({
   magnet,
   creatorName,
+  creatorAvatar,
   bullets,
   onSubmit,
   isLoading,
@@ -401,6 +408,7 @@ function FullImageLayout({
 }: {
   magnet: (typeof leadMagnets)[0];
   creatorName: string;
+  creatorAvatar: string;
   bullets: string[];
   onSubmit: (e: React.FormEvent) => void;
   isLoading: boolean;
@@ -440,8 +448,8 @@ function FullImageLayout({
         className="absolute flex items-center gap-2 z-10"
         style={{ left: "4%", top: "2%", ...backdropStyle("glass") }}
       >
-        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white font-semibold text-sm ring-2 ring-white/25 shrink-0">
-          {creatorName.charAt(0)}
+        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white font-semibold text-sm ring-2 ring-white/25 shrink-0 overflow-hidden">
+          {creatorAvatar ? <img src={creatorAvatar} className="w-full h-full object-cover" alt="" /> : creatorName.charAt(0)}
         </div>
         <p className="text-sm font-medium text-white/80">{creatorName}</p>
       </div>
@@ -552,7 +560,13 @@ export default function PublicPage() {
     return <NotFound />;
   }
 
-  const creatorName = "Sarah Chen";
+  const { name: creatorName, avatar: creatorAvatar } = (() => {
+    try {
+      const raw = localStorage.getItem("sendlet_profile");
+      if (raw) return JSON.parse(raw) as { name: string; avatar: string };
+    } catch {}
+    return { name: "Sarah Chen", avatar: "" };
+  })();
   const gradient = GRADIENT_PRESETS[magnet.backgroundPreset ?? "none"] ?? null;
   const bullets = magnet.bulletsEnabled !== false
     ? (magnet.bullets?.filter(Boolean) ?? FALLBACK_BULLETS)
@@ -571,6 +585,7 @@ export default function PublicPage() {
   const sharedProps = {
     magnet,
     creatorName,
+    creatorAvatar,
     bullets,
     onSubmit: handleSubmit,
     isLoading,
