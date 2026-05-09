@@ -8,6 +8,22 @@ import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 import NotFound from "./not-found";
 
+function renderRichText(text: string): React.ReactNode {
+  const regex = /\[#([0-9a-fA-F]{3,6})\]([\s\S]*?)\[\/\]/g;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index));
+    parts.push(<span key={match.index} style={{ color: `#${match[1]}` }}>{match[2]}</span>);
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+  if (parts.length === 0) return text;
+  if (parts.length === 1 && typeof parts[0] === "string") return parts[0];
+  return <>{parts}</>;
+}
+
 const GRADIENT_PRESETS: Record<string, string | null> = {
   none: null,
   dusk: "linear-gradient(135deg, #fdd5c4 0%, #fef0d0 42%, #d5e5ff 75%, #e5d5ff 100%)",
@@ -133,12 +149,12 @@ function SimpleLayout({
           <div className="p-6 sm:p-8">
             {!magnet.hiddenBlocks?.includes("headline") && (
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-3 text-foreground">
-                {magnet.title}
+                {renderRichText(magnet.title)}
               </h1>
             )}
             {magnet.description && !magnet.hiddenBlocks?.includes("description") && (
               <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
-                {magnet.description}
+                {renderRichText(magnet.description)}
               </p>
             )}
             {magnet.bulletsEnabled !== false && !magnet.hiddenBlocks?.includes("bullets") && bullets.length > 0 && (
@@ -234,12 +250,12 @@ function SplitLayout({
         <div className="w-full max-w-md mx-auto px-8 py-12 lg:py-16">
           {!magnet.hiddenBlocks?.includes("headline") && (
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-3 text-foreground">
-              {magnet.title}
+              {renderRichText(magnet.title)}
             </h1>
           )}
           {magnet.description && !magnet.hiddenBlocks?.includes("description") && (
             <p className="text-base text-muted-foreground mb-8 leading-relaxed">
-              {magnet.description}
+              {renderRichText(magnet.description)}
             </p>
           )}
           {magnet.bulletsEnabled !== false && !magnet.hiddenBlocks?.includes("bullets") && bullets.length > 0 && (
@@ -321,12 +337,12 @@ function StackedLayout({
         <div className="w-full max-w-lg px-6 py-10">
           {!magnet.hiddenBlocks?.includes("headline") && (
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-3 text-foreground">
-              {magnet.title}
+              {renderRichText(magnet.title)}
             </h1>
           )}
           {magnet.description && !magnet.hiddenBlocks?.includes("description") && (
             <p className="text-base text-muted-foreground mb-8 leading-relaxed">
-              {magnet.description}
+              {renderRichText(magnet.description)}
             </p>
           )}
           {magnet.bulletsEnabled !== false && !magnet.hiddenBlocks?.includes("bullets") && bullets.length > 0 && (
@@ -446,7 +462,7 @@ function FullImageLayout({
             className="font-bold tracking-tight leading-snug"
             style={{ fontSize: fs(tel.headline.size) }}
           >
-            {magnet.title}
+            {renderRichText(magnet.title)}
           </h1>
         </div>
       )}
@@ -464,7 +480,7 @@ function FullImageLayout({
           }}
         >
           <p className="leading-relaxed" style={{ fontSize: fs(tel.description.size) }}>
-            {magnet.description}
+            {renderRichText(magnet.description)}
           </p>
         </div>
       )}

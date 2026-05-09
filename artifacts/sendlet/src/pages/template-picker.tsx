@@ -192,6 +192,24 @@ type Guide = { axis: "h" | "v"; pct: number };
 
 const SNAP_T = 2.5; // snap threshold in %
 
+// Parses [#hex]word[/] inline color markers into colored <span> elements.
+// Plain text outside markers keeps whatever colour is inherited from CSS.
+function renderRichText(text: string): React.ReactNode {
+  const regex = /\[#([0-9a-fA-F]{3,6})\]([\s\S]*?)\[\/\]/g;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index));
+    parts.push(<span key={match.index} style={{ color: `#${match[1]}` }}>{match[2]}</span>);
+    lastIndex = regex.lastIndex;
+  }
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+  if (parts.length === 0) return text;
+  if (parts.length === 1 && typeof parts[0] === "string") return parts[0];
+  return <>{parts}</>;
+}
+
 function computeSnap(
   rawX: number,
   rawY: number,
@@ -409,12 +427,12 @@ function SimplePreview({
             <GuideLines guides={guides} />
             {!(form.hiddenBlocks ?? []).includes("headline") && (
               <DraggableTextBlock el={textElements.headline} onUpdate={(u) => onUpdateTextEl?.("headline", u)} fontClass="font-bold tracking-tight leading-snug" label="Headline" onSnapMove={makeSnapMove("headline")} onDragEnd={() => setGuides([])} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "headline"] })} locked={locked}>
-                {form.title || "Your Resource Title"}
+                {renderRichText(form.title || "Your Resource Title")}
               </DraggableTextBlock>
             )}
             {!(form.hiddenBlocks ?? []).includes("description") && (
               <DraggableTextBlock el={textElements.description} onUpdate={(u) => onUpdateTextEl?.("description", u)} fontClass="leading-relaxed" label="Description" onSnapMove={makeSnapMove("description")} onDragEnd={() => setGuides([])} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "description"] })} locked={locked}>
-                {form.description || "A short description of what they'll get and why it helps."}
+                {renderRichText(form.description || "A short description of what they'll get and why it helps.")}
               </DraggableTextBlock>
             )}
             {form.bulletsEnabled && (
@@ -444,10 +462,10 @@ function SimplePreview({
         ) : (
           <div className="p-5">
             <h2 className="text-sm font-bold tracking-tight mb-1 text-foreground leading-snug">
-              {form.title || "Your Resource Title"}
+              {renderRichText(form.title || "Your Resource Title")}
             </h2>
             <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
-              {form.description || "A short description of what they'll get and why it helps."}
+              {renderRichText(form.description || "A short description of what they'll get and why it helps.")}
             </p>
             {form.bulletsEnabled && (
               <div className="space-y-1.5 mb-3">
@@ -510,9 +528,36 @@ function DraggableTextBlock({
   onDelete?: () => void;
   locked?: boolean;
 }) {
-  const ref        = useRef<HTMLDivElement>(null);
-  const colorRef   = useRef<HTMLInputElement>(null);
-  const taRef      = useRef<HTMLTextAreaElement>(null);
+  const ref             = useRef<HTMLDivElement>(null);
+  const colorRef        = useRef<HTMLInputElement>(null);
+  const taRef           = useRef<HTMLTextAreaElement>(null);
+  const inlineColorRef  = useRef<HTMLInputElement>(null);
+
+  const applyInlineColor = (hex: string) => {
+    const ta = taRef.current;
+    if (!ta) return;
+    const start = ta.selectionStart ?? 0;
+    const end   = ta.selectionEnd   ?? 0;
+    if (start === end) return;
+    const raw         = hex.replace(/^#/, "");
+    const selected    = ta.value.slice(start, end);
+    const replacement = `[#${raw}]${selected}[/]`;
+    const next        = ta.value.slice(0, start) + replacement + ta.value.slice(end);
+    onTextChange?.(next);
+    requestAnimationFrame(() => {
+      if (taRef.current) {
+        const pos = start + replacement.length;
+        taRef.current.setSelectionRange(pos, pos);
+        taRef.current.focus();
+      }
+    });
+  };
+
+  const stripInlineColors = () => {
+    const ta = taRef.current;
+    if (!ta) return;
+    onTextChange?.(ta.value.replace(/\[#[0-9a-fA-F]{3,6}\]([\s\S]*?)\[\/\]/g, "$1"));
+  };
   const [selected, setSelected] = useState(false);
   const [editing,  setEditing]  = useState(false);
   const dragRef    = useRef<{ mx: number; my: number; x0: number; y0: number } | null>(null);
@@ -732,7 +777,7 @@ function DraggableTextBlock({
           )}
         </div>
       ) : (
-        children
+        typeof children === "string" ? renderRichText(children) : children
       )}
 
       {/* Floating toolbar rendered via portal — escapes overflow:hidden parents */}
@@ -783,6 +828,24 @@ function DraggableTextBlock({
             ) : (
               <button onClick={enterEdit as unknown as React.MouseEventHandler<HTMLButtonElement>} className="text-[7px] text-sky-500 hover:text-sky-700 border-l border-slate-200 pl-1 font-medium" title="Double-click to edit text">✎ edit</button>
             )
+          )}
+          {editing && editType === "text" && (
+            <>
+              <button
+                className="flex items-center gap-0.5 border-l border-slate-200 pl-1 text-[7px] font-bold text-slate-500 hover:text-slate-800"
+                title="Select text in the box, then pick a colour to tint just that word"
+                onClick={() => inlineColorRef.current?.click()}
+              >
+                <span style={{ textDecoration: "underline", textDecorationColor: safeColor, textDecorationThickness: "2px" }}>A</span>
+                <span className="text-[6px] font-normal text-slate-400">word</span>
+              </button>
+              <input ref={inlineColorRef} type="color" defaultValue={safeColor} onChange={(e) => applyInlineColor(e.target.value)} className="sr-only" />
+              <button
+                className="text-[7px] text-slate-400 hover:text-rose-500 border-l border-slate-200 pl-1 font-medium"
+                title="Strip all inline colours from this block"
+                onClick={stripInlineColors}
+              >−clr</button>
+            </>
           )}
           {onDelete && (
             <button
@@ -933,7 +996,7 @@ function SplitPreview({
             <div className="flex-1" />
             <div className="relative z-10 px-6 pb-6">
               <p className="text-white font-extrabold text-xl leading-tight">
-                {form.title || "Your bold headline goes here"}
+                {renderRichText(form.title || "Your bold headline goes here")}
               </p>
             </div>
           </>
@@ -968,7 +1031,7 @@ function SplitPreview({
               onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "headline"] })}
               locked={locked}
             >
-              {form.title || "Your Resource Title"}
+              {renderRichText(form.title || "Your Resource Title")}
             </DraggableTextBlock>
           )}
 
@@ -987,7 +1050,7 @@ function SplitPreview({
               onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "description"] })}
               locked={locked}
             >
-              {form.description || "A short description of what they'll get and why it helps."}
+              {renderRichText(form.description || "A short description of what they'll get and why it helps.")}
             </DraggableTextBlock>
           )}
 
@@ -1050,10 +1113,10 @@ function SplitPreview({
         <div className="flex-1 bg-white flex items-center overflow-hidden">
           <div className="px-5 py-5 w-full">
             <h2 className="text-sm font-bold tracking-tight mb-1 text-foreground leading-snug">
-              {form.title || "Your Resource Title"}
+              {renderRichText(form.title || "Your Resource Title")}
             </h2>
             <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
-              {form.description || "A short description of what they'll get and why it helps."}
+              {renderRichText(form.description || "A short description of what they'll get and why it helps.")}
             </p>
             {form.bulletsEnabled && (
               <div className="space-y-1.5 mb-3">
@@ -1242,12 +1305,12 @@ function StackedPreview({
           <GuideLines guides={guides} />
           {!(form.hiddenBlocks ?? []).includes("headline") && (
             <DraggableTextBlock el={textElements.headline} onUpdate={(u) => onUpdateTextEl?.("headline", u)} fontClass="font-bold tracking-tight leading-snug" label="Headline" onSnapMove={makeSnapMove("headline")} onDragEnd={() => setGuides([])} editType="text" textValue={form.title} onTextChange={(v) => onUpdate?.({ title: v })} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "headline"] })} locked={locked}>
-              {form.title || "Your Resource Title"}
+              {renderRichText(form.title || "Your Resource Title")}
             </DraggableTextBlock>
           )}
           {!(form.hiddenBlocks ?? []).includes("description") && (
             <DraggableTextBlock el={textElements.description} onUpdate={(u) => onUpdateTextEl?.("description", u)} fontClass="leading-relaxed" label="Description" onSnapMove={makeSnapMove("description")} onDragEnd={() => setGuides([])} editType="text" textValue={form.description} onTextChange={(v) => onUpdate?.({ description: v })} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "description"] })} locked={locked}>
-              {form.description || "A short description of what they'll get and why it helps."}
+              {renderRichText(form.description || "A short description of what they'll get and why it helps.")}
             </DraggableTextBlock>
           )}
           {form.bulletsEnabled && (
@@ -1277,10 +1340,10 @@ function StackedPreview({
       ) : (
         <div className="flex-1 overflow-hidden px-5 py-4 flex flex-col justify-center">
           <h2 className="text-sm font-bold tracking-tight mb-1 text-foreground leading-snug">
-            {form.title || "Your Resource Title"}
+            {renderRichText(form.title || "Your Resource Title")}
           </h2>
           <p className="text-[11px] text-muted-foreground mb-2.5 leading-relaxed">
-            {form.description || "A short description of what they'll get and why it helps."}
+            {renderRichText(form.description || "A short description of what they'll get and why it helps.")}
           </p>
           {form.bulletsEnabled && (
             <div className="space-y-1.5 mb-3">
@@ -1402,7 +1465,7 @@ function FullImagePreview({
               onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "headline"] })}
               locked={locked}
             >
-              {form.title || "Your Resource Title"}
+              {renderRichText(form.title || "Your Resource Title")}
             </DraggableTextBlock>
           )}
 
@@ -1420,7 +1483,7 @@ function FullImagePreview({
               onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "description"] })}
               locked={locked}
             >
-              {form.description || "A short description of what they'll get and why it helps."}
+              {renderRichText(form.description || "A short description of what they'll get and why it helps.")}
             </DraggableTextBlock>
           )}
 
@@ -1479,7 +1542,7 @@ function FullImagePreview({
           <div className="absolute" style={{ left: "5%", top: "8%", width: "90%" }}>
             <div style={glassPanel}>
               <p className="text-sm font-bold text-white leading-snug">
-                {form.title || "Your Resource Title"}
+                {renderRichText(form.title || "Your Resource Title")}
               </p>
             </div>
           </div>
@@ -1487,7 +1550,7 @@ function FullImagePreview({
           <div className="absolute" style={{ left: "5%", top: "26%", width: "90%" }}>
             <div style={glassPanel}>
               <p className="text-[11px] text-white/85 leading-relaxed">
-                {form.description || "A short description of what they'll get and why it helps."}
+                {renderRichText(form.description || "A short description of what they'll get and why it helps.")}
               </p>
             </div>
           </div>
