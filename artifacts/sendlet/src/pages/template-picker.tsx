@@ -531,26 +531,19 @@ function DraggableTextBlock({
   const ref             = useRef<HTMLDivElement>(null);
   const colorRef        = useRef<HTMLInputElement>(null);
   const taRef           = useRef<HTMLTextAreaElement>(null);
-  const inlineColorRef  = useRef<HTMLInputElement>(null);
+  const inlineColorRef    = useRef<HTMLInputElement>(null);
+  const savedSelectionRef = useRef<{ start: number; end: number; text: string } | null>(null);
 
   const applyInlineColor = (hex: string) => {
-    const ta = taRef.current;
-    if (!ta) return;
-    const start = ta.selectionStart ?? 0;
-    const end   = ta.selectionEnd   ?? 0;
-    if (start === end) return;
+    const ta    = taRef.current;
+    const saved = savedSelectionRef.current;
+    if (!ta || !saved || saved.start === saved.end) return;
+    const { start, end } = saved;
     const raw         = hex.replace(/^#/, "");
-    const selected    = ta.value.slice(start, end);
-    const replacement = `[#${raw}]${selected}[/]`;
+    const replacement = `[#${raw}]${saved.text}[/]`;
     const next        = ta.value.slice(0, start) + replacement + ta.value.slice(end);
+    savedSelectionRef.current = null; // consume snapshot — picker can only apply once per open
     onTextChange?.(next);
-    requestAnimationFrame(() => {
-      if (taRef.current) {
-        const pos = start + replacement.length;
-        taRef.current.setSelectionRange(pos, pos);
-        taRef.current.focus();
-      }
-    });
   };
 
   const stripInlineColors = () => {
@@ -833,13 +826,22 @@ function DraggableTextBlock({
             <>
               <button
                 className="flex items-center gap-0.5 border-l border-slate-200 pl-1 text-[7px] font-bold text-slate-500 hover:text-slate-800"
-                title="Select text in the box, then pick a colour to tint just that word"
-                onClick={() => inlineColorRef.current?.click()}
+                title="Select a word in the box, then click here to colour it"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  const ta = taRef.current;
+                  if (!ta) return;
+                  const start = ta.selectionStart ?? 0;
+                  const end   = ta.selectionEnd   ?? 0;
+                  if (start === end) return;
+                  savedSelectionRef.current = { start, end, text: ta.value.slice(start, end) };
+                  inlineColorRef.current?.click();
+                }}
               >
                 <span style={{ textDecoration: "underline", textDecorationColor: safeColor, textDecorationThickness: "2px" }}>A</span>
                 <span className="text-[6px] font-normal text-slate-400">word</span>
               </button>
-              <input ref={inlineColorRef} type="color" defaultValue={safeColor} onChange={(e) => applyInlineColor(e.target.value)} className="sr-only" />
+              <input ref={inlineColorRef} type="color" defaultValue="#ef4444" onChange={(e) => applyInlineColor(e.target.value)} className="sr-only" />
               <button
                 className="text-[7px] text-slate-400 hover:text-rose-500 border-l border-slate-200 pl-1 font-medium"
                 title="Strip all inline colours from this block"
