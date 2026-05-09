@@ -21,6 +21,7 @@ function loadProfile(): { name: string; avatar: string } {
 
 interface AuthContextType {
   isSignedIn: boolean;
+  isAuthReady: boolean;
   email: string | null;
   name: string;
   avatar: string;
@@ -33,16 +34,14 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
   const [name, setNameState]   = useState(() => loadProfile().name);
   const [avatar, setAvatarState] = useState(() => loadProfile().avatar);
 
   useEffect(() => {
     let mounted = true;
-
-    void completeFirebaseMagicLinkIfPresent().catch((error) => {
-      console.error("Could not complete Firebase magic link", error);
-    });
+    let linkHandled = false;
 
     const unsubscribe = watchFirebaseAuth((nextUser) => {
       if (!mounted) return;
@@ -57,7 +56,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.removeItem(EMAIL_KEY);
         }
       } catch {}
+      if (linkHandled) setIsAuthReady(true);
     });
+
+    void completeFirebaseMagicLinkIfPresent()
+      .catch((error) => {
+        console.error("Could not complete Firebase magic link", error);
+      })
+      .finally(() => {
+        linkHandled = true;
+        if (mounted) setIsAuthReady(true);
+      });
 
     return () => {
       mounted = false;
@@ -86,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isSignedIn: !!user, email, name, avatar, updateProfile, signIn, signOut }}>
+    <AuthContext.Provider value={{ isSignedIn: !!user, isAuthReady, email, name, avatar, updateProfile, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

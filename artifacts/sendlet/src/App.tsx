@@ -19,8 +19,9 @@ import SettingsIntegrationsPage from "@/pages/settings-integrations";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, isAuthReady } = useAuth();
   const [, setLocation] = useLocation();
+  if (!isAuthReady) return null;
   if (!isSignedIn) {
     setLocation("/sign-in");
     return null;

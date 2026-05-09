@@ -111,7 +111,7 @@ export default function SignIn() {
               <p className="text-sm text-muted-foreground leading-relaxed">
                 We sent a sign-in link to{" "}
                 <span className="font-medium text-foreground">{submittedEmail}</span>.
-                Click it to sign in — redirecting shortly.
+                Click it to sign in.
               </p>
             </div>
           ) : (
