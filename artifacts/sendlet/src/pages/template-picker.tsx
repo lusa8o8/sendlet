@@ -2421,6 +2421,7 @@ export default function TemplatePicker() {
   const [gateEmail, setGateEmail] = useState("");
   const [gateSubmitting, setGateSubmitting] = useState(false);
   const [gateError, setGateError] = useState<string | null>(null);
+  const [gateLinkSent, setGateLinkSent] = useState(false);
 
   // ─── Undo / redo ────────────────────────────────────────────
   type FormSnapshot = {
@@ -2893,10 +2894,18 @@ export default function TemplatePicker() {
             {/* Body */}
             <div className="px-6 py-6">
               <h2 className="text-lg font-bold tracking-tight text-foreground mb-1">
-                Your page is ready to go live
+                {gateLinkSent ? "Check your inbox" : "Your page is ready to go live"}
               </h2>
               <p className="text-sm text-muted-foreground leading-relaxed mb-5">
-                Create your free Sendlet account to publish it and start collecting leads.
+                {gateLinkSent ? (
+                  <>
+                    We sent a sign-in link to{" "}
+                    <span className="font-medium text-foreground">{gateEmail}</span>.
+                    Click it to publish this page.
+                  </>
+                ) : (
+                  "Create your free Sendlet account to publish it and start collecting leads."
+                )}
               </p>
 
               <form
@@ -2904,11 +2913,12 @@ export default function TemplatePicker() {
                   e.preventDefault();
                   if (!gateEmail || gateSubmitting) return;
                   setGateError(null);
+                  setGateLinkSent(false);
                   setGateSubmitting(true);
                   try { sessionStorage.setItem(PENDING_PUBLISH_KEY, "true"); } catch { /* ignore */ }
                   void signIn(gateEmail, `${window.location.origin}/lead-magnets/new`)
                     .then(() => {
-                      setAuthGateOpen(false);
+                      setGateLinkSent(true);
                     })
                     .catch((error) => {
                       const message = error instanceof Error && error.message.toLowerCase().includes("rate limit")
@@ -2924,29 +2934,42 @@ export default function TemplatePicker() {
                 }}
                 className="space-y-3"
               >
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                  <input
-                    type="email"
-                    required
-                    value={gateEmail}
-                    onChange={(e) => setGateEmail(e.target.value)}
-                    placeholder="name@example.com"
-                    autoFocus
-                    className="w-full pl-9 pr-3 h-10 text-sm bg-muted/50 border border-border rounded-lg outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
-                  />
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full h-11 text-sm font-semibold gap-2"
-                  disabled={gateSubmitting || !gateEmail}
-                >
-                  {gateSubmitting ? (
-                    <>Sending link...</>
-                  ) : (
-                    <>Send magic link <ArrowRight className="h-4 w-4" /></>
-                  )}
-                </Button>
+                {!gateLinkSent ? (
+                  <>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                      <input
+                        type="email"
+                        required
+                        value={gateEmail}
+                        onChange={(e) => setGateEmail(e.target.value)}
+                        placeholder="name@example.com"
+                        autoFocus
+                        className="w-full pl-9 pr-3 h-10 text-sm bg-muted/50 border border-border rounded-lg outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      className="w-full h-11 text-sm font-semibold gap-2"
+                      disabled={gateSubmitting || !gateEmail}
+                    >
+                      {gateSubmitting ? (
+                        <>Sending link...</>
+                      ) : (
+                        <>Send magic link <ArrowRight className="h-4 w-4" /></>
+                      )}
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-11 text-sm font-semibold"
+                    onClick={() => setGateLinkSent(false)}
+                  >
+                    Use a different email
+                  </Button>
+                )}
                 {gateError ? (
                   <p className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">
                     {gateError}
@@ -2959,7 +2982,7 @@ export default function TemplatePicker() {
               </p>
               <div className="text-center mt-2">
                 <button
-                  onClick={() => { setAuthGateOpen(false); setGateEmail(""); }}
+                  onClick={() => { setAuthGateOpen(false); setGateEmail(""); setGateLinkSent(false); }}
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Cancel and keep editing
