@@ -13,34 +13,36 @@ import UploadPage from "@/pages/upload";
 import Leads from "@/pages/leads";
 import PublicPage from "@/pages/public-page";
 import SuccessPage from "@/pages/success-page";
+import LandingPage from "@/pages/landing";
 
 const queryClient = new QueryClient();
 
-function RootRoute() {
+function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { isSignedIn } = useAuth();
   const [, setLocation] = useLocation();
-  
-  if (isSignedIn) {
-    setLocation("/dashboard");
-  } else {
+  if (!isSignedIn) {
     setLocation("/sign-in");
+    return null;
   }
-  
-  return null;
+  return <Component />;
 }
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={RootRoute} />
+      <Route path="/" component={LandingPage} />
       <Route path="/sign-in" component={SignIn} />
-      <Route path="/dashboard" component={Dashboard} />
+      <Route path="/dashboard">
+        {() => <ProtectedRoute component={Dashboard} />}
+      </Route>
       <Route path="/lead-magnets/upload" component={UploadPage} />
       <Route path="/lead-magnets/new" component={TemplatePicker} />
       <Route path="/lead-magnets/:id/edit" component={TemplatePicker} />
       <Route path="/lead-magnets/:id/email" component={EmailDraftPage} />
       <Route path="/lead-magnets/:id" component={LeadMagnetDetail} />
-      <Route path="/leads" component={Leads} />
+      <Route path="/leads">
+        {() => <ProtectedRoute component={Leads} />}
+      </Route>
       <Route path="/p/:slug" component={PublicPage} />
       <Route path="/p/:slug/success" component={SuccessPage} />
       <Route component={NotFound} />
