@@ -6,6 +6,17 @@ import { AppLayout } from "@/components/layout/app-layout";
 
 const UPLOAD_KEY = "sendlet-upload";
 
+function persistUploadDraft(value: string | null) {
+  try {
+    if (value === null) sessionStorage.removeItem(UPLOAD_KEY);
+    else sessionStorage.setItem(UPLOAD_KEY, value);
+  } catch { /* ignore */ }
+  try {
+    if (value === null) localStorage.removeItem(UPLOAD_KEY);
+    else localStorage.setItem(UPLOAD_KEY, value);
+  } catch { /* ignore */ }
+}
+
 function toTitle(filename: string): string {
   return filename
     .replace(/\.[^/.]+$/, "")
@@ -97,12 +108,12 @@ export default function UploadPage() {
             fileDataUrl: file ? await readFileDataUrl(file) : null,
           }
         : { title: linkTitle.trim(), fileName: "", fileSize: 0, linkUrl: linkUrl.trim() };
-    try { sessionStorage.setItem(UPLOAD_KEY, JSON.stringify(payload)); } catch { /* ignore */ }
+    persistUploadDraft(JSON.stringify(payload));
     setLocation("/lead-magnets/new");
   };
 
   const skip = () => {
-    try { sessionStorage.removeItem(UPLOAD_KEY); } catch { /* ignore */ }
+    persistUploadDraft(null);
     setLocation("/lead-magnets/new");
   };
 

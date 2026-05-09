@@ -2378,16 +2378,36 @@ const NEW_DRAFT_KEY = "sendlet-new-draft";
 const UPLOAD_KEY = "sendlet-upload";
 const PENDING_PUBLISH_KEY = "sendlet-pending-publish";
 
+function readBrowserStorage(key: string) {
+  try {
+    return sessionStorage.getItem(key) ?? localStorage.getItem(key);
+  } catch {
+    try { return localStorage.getItem(key); } catch { return null; }
+  }
+}
+
+function writeBrowserStorage(key: string, value: string) {
+  try { sessionStorage.setItem(key, value); } catch { /* ignore */ }
+  try { localStorage.setItem(key, value); } catch { /* ignore */ }
+}
+
+function removeBrowserStorage(...keys: string[]) {
+  for (const key of keys) {
+    try { sessionStorage.removeItem(key); } catch { /* ignore */ }
+    try { localStorage.removeItem(key); } catch { /* ignore */ }
+  }
+}
+
 function readNewDraft(): { mode: "pick" | "edit"; layout: string; form: Form } | null {
   try {
-    const raw = sessionStorage.getItem(NEW_DRAFT_KEY);
+    const raw = readBrowserStorage(NEW_DRAFT_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch { return null; }
 }
 
 function readUploadDraft(): { title: string; fileName: string; fileSize: number; fileType?: string; fileDataUrl?: string | null; linkUrl?: string } | null {
   try {
-    const raw = sessionStorage.getItem(UPLOAD_KEY);
+    const raw = readBrowserStorage(UPLOAD_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch { return null; }
 }
@@ -2528,7 +2548,7 @@ export default function TemplatePicker() {
   useEffect(() => {
     if (editingMagnet) return;
     try {
-      sessionStorage.setItem(NEW_DRAFT_KEY, JSON.stringify({ mode, layout, form }));
+      writeBrowserStorage(NEW_DRAFT_KEY, JSON.stringify({ mode, layout, form }));
     } catch { /* ignore quota errors */ }
   }, [mode, layout, form, editingMagnet]);
 
@@ -2647,7 +2667,7 @@ export default function TemplatePicker() {
       };
       updateMagnet(editingMagnet.id, nextMagnet);
       await updateLeadMagnetInSupabase(nextMagnet);
-      try { sessionStorage.removeItem(NEW_DRAFT_KEY); sessionStorage.removeItem(UPLOAD_KEY); } catch { /* ignore */ }
+      removeBrowserStorage(NEW_DRAFT_KEY, UPLOAD_KEY, PENDING_PUBLISH_KEY);
       setLocation("/dashboard");
     } else {
       const newId = crypto.randomUUID();
@@ -2675,14 +2695,14 @@ export default function TemplatePicker() {
       };
       saveMagnet(nextMagnet);
       await saveLeadMagnetToSupabase(nextMagnet, upload);
-      try { sessionStorage.removeItem(NEW_DRAFT_KEY); sessionStorage.removeItem(UPLOAD_KEY); } catch { /* ignore */ }
+      removeBrowserStorage(NEW_DRAFT_KEY, UPLOAD_KEY, PENDING_PUBLISH_KEY);
       setLocation(`/lead-magnets/${newId}/email`);
     }
   };
 
   const handleSave = () => {
     if (!isSignedIn && !editingMagnet) {
-      try { sessionStorage.setItem(PENDING_PUBLISH_KEY, "true"); } catch { /* ignore */ }
+      writeBrowserStorage(PENDING_PUBLISH_KEY, "true");
       setAuthGateOpen(true);
       return;
     }
@@ -2693,8 +2713,8 @@ export default function TemplatePicker() {
     if (!isSignedIn || editingMagnet) return;
     let shouldPublish = false;
     try {
-      shouldPublish = sessionStorage.getItem(PENDING_PUBLISH_KEY) === "true";
-      if (shouldPublish) sessionStorage.removeItem(PENDING_PUBLISH_KEY);
+      shouldPublish = readBrowserStorage(PENDING_PUBLISH_KEY) === "true";
+      if (shouldPublish) removeBrowserStorage(PENDING_PUBLISH_KEY);
     } catch { /* ignore */ }
 
     if (shouldPublish) {
@@ -2915,7 +2935,7 @@ export default function TemplatePicker() {
                   setGateError(null);
                   setGateLinkSent(false);
                   setGateSubmitting(true);
-                  try { sessionStorage.setItem(PENDING_PUBLISH_KEY, "true"); } catch { /* ignore */ }
+                  writeBrowserStorage(PENDING_PUBLISH_KEY, "true");
                   void signIn(gateEmail, `${window.location.origin}/lead-magnets/new`)
                     .then(() => {
                       setGateLinkSent(true);
