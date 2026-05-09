@@ -1017,7 +1017,7 @@ function SplitPreview({
                     onUpdate={(u) => onUpdateTextEl?.("tagline", u)}
                     fontClass="font-extrabold leading-tight"
                     label="Tagline"
-                    onSnapMove={(x, y) => ({ x, y, guides: [] })}
+                    onSnapMove={(x, y, w) => computeSnap(x, y, w, [])}
                     onDragEnd={() => {}}
                     editType="text"
                     textValue={form.tagline ?? ""}
@@ -1329,7 +1329,7 @@ function StackedPreview({
                 onUpdate={(u) => onUpdateTextEl?.("tagline", u)}
                 fontClass="font-extrabold leading-tight"
                 label="Tagline"
-                onSnapMove={(x, y) => ({ x, y, guides: [] })}
+                onSnapMove={(x, y, w) => computeSnap(x, y, w, [])}
                 onDragEnd={() => {}}
                 editType="text"
                 textValue={form.tagline ?? ""}
