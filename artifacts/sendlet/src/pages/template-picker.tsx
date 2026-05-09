@@ -2376,6 +2376,7 @@ function magnetToForm(m: LeadMagnet): Form {
 
 const NEW_DRAFT_KEY = "sendlet-new-draft";
 const UPLOAD_KEY = "sendlet-upload";
+const PENDING_PUBLISH_KEY = "sendlet-pending-publish";
 
 function readNewDraft(): { mode: "pick" | "edit"; layout: string; form: Form } | null {
   try {
@@ -2679,11 +2680,26 @@ export default function TemplatePicker() {
 
   const handleSave = () => {
     if (!isSignedIn && !editingMagnet) {
+      try { sessionStorage.setItem(PENDING_PUBLISH_KEY, "true"); } catch { /* ignore */ }
       setAuthGateOpen(true);
       return;
     }
     void doSave();
   };
+
+  useEffect(() => {
+    if (!isSignedIn || editingMagnet) return;
+    let shouldPublish = false;
+    try {
+      shouldPublish = sessionStorage.getItem(PENDING_PUBLISH_KEY) === "true";
+      if (shouldPublish) sessionStorage.removeItem(PENDING_PUBLISH_KEY);
+    } catch { /* ignore */ }
+
+    if (shouldPublish) {
+      void doSave();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSignedIn, editingMagnet]);
 
   const previewCaption =
     layout === "simple"
@@ -2887,6 +2903,7 @@ export default function TemplatePicker() {
                   e.preventDefault();
                   if (!gateEmail || gateSubmitting) return;
                   setGateSubmitting(true);
+                  try { sessionStorage.setItem(PENDING_PUBLISH_KEY, "true"); } catch { /* ignore */ }
                   void signIn(gateEmail, `${window.location.origin}/lead-magnets/new`)
                     .then(() => {
                       setAuthGateOpen(false);
