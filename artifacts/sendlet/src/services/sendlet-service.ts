@@ -65,6 +65,7 @@ export async function updateLeadMagnetStatusInSupabase(
   if (!response.ok) {
     throw new Error(payload.error ?? "Could not update lead magnet status");
   }
+  return payload.magnet;
 }
 
 export async function updateLeadMagnetInSupabase(magnet: LeadMagnet) {

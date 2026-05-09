@@ -58,7 +58,10 @@ export default function EmailDraftPage() {
         status: "published",
         ...delivery,
       });
-      await updateLeadMagnetStatusInSupabase(magnet.id, "published", delivery);
+      const updated = await updateLeadMagnetStatusInSupabase(magnet.id, "published", delivery);
+      if (usingCustom && !updated?.delivery_email_body) {
+        throw new Error("Custom delivery email was not saved. Try publishing again.");
+      }
       setLocation("/dashboard");
     } catch (error) {
       setPublishing(false);
