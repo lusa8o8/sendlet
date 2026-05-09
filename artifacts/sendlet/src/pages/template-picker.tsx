@@ -2200,14 +2200,32 @@ function magnetToForm(m: LeadMagnet): Form {
 
 /* ─── Page ──────────────────────────────────────────────────── */
 
+const NEW_DRAFT_KEY = "sendlet-new-draft";
+
+function readNewDraft(): { mode: "pick" | "edit"; layout: string; form: Form } | null {
+  try {
+    const raw = sessionStorage.getItem(NEW_DRAFT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
 export default function TemplatePicker() {
   const [, setLocation] = useLocation();
   const { id } = useParams<{ id?: string }>();
   const editingMagnet = id ? leadMagnets.find((m) => m.id === id) : undefined;
 
-  const [mode, setMode] = useState<"pick" | "edit">(() => editingMagnet ? "edit" : "pick");
-  const [layout, setLayout] = useState(() => editingMagnet?.layout ?? "simple");
-  const [form, setForm] = useState<Form>(() => editingMagnet ? magnetToForm(editingMagnet) : defaultForm);
+  const [mode, setMode] = useState<"pick" | "edit">(() => {
+    if (editingMagnet) return "edit";
+    return readNewDraft()?.mode ?? "pick";
+  });
+  const [layout, setLayout] = useState<string>(() => {
+    if (editingMagnet) return editingMagnet.layout ?? "simple";
+    return readNewDraft()?.layout ?? "simple";
+  });
+  const [form, setForm] = useState<Form>(() => {
+    if (editingMagnet) return magnetToForm(editingMagnet);
+    return readNewDraft()?.form ?? defaultForm;
+  });
   const [barPosition, setBarPosition] = useState<"bottom" | "side">("bottom");
   const [locked, setLocked] = useState(false);
   const [activePreset, setActivePreset] = useState<string | null>(null);
@@ -2313,6 +2331,27 @@ export default function TemplatePicker() {
     return () => window.removeEventListener("keydown", onKey);
   }, [mode]);
 
+  // ─── Persist new-magnet draft to sessionStorage ──────────────
+  useEffect(() => {
+    if (editingMagnet) return;
+    try {
+      sessionStorage.setItem(NEW_DRAFT_KEY, JSON.stringify({ mode, layout, form }));
+    } catch { /* ignore quota errors */ }
+  }, [mode, layout, form, editingMagnet]);
+
+  // ─── Intercept native back-button to stay on page ────────────
+  useEffect(() => {
+    if (editingMagnet) return;
+    const onPop = () => {
+      if (mode === "edit") {
+        history.pushState({ sendletEdit: true }, "");
+        setMode("pick");
+      }
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [mode, editingMagnet]);
+
   // ─── Custom presets ──────────────────────────────────────────
   const [customPresets, setCustomPresets] = useState<CustomPreset[]>(() => {
     try { return JSON.parse(localStorage.getItem(CUSTOM_PRESETS_KEY) ?? "[]"); }
@@ -2370,6 +2409,9 @@ export default function TemplatePicker() {
       }));
     }
     setMode("edit");
+    if (!editingMagnet) {
+      history.pushState({ sendletEdit: true }, "");
+    }
   };
 
   const handleBack = () => {
@@ -2425,6 +2467,7 @@ export default function TemplatePicker() {
         ...formState,
       });
     }
+    try { sessionStorage.removeItem(NEW_DRAFT_KEY); } catch { /* ignore */ }
     setLocation("/dashboard");
   };
 
