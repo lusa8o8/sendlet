@@ -142,6 +142,15 @@ export default function EmailDraftPage() {
                 </div>
               ) : (
                 <>
+                  <div className="px-5 py-4 border-b bg-primary/5">
+                    <p className="text-sm font-medium text-foreground">
+                      Sendlet adds the download link for you.
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                      Put <span className="font-medium text-foreground">{"{{resource_link}}"}</span> where the download button should appear. If you leave it out, Sendlet adds the button at the end.
+                    </p>
+                  </div>
+
                   <div className="divide-y">
                     <div className="flex items-center px-5 py-3 gap-3">
                       <span className="w-16 text-xs font-medium text-muted-foreground shrink-0">Subject</span>
@@ -160,12 +169,14 @@ export default function EmailDraftPage() {
                       onChange={(event) => setBody(event.target.value)}
                       rows={12}
                       className="w-full text-sm text-foreground bg-transparent border-none outline-none resize-none leading-relaxed placeholder:text-muted-foreground/50"
-                      placeholder="Write the email people receive after opting in..."
+                      placeholder="Write the message people receive after opting in. Sendlet will add the resource link."
                     />
                   </div>
 
-                  <div className="border-t bg-muted/30 px-5 py-3 text-xs text-muted-foreground">
-                    Use <span className="font-medium text-foreground">{"{{resource_link}}"}</span> where the download button should appear.
+                  <div className="border-t bg-muted/30 px-5 py-3">
+                    <div className="inline-flex rounded-lg border bg-card px-3 py-2 text-xs font-medium text-muted-foreground">
+                      {"{{resource_link}}"} = download button for the uploaded file or pasted link
+                    </div>
                   </div>
                 </>
               )}
