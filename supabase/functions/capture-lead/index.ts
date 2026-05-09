@@ -142,9 +142,17 @@ Deno.serve(async (req) => {
     });
 
     if (response.ok) {
+      const resendResult = await response.json().catch(() => ({}));
       await supabase
         .from("delivery_events")
-        .update({ status: "sent", sent_at: new Date().toISOString() })
+        .update({
+          status: "sent",
+          sent_at: new Date().toISOString(),
+          metadata: {
+            access_url_present: !!accessUrl,
+            resend_id: typeof resendResult?.id === "string" ? resendResult.id : null,
+          },
+        })
         .eq("id", delivery?.id);
       await supabase
         .from("leads")
