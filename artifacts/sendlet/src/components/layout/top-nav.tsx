@@ -190,16 +190,6 @@ export function TopNav() {
                 >
                   Leads
                 </Link>
-                <Link
-                  href="/settings/integrations"
-                  className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
-                    location.startsWith("/settings")
-                      ? "text-foreground font-medium bg-muted"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                  }`}
-                >
-                  Integrations
-                </Link>
               </>
             )}
           </nav>
