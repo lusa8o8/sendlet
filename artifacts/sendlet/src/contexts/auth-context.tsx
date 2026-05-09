@@ -15,8 +15,7 @@ interface AuthContextType {
   email: string | null;
   name: string;
   avatar: string;
-  setName: (n: string) => void;
-  setAvatar: (a: string) => void;
+  updateProfile: (name: string, avatar: string) => void;
   signIn: (email: string) => void;
   signOut: () => void;
 }
@@ -29,17 +28,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [name, setNameState] = useState(() => loadProfile().name);
   const [avatar, setAvatarState] = useState(() => loadProfile().avatar);
 
-  const setName = (n: string) => {
+  const updateProfile = (n: string, a: string) => {
     setNameState(n);
-    try {
-      localStorage.setItem(PROFILE_KEY, JSON.stringify({ name: n, avatar }));
-    } catch {}
-  };
-
-  const setAvatar = (a: string) => {
     setAvatarState(a);
     try {
-      localStorage.setItem(PROFILE_KEY, JSON.stringify({ name, avatar: a }));
+      localStorage.setItem(PROFILE_KEY, JSON.stringify({ name: n, avatar: a }));
     } catch {}
   };
 
@@ -54,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isSignedIn, email, name, avatar, setName, setAvatar, signIn, signOut }}>
+    <AuthContext.Provider value={{ isSignedIn, email, name, avatar, updateProfile, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

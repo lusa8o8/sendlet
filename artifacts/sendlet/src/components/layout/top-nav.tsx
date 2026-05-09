@@ -1,6 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Link, useLocation } from "wouter";
-import { Send, LogOut, User } from "lucide-react";
+import { Send, LogOut, User, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,33 +21,33 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-async function compressAvatar(file: File): Promise<string> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
-    img.onload = () => {
-      const size = 200;
-      const canvas = document.createElement("canvas");
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext("2d")!;
-      const min = Math.min(img.width, img.height);
-      const sx = (img.width - min) / 2;
-      const sy = (img.height - min) / 2;
-      ctx.drawImage(img, sx, sy, min, min, 0, 0, size, size);
-      URL.revokeObjectURL(url);
-      resolve(canvas.toDataURL("image/jpeg", 0.82));
-    };
-    img.src = url;
-  });
+const CROP_SIZE = 200;
+
+interface ImgMeta { naturalW: number; naturalH: number }
+
+function computeDraw(meta: ImgMeta, ox: number, oy: number) {
+  const scale = Math.max(CROP_SIZE / meta.naturalW, CROP_SIZE / meta.naturalH);
+  const w = meta.naturalW * scale;
+  const h = meta.naturalH * scale;
+  const x = (CROP_SIZE - w) / 2 + ox;
+  const y = (CROP_SIZE - h) / 2 + oy;
+  return { x, y, w, h };
 }
 
 export function TopNav() {
   const [location] = useLocation();
-  const { name, email, avatar, setName, setAvatar, signOut } = useAuth();
+  const { name, email, avatar, updateProfile, signOut } = useAuth();
+
   const [profileOpen, setProfileOpen] = useState(false);
   const [draftName, setDraftName] = useState("");
-  const [draftAvatar, setDraftAvatar] = useState("");
+
+  // Avatar crop state
+  const [rawSrc, setRawSrc] = useState("");        // object URL of uploaded file
+  const [draftAvatar, setDraftAvatar] = useState(""); // existing saved avatar (when no new upload)
+  const [imgMeta, setImgMeta] = useState<ImgMeta | null>(null);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const dragStart = useRef({ mx: 0, my: 0, ox: 0, oy: 0 });
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const isActive = (path: string) => location === path;
@@ -55,22 +55,103 @@ export function TopNav() {
   const openProfile = () => {
     setDraftName(name);
     setDraftAvatar(avatar);
-    setProfileOpen(true);
+    setRawSrc("");
+    setImgMeta(null);
+    setOffset({ x: 0, y: 0 });
+    setProfileOpen(false);
+    setTimeout(() => setProfileOpen(true), 0);
   };
 
-  const handleAvatarFile = async (file: File) => {
-    const compressed = await compressAvatar(file);
-    setDraftAvatar(compressed);
-  };
-
-  const saveProfile = () => {
-    const trimmed = draftName.trim();
-    if (trimmed) setName(trimmed);
-    setAvatar(draftAvatar);
+  const closeProfile = () => {
+    if (rawSrc) URL.revokeObjectURL(rawSrc);
+    setRawSrc("");
     setProfileOpen(false);
   };
 
+  const handleAvatarFile = (file: File) => {
+    if (rawSrc) URL.revokeObjectURL(rawSrc);
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      setImgMeta({ naturalW: img.naturalWidth, naturalH: img.naturalHeight });
+      setOffset({ x: 0, y: 0 });
+      setRawSrc(url);
+    };
+    img.src = url;
+  };
+
+  // Drag handlers
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (!rawSrc) return;
+    e.preventDefault();
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    dragStart.current = { mx: e.clientX, my: e.clientY, ox: offset.x, oy: offset.y };
+    setDragging(true);
+  };
+
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!dragging) return;
+    setOffset({
+      x: dragStart.current.ox + e.clientX - dragStart.current.mx,
+      y: dragStart.current.oy + e.clientY - dragStart.current.my,
+    });
+  }, [dragging]);
+
+  const onPointerUp = () => setDragging(false);
+
+  // Render the crop to a 200×200 JPEG data URL
+  const cropToDataURL = (): Promise<string> => {
+    return new Promise((resolve) => {
+      if (!rawSrc || !imgMeta) { resolve(draftAvatar); return; }
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = CROP_SIZE;
+        canvas.height = CROP_SIZE;
+        const ctx = canvas.getContext("2d")!;
+        const { x, y, w, h } = computeDraw(imgMeta, offset.x, offset.y);
+        ctx.drawImage(img, x, y, w, h);
+        resolve(canvas.toDataURL("image/jpeg", 0.82));
+      };
+      img.src = rawSrc;
+    });
+  };
+
+  const saveProfile = async () => {
+    const trimmed = draftName.trim();
+    if (!trimmed) return;
+    const finalAvatar = rawSrc ? await cropToDataURL() : draftAvatar;
+    if (rawSrc) URL.revokeObjectURL(rawSrc);
+    setRawSrc("");
+    updateProfile(trimmed, finalAvatar);
+    setProfileOpen(false);
+  };
+
+  const removePhoto = () => {
+    if (rawSrc) URL.revokeObjectURL(rawSrc);
+    setRawSrc("");
+    setImgMeta(null);
+    setDraftAvatar("");
+    setOffset({ x: 0, y: 0 });
+  };
+
   const initial = (name || "S").charAt(0).toUpperCase();
+  const hasImage = rawSrc || draftAvatar;
+
+  // Build inline style for the crop image
+  const cropImgStyle = (): React.CSSProperties => {
+    if (!imgMeta) return {};
+    const { x, y, w, h } = computeDraw(imgMeta, offset.x, offset.y);
+    return {
+      position: "absolute",
+      left: x,
+      top: y,
+      width: w,
+      height: h,
+      userSelect: "none",
+      pointerEvents: "none",
+    };
+  };
 
   return (
     <>
@@ -139,50 +220,86 @@ export function TopNav() {
         </div>
       </header>
 
-      <Dialog open={profileOpen} onOpenChange={setProfileOpen}>
+      <Dialog open={profileOpen} onOpenChange={(open) => { if (!open) closeProfile(); }}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Edit profile</DialogTitle>
           </DialogHeader>
 
-          <div className="flex flex-col gap-5 py-2">
-            {/* Avatar picker */}
-            <div className="flex flex-col items-center gap-2">
-              <button
-                className="w-20 h-20 rounded-full bg-secondary border-2 border-dashed border-muted-foreground/30 flex items-center justify-center overflow-hidden hover:border-primary transition-colors relative group"
-                onClick={() => avatarInputRef.current?.click()}
-                title="Click to upload a photo"
-              >
-                {draftAvatar
-                  ? <img src={draftAvatar} className="w-full h-full object-cover" alt="avatar preview" />
-                  : <span className="text-2xl font-semibold text-foreground/50">{(draftName || name).charAt(0).toUpperCase()}</span>}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-full flex items-center justify-center">
-                  <span className="text-white text-[10px] font-medium">Change</span>
+          <div className="flex flex-col items-center gap-4 py-2">
+
+            {/* Crop circle */}
+            <div
+              className="relative rounded-full overflow-hidden border-2 border-primary/30 bg-secondary select-none"
+              style={{
+                width: CROP_SIZE,
+                height: CROP_SIZE,
+                cursor: rawSrc ? (dragging ? "grabbing" : "grab") : "default",
+              }}
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+              onPointerCancel={onPointerUp}
+            >
+              {rawSrc && imgMeta ? (
+                <img src={rawSrc} style={cropImgStyle()} alt="" draggable={false} />
+              ) : draftAvatar ? (
+                <img src={draftAvatar} className="w-full h-full object-cover" alt="" draggable={false} />
+              ) : (
+                <span className="absolute inset-0 flex items-center justify-center text-5xl font-semibold text-foreground/30">
+                  {(draftName || name).charAt(0).toUpperCase()}
+                </span>
+              )}
+
+              {/* Drag hint overlay shown only when rawSrc is active */}
+              {rawSrc && !dragging && (
+                <div className="absolute inset-0 flex items-end justify-center pb-3 pointer-events-none">
+                  <span className="bg-black/50 text-white text-[10px] px-2 py-0.5 rounded-full">
+                    Drag to reposition
+                  </span>
                 </div>
-              </button>
-              <input
-                ref={avatarInputRef}
-                type="file"
-                accept="image/*"
-                className="sr-only"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleAvatarFile(file);
-                  e.target.value = "";
-                }}
-              />
-              {draftAvatar && (
-                <button
-                  className="text-xs text-muted-foreground hover:text-destructive transition-colors"
-                  onClick={() => setDraftAvatar("")}
-                >
-                  Remove photo
-                </button>
               )}
             </div>
 
+            {/* Upload + remove buttons */}
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => avatarInputRef.current?.click()}
+              >
+                <Upload className="h-3.5 w-3.5" />
+                Upload photo
+              </Button>
+              {hasImage && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="text-muted-foreground hover:text-destructive"
+                  onClick={removePhoto}
+                >
+                  Remove
+                </Button>
+              )}
+            </div>
+
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleAvatarFile(file);
+                e.target.value = "";
+              }}
+            />
+
             {/* Name */}
-            <div className="space-y-1.5">
+            <div className="w-full space-y-1.5">
               <Label htmlFor="profile-name">Display name</Label>
               <Input
                 id="profile-name"
@@ -195,7 +312,7 @@ export function TopNav() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setProfileOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={closeProfile}>Cancel</Button>
             <Button onClick={saveProfile} disabled={!draftName.trim()}>Save</Button>
           </DialogFooter>
         </DialogContent>
