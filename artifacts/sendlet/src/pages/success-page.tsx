@@ -10,7 +10,7 @@ function getProfile() {
     const raw = localStorage.getItem("sendlet_profile");
     if (raw) return JSON.parse(raw) as { name: string; avatar: string };
   } catch {}
-  return { name: "Sarah Chen", avatar: "" };
+  return { name: "Sendlet creator", avatar: "" };
 }
 
 /* ── Shared success card content ─────────────────────────── */
@@ -19,14 +19,18 @@ function SuccessCard({
   slug,
   accent,
   accessUrl,
+  deliveryStatus,
   align = "center",
 }: {
   title: string;
   slug: string;
   accent: string;
   accessUrl?: string | null;
+  deliveryStatus?: string | null;
   align?: "center" | "left";
 }) {
+  const emailWasSent = deliveryStatus === "sent";
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 14 }}
@@ -51,19 +55,25 @@ function SuccessCard({
       <p className="text-sm text-muted-foreground leading-relaxed mb-8">
         Your copy of{" "}
         <span className="font-semibold text-foreground">{title}</span> is ready.
-        We've also sent a copy to your email.
+        {emailWasSent ? " We've also sent a copy to your email." : ""}
       </p>
 
-      <Button
-        asChild
-        className="w-full h-12 text-[15px] font-semibold shadow-sm gap-2 mb-4"
-        style={{ backgroundColor: accent, color: "#fff" }}
-      >
-        <a href={accessUrl ?? `/p/${slug}`} target={accessUrl ? "_blank" : undefined} rel={accessUrl ? "noopener noreferrer" : undefined}>
-          <Download className="h-4 w-4" />
-          {accessUrl ? "Open Resource" : "Back to Resource"}
-        </a>
-      </Button>
+      {accessUrl ? (
+        <Button
+          asChild
+          className="w-full h-12 text-[15px] font-semibold shadow-sm gap-2 mb-4"
+          style={{ backgroundColor: accent, color: "#fff" }}
+        >
+          <a href={accessUrl} target="_blank" rel="noopener noreferrer">
+            <Download className="h-4 w-4" />
+            Open Resource
+          </a>
+        </Button>
+      ) : (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 mb-4">
+          This page is collecting leads, but no resource file or URL is attached yet.
+        </div>
+      )}
 
       <div className="pt-5 border-t border-border">
         <Link
@@ -159,6 +169,7 @@ function SplitSuccess({
   creatorAvatar,
   slug,
   accessUrl,
+  deliveryStatus,
 }: {
   magnet: (typeof leadMagnets)[0];
   accent: string;
@@ -168,6 +179,7 @@ function SplitSuccess({
   creatorAvatar: string;
   slug: string;
   accessUrl?: string | null;
+  deliveryStatus?: string | null;
 }) {
   const panelWidth = magnet.leftPanelWidth ?? 50;
 
@@ -192,7 +204,7 @@ function SplitSuccess({
         transition={{ duration: 0.45 }}
         className="flex-1 bg-background flex items-center justify-center px-8 py-14 lg:py-0"
       >
-        <SuccessCard title={magnet.title} slug={slug} accent={accent} accessUrl={accessUrl} align="left" />
+        <SuccessCard title={magnet.title} slug={slug} accent={accent} accessUrl={accessUrl} deliveryStatus={deliveryStatus} align="left" />
       </motion.div>
     </div>
   );
@@ -208,6 +220,7 @@ function StackedSuccess({
   creatorAvatar,
   slug,
   accessUrl,
+  deliveryStatus,
 }: {
   magnet: (typeof leadMagnets)[0];
   accent: string;
@@ -217,6 +230,7 @@ function StackedSuccess({
   creatorAvatar: string;
   slug: string;
   accessUrl?: string | null;
+  deliveryStatus?: string | null;
 }) {
   return (
     <div className="min-h-[100dvh] flex flex-col">
@@ -230,7 +244,7 @@ function StackedSuccess({
         style={{ height: "38vh", minHeight: 200 }}
       />
       <div className="flex-1 flex flex-col items-center justify-center bg-background px-5 py-10">
-        <SuccessCard title={magnet.title} slug={slug} accent={accent} accessUrl={accessUrl} />
+        <SuccessCard title={magnet.title} slug={slug} accent={accent} accessUrl={accessUrl} deliveryStatus={deliveryStatus} />
       </div>
     </div>
   );
@@ -256,15 +270,24 @@ export default function SuccessPage() {
 
   const accessUrl = (() => {
     try {
-      const raw = sessionStorage.getItem(`sendlet_access_${slug}`);
+      const raw = sessionStorage.getItem(`sendlet_access_${slug}`) ?? localStorage.getItem(`sendlet_access_${slug}`);
       if (!raw) return null;
       return (JSON.parse(raw) as { accessUrl?: string | null }).accessUrl ?? null;
     } catch {
       return null;
     }
   })();
+  const deliveryStatus = (() => {
+    try {
+      const raw = sessionStorage.getItem(`sendlet_access_${slug}`) ?? localStorage.getItem(`sendlet_access_${slug}`);
+      if (!raw) return null;
+      return (JSON.parse(raw) as { deliveryStatus?: string | null }).deliveryStatus ?? null;
+    } catch {
+      return null;
+    }
+  })();
 
-  const shared = { magnet, accent, showImage, imgPos, creatorName, creatorAvatar, slug: slug!, accessUrl };
+  const shared = { magnet, accent, showImage, imgPos, creatorName, creatorAvatar, slug: slug!, accessUrl, deliveryStatus };
 
   if (magnet.layout === "split") return <SplitSuccess {...shared} />;
   return <StackedSuccess {...shared} />;

@@ -126,5 +126,8 @@ export async function captureLead(slug: string, email: string) {
     accessUrl: string | null;
     title: string;
     deliveryEmailEnabled: boolean;
+    deliveryStatus?: "queued" | "sent" | "failed" | "skipped";
+    deliveryError?: string | null;
+    hasResource?: boolean;
   };
 }

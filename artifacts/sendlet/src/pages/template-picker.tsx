@@ -226,7 +226,7 @@ function getProfile(): { name: string; avatar: string } {
     const raw = localStorage.getItem("sendlet_profile");
     if (raw) return JSON.parse(raw) as { name: string; avatar: string };
   } catch {}
-  return { name: "Sarah Chen", avatar: "" };
+  return { name: "Sendlet creator", avatar: "" };
 }
 
 function computeSnap(

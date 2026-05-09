@@ -159,6 +159,14 @@ Deno.serve(async (req) => {
     }
   }
 
+  const { data: refreshedDelivery } = delivery?.id
+    ? await supabase
+        .from("delivery_events")
+        .select("status,error_message")
+        .eq("id", delivery.id)
+        .maybeSingle()
+    : { data: null };
+
   await supabase.from("agent_events").insert({
     workspace_id: magnet.workspace_id,
     kind: "lead.captured",
@@ -173,5 +181,8 @@ Deno.serve(async (req) => {
     accessUrl,
     title: magnet.title,
     deliveryEmailEnabled: magnet.delivery_email_enabled,
+    deliveryStatus: refreshedDelivery?.status ?? deliveryPayload.status,
+    deliveryError: refreshedDelivery?.error_message ?? null,
+    hasResource: !!accessUrl,
   });
 });

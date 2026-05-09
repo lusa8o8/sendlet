@@ -635,7 +635,7 @@ export default function PublicPage() {
       const raw = localStorage.getItem("sendlet_profile");
       if (raw) return JSON.parse(raw) as { name: string; avatar: string };
     } catch {}
-    return { name: "Sarah Chen", avatar: "" };
+    return { name: "Sendlet creator", avatar: "" };
   })();
   const gradient = GRADIENT_PRESETS[magnet.backgroundPreset ?? "none"] ?? null;
   const bullets = magnet.bulletsEnabled !== false
@@ -650,7 +650,9 @@ export default function PublicPage() {
     try {
       const result = await captureLead(magnet.slug, email);
       try {
-        sessionStorage.setItem(`sendlet_access_${magnet.slug}`, JSON.stringify(result));
+        const accessPayload = JSON.stringify(result);
+        sessionStorage.setItem(`sendlet_access_${magnet.slug}`, accessPayload);
+        localStorage.setItem(`sendlet_access_${magnet.slug}`, accessPayload);
       } catch {}
       setIsLoading(false);
       setLocation(`/p/${magnet.slug}/success`);

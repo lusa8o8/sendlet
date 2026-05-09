@@ -16,7 +16,7 @@ function loadProfile(): { name: string; avatar: string } {
     const raw = localStorage.getItem(PROFILE_KEY);
     if (raw) return JSON.parse(raw) as { name: string; avatar: string };
   } catch {}
-  return { name: "Sarah Chen", avatar: "" };
+  return { name: "Sendlet creator", avatar: "" };
 }
 
 interface AuthContextType {
