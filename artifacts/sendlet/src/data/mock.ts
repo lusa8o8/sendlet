@@ -38,6 +38,7 @@ export type LeadMagnet = {
   hiddenBlocks?: string[];
   fileName?: string;
   fileSize?: number;
+  tagline?: string;
 };
 
 const SEED: LeadMagnet[] = [

@@ -91,7 +91,8 @@ const LEFT_TYPES = [
 
 /* ─── Typography layout presets ────────────────────────────── */
 
-type TextElPreset = Record<TextElKey, Omit<TextEl, "backdrop"> & { backdrop: "none" | "glass" | "card" }>;
+type TextElEntry = Omit<TextEl, "backdrop"> & { backdrop: "none" | "glass" | "card" };
+type TextElPreset = Record<Exclude<TextElKey, "tagline">, TextElEntry> & { tagline?: TextElEntry };
 
 const LAYOUT_PRESETS: Array<{
   id: string; label: string; desc: string;
@@ -301,7 +302,7 @@ interface TextEl {
   backdrop?: "none" | "glass" | "card"; // background panel style
 }
 
-type TextElKey = "headline" | "description" | "bullets" | "form";
+type TextElKey = "headline" | "description" | "bullets" | "form" | "tagline";
 
 interface Form {
   title:          string;
@@ -319,6 +320,7 @@ interface Form {
   imagePosition:  { x: number; y: number };
   bannerHeight:   number;
   hiddenBlocks:   TextElKey[];
+  tagline?:       string;
 }
 
 const defaultForm: Form = {
@@ -336,11 +338,13 @@ const defaultForm: Form = {
   imagePosition:  { x: 50, y: 50 },
   bannerHeight:   44,
   hiddenBlocks:   [],
+  tagline:        "",
   textElements: {
     headline:    { x: 4, y: 5,  w: 92, size: 14, color: "#0f172a", backdrop: "none" },
     description: { x: 4, y: 27, w: 92, size: 11, color: "#64748b", backdrop: "none" },
     bullets:     { x: 4, y: 50, w: 92, size: 10, color: "#374151", backdrop: "none" },
     form:        { x: 4, y: 70, w: 92, size: 10, color: "#0f172a", backdrop: "none" },
+    tagline:     { x: 5, y: 62, w: 90, size: 18, color: "#ffffff", backdrop: "none" },
   },
 };
 
@@ -1006,11 +1010,32 @@ function SplitPreview({
         ) : (
           <>
             <div className="flex-1" />
-            <div className="relative z-10 px-6 pb-6">
-              <p className="text-white font-extrabold text-xl leading-tight">
-                {renderRichText(form.title || "Your bold headline goes here")}
-              </p>
-            </div>
+            {interactive
+              ? !(form.hiddenBlocks ?? []).includes("tagline") && (
+                  <DraggableTextBlock
+                    el={textElements.tagline}
+                    onUpdate={(u) => onUpdateTextEl?.("tagline", u)}
+                    fontClass="font-extrabold leading-tight"
+                    label="Tagline"
+                    onSnapMove={(x, y) => ({ x, y, guides: [] })}
+                    onDragEnd={() => {}}
+                    editType="text"
+                    textValue={form.tagline ?? ""}
+                    onTextChange={(v) => onUpdate?.({ tagline: v })}
+                    onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "tagline"] })}
+                    locked={locked}
+                  >
+                    {form.tagline || "Your bold headline goes here"}
+                  </DraggableTextBlock>
+                )
+              : (
+                  <div className="relative z-10 px-6 pb-6">
+                    <p className="text-white font-extrabold text-xl leading-tight">
+                      {renderRichText(form.tagline || form.title || "Your bold headline goes here")}
+                    </p>
+                  </div>
+                )
+            }
           </>
         )}
 
@@ -1297,6 +1322,30 @@ function StackedPreview({
             </div>
           </div>
         )}
+        {interactive
+          ? !(form.hiddenBlocks ?? []).includes("tagline") && (
+              <DraggableTextBlock
+                el={textElements.tagline}
+                onUpdate={(u) => onUpdateTextEl?.("tagline", u)}
+                fontClass="font-extrabold leading-tight"
+                label="Tagline"
+                onSnapMove={(x, y) => ({ x, y, guides: [] })}
+                onDragEnd={() => {}}
+                editType="text"
+                textValue={form.tagline ?? ""}
+                onTextChange={(v) => onUpdate?.({ tagline: v })}
+                onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "tagline"] })}
+                locked={locked}
+              >
+                {form.tagline || "Your bold headline goes here"}
+              </DraggableTextBlock>
+            )
+          : form.tagline && !(form.hiddenBlocks ?? []).includes("tagline") && (
+              <div className="absolute z-10 bottom-14 left-4 right-4">
+                <p className="text-white font-extrabold text-lg leading-tight drop-shadow">{renderRichText(form.tagline)}</p>
+              </div>
+            )
+        }
         <div className="absolute bottom-3 left-4 flex items-center gap-1.5 z-10">
           {(() => { const p = getProfile(); return (<>
             <div className="w-6 h-6 rounded-full bg-white/90 shadow flex items-center justify-center font-semibold text-foreground text-[9px] overflow-hidden">
@@ -1835,6 +1884,7 @@ function FloatingBar({
   const hiddenKeys = form.hiddenBlocks ?? [];
   const restorableKeys: TextElKey[] = (["headline", "description", "form"] as TextElKey[]).filter((k) => hiddenKeys.includes(k));
   if (!form.bulletsEnabled) restorableKeys.push("bullets" as TextElKey);
+  if ((layout === "split" || layout === "stacked") && hiddenKeys.includes("tagline")) restorableKeys.push("tagline" as TextElKey);
 
   const isSide = barPosition === "side";
   const popSide = isSide ? ("left" as const) : ("top" as const);
@@ -1880,6 +1930,12 @@ function FloatingBar({
         <label className="text-[11px] font-medium text-muted-foreground">Headline</label>
         <Input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="Your Resource Title" className="h-8 text-sm" />
       </div>
+      {(layout === "split" || layout === "stacked") && (
+        <div className="space-y-1">
+          <label className="text-[11px] font-medium text-muted-foreground">Image tagline</label>
+          <Input value={form.tagline ?? ""} onChange={(e) => setForm({ ...form, tagline: e.target.value })} placeholder="Bold text over the image…" className="h-8 text-sm" />
+        </div>
+      )}
       <div className="space-y-1">
         <label className="text-[11px] font-medium text-muted-foreground">Description</label>
         <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="A short description..." className="text-sm resize-none h-16" />
@@ -2277,6 +2333,7 @@ function magnetToForm(m: LeadMagnet): Form {
     bannerHeight:   m.bannerHeight   ?? 44,
     textElements:   (m.textElements as Record<TextElKey, TextEl>) ?? defaultForm.textElements,
     hiddenBlocks:   (m.hiddenBlocks as TextElKey[]) ?? [],
+    tagline:        m.tagline ?? "",
   };
 }
 
@@ -2477,7 +2534,7 @@ export default function TemplatePicker() {
   // ─── Built-in presets + lock ─────────────────────────────────
   const applyPreset = (preset: typeof LAYOUT_PRESETS[0]) => {
     const isDark = layout === "fullimage";
-    setForm((f) => ({ ...f, textElements: isDark ? preset.dark : preset.light }));
+    setForm((f) => ({ ...f, textElements: { ...(isDark ? preset.dark : preset.light), tagline: f.textElements.tagline } }));
     setActivePreset(preset.id);
     setLocked(true);
   };
@@ -2499,6 +2556,7 @@ export default function TemplatePicker() {
           description: { ...f.textElements.description, backdrop: "glass", color: "#ffffff", x: 5, y: 26, w: 90 },
           bullets:     { ...f.textElements.bullets,     backdrop: "glass", color: "#ffffff", x: 5, y: 45, w: 90 },
           form:        { ...f.textElements.form,        backdrop: "glass", color: "#ffffff", x: 5, y: 67, w: 90 },
+          tagline:     f.textElements.tagline,
         },
       }));
     }
@@ -2529,6 +2587,7 @@ export default function TemplatePicker() {
       bannerHeight:   form.bannerHeight,
       textElements:   form.textElements,
       hiddenBlocks:   form.hiddenBlocks,
+      tagline:        form.tagline,
     };
 
     if (editingMagnet) {

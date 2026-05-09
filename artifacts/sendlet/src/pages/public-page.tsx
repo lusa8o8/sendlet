@@ -234,6 +234,13 @@ function SplitLayout({
           />
         )}
         {magnet.imageDataUrl && <div className="absolute inset-0 bg-black/20" />}
+        {magnet.tagline && !magnet.hiddenBlocks?.includes("tagline") && (
+          <div className="relative z-10 px-8 lg:px-10 pb-2">
+            <p className="text-white font-extrabold text-2xl sm:text-3xl leading-tight drop-shadow">
+              {renderRichText(magnet.tagline)}
+            </p>
+          </div>
+        )}
         <div className="relative z-10 p-8 lg:p-10">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-semibold text-sm ring-2 ring-white/30 overflow-hidden">
@@ -330,6 +337,13 @@ function StackedLayout({
           />
         )}
         {magnet.imageDataUrl && <div className="absolute inset-0 bg-black/15" />}
+        {magnet.tagline && !magnet.hiddenBlocks?.includes("tagline") && (
+          <div className="absolute z-10 bottom-16 left-6 right-6">
+            <p className="text-white font-extrabold text-2xl sm:text-3xl leading-tight drop-shadow">
+              {renderRichText(magnet.tagline)}
+            </p>
+          </div>
+        )}
         <div className="absolute bottom-5 left-6 z-10 flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white font-semibold text-sm ring-2 ring-white/30 overflow-hidden">
             {creatorAvatar ? <img src={creatorAvatar} className="w-full h-full object-cover" alt="" /> : creatorName.charAt(0)}
