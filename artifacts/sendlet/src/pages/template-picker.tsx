@@ -1292,42 +1292,44 @@ function StackedPreview({
             backgroundSize: "48px 48px",
           }}
         />
-        {form.imageDataUrl ? (
-          <>
-            <img
-              src={form.imageDataUrl}
-              alt="Banner"
-              className="absolute inset-0 w-full h-full object-cover select-none"
-              onMouseDown={interactive ? (e) => { e.preventDefault(); startImagePan(e.clientX, e.clientY); } : undefined}
-              onTouchStart={interactive ? (e) => { startImagePan(e.touches[0].clientX, e.touches[0].clientY); } : undefined}
-              style={{ objectPosition: `${imgPos.x}% ${imgPos.y}%`, cursor: interactive ? "move" : undefined, touchAction: interactive ? "none" : undefined }}
-              draggable={false}
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/25 pointer-events-none" />
-            {interactive && (
-              <button
-                onClick={() => imgFileRef.current?.click()}
-                className="absolute top-2 right-2 z-20 text-[9px] bg-black/50 hover:bg-black/70 text-white rounded-md px-1.5 py-0.5 transition-colors"
-              >Replace</button>
-            )}
-          </>
-        ) : (
-          <div
-            className={`absolute inset-0 flex items-center justify-center ${interactive ? "cursor-pointer group" : ""}`}
-            onClick={interactive ? () => imgFileRef.current?.click() : undefined}
-          >
-            <div className={`w-16 h-16 rounded-xl border-2 border-white/20 flex flex-col items-center justify-center gap-1.5 transition-all ${interactive ? "group-hover:border-white/50 group-hover:bg-white/10" : ""}`}>
-              {interactive ? (
-                <>
-                  <Upload className="h-5 w-5 text-white/50 group-hover:text-white/80 transition-colors" />
-                  <span className="text-[9px] text-white/50 group-hover:text-white/80 font-medium">Upload image</span>
-                </>
-              ) : (
-                <Image className="h-6 w-6 text-white/25" />
+        {form.leftType !== "text" ? (
+          form.imageDataUrl ? (
+            <>
+              <img
+                src={form.imageDataUrl}
+                alt="Banner"
+                className="absolute inset-0 w-full h-full object-cover select-none"
+                onMouseDown={interactive ? (e) => { e.preventDefault(); startImagePan(e.clientX, e.clientY); } : undefined}
+                onTouchStart={interactive ? (e) => { startImagePan(e.touches[0].clientX, e.touches[0].clientY); } : undefined}
+                style={{ objectPosition: `${imgPos.x}% ${imgPos.y}%`, cursor: interactive ? "move" : undefined, touchAction: interactive ? "none" : undefined }}
+                draggable={false}
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/25 pointer-events-none" />
+              {interactive && (
+                <button
+                  onClick={() => imgFileRef.current?.click()}
+                  className="absolute top-2 right-2 z-20 text-[9px] bg-black/50 hover:bg-black/70 text-white rounded-md px-1.5 py-0.5 transition-colors"
+                >Replace</button>
               )}
+            </>
+          ) : (
+            <div
+              className={`absolute inset-0 flex items-center justify-center ${interactive ? "cursor-pointer group" : ""}`}
+              onClick={interactive ? () => imgFileRef.current?.click() : undefined}
+            >
+              <div className={`w-16 h-16 rounded-xl border-2 border-white/20 flex flex-col items-center justify-center gap-1.5 transition-all ${interactive ? "group-hover:border-white/50 group-hover:bg-white/10" : ""}`}>
+                {interactive ? (
+                  <>
+                    <Upload className="h-5 w-5 text-white/50 group-hover:text-white/80 transition-colors" />
+                    <span className="text-[9px] text-white/50 group-hover:text-white/80 font-medium">Upload image</span>
+                  </>
+                ) : (
+                  <Image className="h-6 w-6 text-white/25" />
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )
+        ) : null}
         {interactive
           ? !(form.hiddenBlocks ?? []).includes("tagline") && (
               <DraggableTextBlock
@@ -1726,9 +1728,9 @@ function PickerPanel({
         </div>
       </div>
 
-      {/* Left panel type (only for visual split) */}
+      {/* Left panel / banner type (split and stacked) */}
       <AnimatePresence>
-        {layout === "split" && (
+        {(layout === "split" || layout === "stacked") && (
           <motion.div
             key="left-type"
             initial={{ opacity: 0, height: 0 }}
@@ -1738,7 +1740,7 @@ function PickerPanel({
             className="overflow-hidden mb-7"
           >
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-              Left panel
+              {layout === "stacked" ? "Banner" : "Left panel"}
             </p>
             <div className="grid grid-cols-2 gap-2.5">
               {LEFT_TYPES.map((t) => {
@@ -1778,7 +1780,7 @@ function PickerPanel({
       <div className="mt-auto pt-6 border-t flex items-center justify-between">
         <p className="text-xs text-muted-foreground">
           {LAYOUTS.find((l) => l.id === layout)?.label}
-          {layout === "split" ? ` · ${LEFT_TYPES.find((t) => t.id === form.leftType)?.label}` : ""}
+          {(layout === "split" || layout === "stacked") ? ` · ${LEFT_TYPES.find((t) => t.id === form.leftType)?.label}` : ""}
         </p>
         <Button onClick={onStart} className="gap-2">
           Start with this
@@ -1900,31 +1902,54 @@ function FloatingBar({
   const imagePanel = (
     <PopoverContent side={popSide} align="center" sideOffset={10} className="w-64 p-4 space-y-3">
       <p className="text-xs font-semibold text-foreground">
-        {layout === "stacked" ? "Banner image" : layout === "split" ? "Panel image" : "Cover image"}
+        {layout === "stacked" ? "Banner" : layout === "split" ? "Panel" : "Cover image"}
       </p>
-      {form.imageDataUrl ? (
-        <div className="relative rounded-lg overflow-hidden border" style={{ aspectRatio: "4/3" }}>
-          <img src={form.imageDataUrl} alt="Panel" className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-          <button onClick={() => setForm({ ...form, imageDataUrl: null })} className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center transition-colors">
-            <X className="h-3 w-3 text-white" />
-          </button>
-          <label className="absolute bottom-2 right-2 text-[10px] bg-black/50 hover:bg-black/70 text-white rounded-md px-2 py-1 transition-colors cursor-pointer">
-            Replace
-            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="sr-only" onChange={handleImageUpload} />
-          </label>
+      {(layout === "split" || layout === "stacked") && (
+        <div className="grid grid-cols-2 gap-1.5">
+          {LEFT_TYPES.map((t) => {
+            const active = form.leftType === t.id;
+            const Icon = t.icon;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setForm({ ...form, leftType: t.id as "image" | "text" })}
+                className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-left transition-all ${active ? "border-primary bg-primary/5" : "border-border hover:border-foreground/20"}`}
+              >
+                <Icon className={`h-3.5 w-3.5 shrink-0 ${active ? "text-primary" : "text-muted-foreground"}`} />
+                <div>
+                  <p className={`text-xs font-semibold leading-none ${active ? "text-primary" : "text-foreground"}`}>{t.label}</p>
+                  <p className="text-[9px] text-muted-foreground mt-0.5 leading-tight">{t.desc}</p>
+                </div>
+              </button>
+            );
+          })}
         </div>
-      ) : (
-        <label className="w-full border-2 border-dashed border-border rounded-lg p-4 flex flex-col items-center gap-2 hover:border-primary/40 hover:bg-primary/5 transition-all group cursor-pointer">
-          <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="sr-only" onChange={handleImageUpload} />
-          <div className="w-8 h-8 rounded-lg bg-muted group-hover:bg-primary/10 flex items-center justify-center transition-colors">
-            <Upload className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+      )}
+      {(layout !== "split" && layout !== "stacked" || form.leftType === "image") && (
+        form.imageDataUrl ? (
+          <div className="relative rounded-lg overflow-hidden border" style={{ aspectRatio: "4/3" }}>
+            <img src={form.imageDataUrl} alt="Panel" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+            <button onClick={() => setForm({ ...form, imageDataUrl: null })} className="absolute top-2 right-2 w-6 h-6 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center transition-colors">
+              <X className="h-3 w-3 text-white" />
+            </button>
+            <label className="absolute bottom-2 right-2 text-[10px] bg-black/50 hover:bg-black/70 text-white rounded-md px-2 py-1 transition-colors cursor-pointer">
+              Replace
+              <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="sr-only" onChange={handleImageUpload} />
+            </label>
           </div>
-          <div className="text-center">
-            <p className="text-xs font-medium">Click to upload</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">JPG, PNG, WebP</p>
-          </div>
-        </label>
+        ) : (
+          <label className="w-full border-2 border-dashed border-border rounded-lg p-4 flex flex-col items-center gap-2 hover:border-primary/40 hover:bg-primary/5 transition-all group cursor-pointer">
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" className="sr-only" onChange={handleImageUpload} />
+            <div className="w-8 h-8 rounded-lg bg-muted group-hover:bg-primary/10 flex items-center justify-center transition-colors">
+              <Upload className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            </div>
+            <div className="text-center">
+              <p className="text-xs font-medium">Click to upload</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">JPG, PNG, WebP</p>
+            </div>
+          </label>
+        )
       )}
     </PopoverContent>
   );

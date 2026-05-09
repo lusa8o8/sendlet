@@ -319,7 +319,7 @@ function StackedLayout({
         style={{
           height: `${bannerPct}vh`,
           backgroundColor: magnet.accentColor,
-          ...(magnet.imageDataUrl
+          ...(magnet.imageDataUrl && magnet.leftType !== "text"
             ? {
                 backgroundImage: `url(${magnet.imageDataUrl})`,
                 backgroundSize: "cover",
@@ -328,7 +328,7 @@ function StackedLayout({
             : {}),
         }}
       >
-        {!magnet.imageDataUrl && (
+        {(!magnet.imageDataUrl || magnet.leftType === "text") && (
           <div className="absolute inset-0 opacity-[0.06]"
             style={{
               backgroundImage: "radial-gradient(circle at 30% 20%, white 1px, transparent 1px)",
@@ -336,7 +336,7 @@ function StackedLayout({
             }}
           />
         )}
-        {magnet.imageDataUrl && <div className="absolute inset-0 bg-black/15" />}
+        {magnet.imageDataUrl && magnet.leftType !== "text" && <div className="absolute inset-0 bg-black/15" />}
         {magnet.tagline && !magnet.hiddenBlocks?.includes("tagline") && (
           <div className="absolute z-10 bottom-16 left-6 right-6">
             <p className="text-white font-extrabold text-2xl sm:text-3xl leading-tight drop-shadow">
