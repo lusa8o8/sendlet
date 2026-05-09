@@ -1,10 +1,12 @@
 import { initializeApp, type FirebaseApp } from "firebase/app";
 import {
   GoogleAuthProvider,
+  browserLocalPersistence,
   getAuth,
   isSignInWithEmailLink,
   onAuthStateChanged,
   sendSignInLinkToEmail,
+  setPersistence,
   signInWithPopup,
   signInWithEmailLink,
   signOut as firebaseSignOut,
@@ -25,6 +27,11 @@ export const firebaseApp: FirebaseApp | null = isFirebaseConfigured
   ? initializeApp(firebaseConfig as Record<string, string>)
   : null;
 export const firebaseAuth = firebaseApp ? getAuth(firebaseApp) : null;
+const persistenceReady = firebaseAuth
+  ? setPersistence(firebaseAuth, browserLocalPersistence).catch((error) => {
+      console.error("Could not set Firebase auth persistence", error);
+    })
+  : Promise.resolve();
 
 const EMAIL_FOR_SIGN_IN_KEY = "sendlet_firebase_email_for_sign_in";
 
@@ -40,6 +47,7 @@ export async function sendFirebaseMagicLink(email: string, redirectTo: string) {
   if (!firebaseAuth) {
     throw new Error(`Firebase Auth is not configured. Missing: ${missingConfig.join(", ")}`);
   }
+  await persistenceReady;
   window.localStorage.setItem(EMAIL_FOR_SIGN_IN_KEY, email);
   await sendSignInLinkToEmail(firebaseAuth, email, {
     url: redirectTo,
@@ -51,6 +59,7 @@ export async function signInWithGooglePopup() {
   if (!firebaseAuth) {
     throw new Error(`Firebase Auth is not configured. Missing: ${missingConfig.join(", ")}`);
   }
+  await persistenceReady;
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({ prompt: "select_account" });
   const credential = await signInWithPopup(firebaseAuth, provider);
@@ -59,6 +68,7 @@ export async function signInWithGooglePopup() {
 
 export async function completeFirebaseMagicLinkIfPresent() {
   if (!firebaseAuth) return null;
+  await persistenceReady;
   if (!isSignInWithEmailLink(firebaseAuth, window.location.href)) return null;
 
   let email = window.localStorage.getItem(EMAIL_FOR_SIGN_IN_KEY);

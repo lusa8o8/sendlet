@@ -44,9 +44,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
     let linkHandled = false;
+    let authObserved = false;
+
+    const markReadyIfSettled = () => {
+      if (mounted && linkHandled && authObserved) setIsAuthReady(true);
+    };
 
     const unsubscribe = watchFirebaseAuth((nextUser) => {
       if (!mounted) return;
+      authObserved = true;
       setUser(nextUser);
       setEmail(nextUser?.email ?? null);
       try {
@@ -58,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.removeItem(EMAIL_KEY);
         }
       } catch {}
-      if (linkHandled) setIsAuthReady(true);
+      markReadyIfSettled();
     });
 
     void completeFirebaseMagicLinkIfPresent()
@@ -67,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       .finally(() => {
         linkHandled = true;
-        if (mounted) setIsAuthReady(true);
+        markReadyIfSettled();
       });
 
     return () => {
