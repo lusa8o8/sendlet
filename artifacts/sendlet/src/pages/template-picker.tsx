@@ -105,12 +105,14 @@ const LAYOUT_PRESETS: Array<{
       description: { x: 5, y: 26, w: 90, size: 13, color: "#475569", backdrop: "none" },
       bullets:     { x: 5, y: 45, w: 90, size: 12, color: "#374151", backdrop: "none" },
       form:        { x: 5, y: 66, w: 90, size: 12, color: "#0f172a", backdrop: "none" },
+      tagline:     { x: 5, y: 65, w: 90, size: 22, color: "#ffffff", backdrop: "none" },
     },
     dark: {
       headline:    { x: 5, y: 6,  w: 90, size: 24, color: "#ffffff", backdrop: "glass" },
       description: { x: 5, y: 28, w: 90, size: 13, color: "#ffffff", backdrop: "glass" },
       bullets:     { x: 5, y: 48, w: 90, size: 12, color: "#ffffff", backdrop: "glass" },
       form:        { x: 5, y: 68, w: 90, size: 12, color: "#ffffff", backdrop: "glass" },
+      tagline:     { x: 5, y: 65, w: 90, size: 22, color: "#ffffff", backdrop: "none" },
     },
   },
   {
@@ -120,12 +122,14 @@ const LAYOUT_PRESETS: Array<{
       description: { x: 4, y: 30, w: 88, size: 12, color: "#64748b", backdrop: "none" },
       bullets:     { x: 4, y: 45, w: 92, size: 11, color: "#374151", backdrop: "none" },
       form:        { x: 4, y: 66, w: 92, size: 12, color: "#0f172a", backdrop: "none" },
+      tagline:     { x: 4, y: 58, w: 92, size: 32, color: "#ffffff", backdrop: "none" },
     },
     dark: {
       headline:    { x: 4, y: 4,  w: 92, size: 30, color: "#ffffff", backdrop: "glass" },
       description: { x: 4, y: 32, w: 88, size: 12, color: "#ffffff", backdrop: "glass" },
       bullets:     { x: 4, y: 47, w: 92, size: 11, color: "#ffffff", backdrop: "glass" },
       form:        { x: 4, y: 67, w: 92, size: 12, color: "#ffffff", backdrop: "glass" },
+      tagline:     { x: 4, y: 58, w: 92, size: 32, color: "#ffffff", backdrop: "none" },
     },
   },
   {
@@ -135,12 +139,14 @@ const LAYOUT_PRESETS: Array<{
       description: { x: 6, y: 27, w: 88, size: 15, color: "#334155", backdrop: "none" },
       bullets:     { x: 6, y: 52, w: 88, size: 13, color: "#374151", backdrop: "none" },
       form:        { x: 6, y: 74, w: 88, size: 12, color: "#0f172a", backdrop: "none" },
+      tagline:     { x: 8, y: 62, w: 84, size: 18, color: "#ffffff", backdrop: "none" },
     },
     dark: {
       headline:    { x: 6, y: 8,  w: 88, size: 20, color: "#ffffff", backdrop: "glass" },
       description: { x: 6, y: 28, w: 88, size: 15, color: "#ffffff", backdrop: "glass" },
       bullets:     { x: 6, y: 52, w: 88, size: 13, color: "#ffffff", backdrop: "glass" },
       form:        { x: 6, y: 74, w: 88, size: 12, color: "#ffffff", backdrop: "glass" },
+      tagline:     { x: 8, y: 62, w: 84, size: 18, color: "#ffffff", backdrop: "none" },
     },
   },
 ];
@@ -2534,7 +2540,8 @@ export default function TemplatePicker() {
   // ─── Built-in presets + lock ─────────────────────────────────
   const applyPreset = (preset: typeof LAYOUT_PRESETS[0]) => {
     const isDark = layout === "fullimage";
-    setForm((f) => ({ ...f, textElements: { ...(isDark ? preset.dark : preset.light), tagline: f.textElements.tagline } }));
+    const els = isDark ? preset.dark : preset.light;
+    setForm((f) => ({ ...f, textElements: { ...els, tagline: els.tagline ?? f.textElements.tagline } }));
     setActivePreset(preset.id);
     setLocked(true);
   };
