@@ -34,6 +34,7 @@ import {
 import { leadMagnets, saveMagnet, updateMagnet, type LeadMagnet } from "@/data/mock";
 import { useAuth } from "@/contexts/auth-context";
 import { saveLeadMagnetToSupabase, updateLeadMagnetInSupabase } from "@/services/sendlet-service";
+import { clearUploadDraft, readUploadDraft, readUploadDraftMetadata } from "@/lib/upload-draft";
 
 /* ─── Image compression util ───────────────────────────────── */
 
@@ -360,6 +361,15 @@ const defaultForm: Form = {
   },
 };
 
+function PreviewNameField({ form, dark = false }: { form: Form; dark?: boolean }) {
+  if (form.nameFieldMode === "off") return null;
+  const label = form.nameFieldMode === "optional" ? "Enter your name (optional)" : "Enter your name";
+  const className = dark
+    ? "h-5 rounded-md border border-white/30 text-[9px] text-white/70 flex items-center px-2 bg-white/10"
+    : "h-5 rounded-md border border-slate-200 text-[9px] text-muted-foreground flex items-center px-2 bg-white";
+  return <div className={className}>{label}</div>;
+}
+
 /* ─── Accordion ─────────────────────────────────────────────── */
 
 function Accordion({
@@ -478,6 +488,7 @@ function SimplePreview({
             {!(form.hiddenBlocks ?? []).includes("form") && (
               <DraggableTextBlock el={textElements.form} onUpdate={(u) => onUpdateTextEl?.("form", u)} label="Form" onSnapMove={makeSnapMove("form")} onDragEnd={() => setGuides([])} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "form"] })} locked={locked}>
                 <div className="space-y-1.5">
+                  <PreviewNameField form={form} />
                   <div className="h-5 rounded-md border border-slate-200 text-[9px] text-muted-foreground flex items-center px-2 bg-white">Enter your email address</div>
                   <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium truncate px-1" style={{ backgroundColor: accent }}>{form.ctaLabel || "Get the resource"}</div>
                   <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
@@ -506,6 +517,7 @@ function SimplePreview({
               </div>
             )}
             <div className="border-t pt-2.5 space-y-1.5">
+              <PreviewNameField form={form} />
               <div className="h-5 rounded-md border text-[9px] text-muted-foreground flex items-center px-2">Enter your email address</div>
               <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium truncate px-1" style={{ backgroundColor: accent }}>{form.ctaLabel || "Get the resource"}</div>
               <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
@@ -1147,6 +1159,7 @@ function SplitPreview({
               locked={locked}
             >
               <div className="space-y-1.5">
+                <PreviewNameField form={form} />
                 <div className="h-5 rounded-md border border-slate-200 text-[9px] text-muted-foreground flex items-center px-2 bg-white">
                   Enter your email address
                 </div>
@@ -1184,6 +1197,7 @@ function SplitPreview({
               </div>
             )}
             <div className="border-t pt-2.5 space-y-1.5">
+              <PreviewNameField form={form} />
               <div className="h-5 rounded-md border text-[9px] text-muted-foreground flex items-center px-2">
                 Enter your email address
               </div>
@@ -1413,6 +1427,7 @@ function StackedPreview({
           {!(form.hiddenBlocks ?? []).includes("form") && (
             <DraggableTextBlock el={textElements.form} onUpdate={(u) => onUpdateTextEl?.("form", u)} label="Form" onSnapMove={makeSnapMove("form")} onDragEnd={() => setGuides([])} onDelete={() => onUpdate?.({ hiddenBlocks: [...(form.hiddenBlocks ?? []), "form"] })} locked={locked}>
               <div className="space-y-1.5">
+                <PreviewNameField form={form} />
                 <div className="h-5 rounded-md border border-slate-200 text-[9px] text-muted-foreground flex items-center px-2 bg-white">Enter your email address</div>
                 <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium truncate px-1" style={{ backgroundColor: accent }}>{form.ctaLabel || "Get the resource"}</div>
                 <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
@@ -1441,6 +1456,7 @@ function StackedPreview({
             </div>
           )}
           <div className="border-t pt-2.5 space-y-1.5">
+            <PreviewNameField form={form} />
             <div className="h-5 rounded-md border text-[9px] text-muted-foreground flex items-center px-2">Enter your email address</div>
             <div className="h-5 rounded-md text-[9px] text-white flex items-center justify-center font-medium truncate px-1" style={{ backgroundColor: accent }}>{form.ctaLabel || "Get the resource"}</div>
             <p className="text-center text-[8px] text-muted-foreground">No spam. Unsubscribe anytime.</p>
@@ -1608,6 +1624,7 @@ function FullImagePreview({
               locked={locked}
             >
               <div className="space-y-1.5">
+                <PreviewNameField form={form} dark />
                 <div className="h-5 rounded-md border border-white/30 text-[9px] text-white/70 flex items-center px-2 bg-white/10">
                   Enter your email address
                 </div>
@@ -1657,6 +1674,7 @@ function FullImagePreview({
 
           <div className="absolute" style={{ left: "5%", top: form.bulletsEnabled ? "67%" : "50%", width: "90%" }}>
             <div style={{ ...glassPanel, padding: "8px 12px" }} className="space-y-1.5">
+              <PreviewNameField form={form} dark />
               <div className="h-5 rounded-md border border-white/30 text-[9px] text-white/70 flex items-center px-2 bg-white/10">
                 Enter your email address
               </div>
@@ -2398,7 +2416,6 @@ function magnetToForm(m: LeadMagnet): Form {
 /* ─── Page ──────────────────────────────────────────────────── */
 
 const NEW_DRAFT_KEY = "sendlet-new-draft";
-const UPLOAD_KEY = "sendlet-upload";
 const PENDING_PUBLISH_KEY = "sendlet-pending-publish";
 
 function readBrowserStorage(key: string) {
@@ -2428,13 +2445,6 @@ function readNewDraft(): { mode: "pick" | "edit"; layout: string; form: Form } |
   } catch { return null; }
 }
 
-function readUploadDraft(): { title: string; fileName: string; fileSize: number; fileType?: string; fileDataUrl?: string | null; linkUrl?: string } | null {
-  try {
-    const raw = readBrowserStorage(UPLOAD_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
-}
-
 export default function TemplatePicker() {
   const [, setLocation] = useLocation();
   const { id } = useParams<{ id?: string }>();
@@ -2453,7 +2463,7 @@ export default function TemplatePicker() {
     if (editingMagnet) return magnetToForm(editingMagnet);
     const draft = readNewDraft();
     if (draft) return draft.form;
-    const upload = readUploadDraft();
+    const upload = readUploadDraftMetadata();
     if (upload?.title) return { ...defaultForm, title: upload.title };
     return defaultForm;
   });
@@ -2465,6 +2475,7 @@ export default function TemplatePicker() {
   const [gateSubmitting, setGateSubmitting] = useState(false);
   const [gateError, setGateError] = useState<string | null>(null);
   const [gateLinkSent, setGateLinkSent] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // ─── Undo / redo ────────────────────────────────────────────
   type FormSnapshot = {
@@ -2661,8 +2672,12 @@ export default function TemplatePicker() {
   };
 
   const doSave = async () => {
+    setSaveError(null);
     const slug = form.slug || `resource-${Date.now()}`;
-    const upload = readUploadDraft();
+    const upload = await readUploadDraft();
+    if (upload?.fileName && (upload.fileSize ?? 0) > 0 && !upload.fileDataUrl && !upload.linkUrl) {
+      throw new Error("The uploaded file could not be read. Please re-upload it and try again.");
+    }
     const formState = {
       bullets:        form.bullets,
       bulletsEnabled: form.bulletsEnabled,
@@ -2691,7 +2706,8 @@ export default function TemplatePicker() {
       };
       updateMagnet(editingMagnet.id, nextMagnet);
       await updateLeadMagnetInSupabase(nextMagnet);
-      removeBrowserStorage(NEW_DRAFT_KEY, UPLOAD_KEY, PENDING_PUBLISH_KEY);
+      removeBrowserStorage(NEW_DRAFT_KEY, PENDING_PUBLISH_KEY);
+      await clearUploadDraft();
       setLocation("/dashboard");
     } else {
       const newId = crypto.randomUUID();
@@ -2719,7 +2735,8 @@ export default function TemplatePicker() {
       };
       saveMagnet(nextMagnet);
       await saveLeadMagnetToSupabase(nextMagnet, upload);
-      removeBrowserStorage(NEW_DRAFT_KEY, UPLOAD_KEY, PENDING_PUBLISH_KEY);
+      removeBrowserStorage(NEW_DRAFT_KEY, PENDING_PUBLISH_KEY);
+      await clearUploadDraft();
       setLocation(`/lead-magnets/${newId}/email`);
     }
   };
@@ -2730,7 +2747,9 @@ export default function TemplatePicker() {
       setAuthGateOpen(true);
       return;
     }
-    void doSave();
+    void doSave().catch((error) => {
+      setSaveError(error instanceof Error ? error.message : "Could not publish this lead magnet.");
+    });
   };
 
   useEffect(() => {
@@ -2742,7 +2761,9 @@ export default function TemplatePicker() {
     } catch { /* ignore */ }
 
     if (shouldPublish) {
-      void doSave();
+      void doSave().catch((error) => {
+        setSaveError(error instanceof Error ? error.message : "Could not publish this lead magnet.");
+      });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSignedIn, editingMagnet]);
@@ -2876,6 +2897,11 @@ export default function TemplatePicker() {
                   {previewBlock}
                 </div>
                 <p className="text-center text-xs text-muted-foreground mt-4">{previewCaption}</p>
+                {saveError ? (
+                  <div className="mx-auto mt-3 max-w-xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm">
+                    {saveError}
+                  </div>
+                ) : null}
               </motion.div>
 
               <FloatingBar

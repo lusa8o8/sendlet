@@ -3,19 +3,7 @@ import { useLocation } from "wouter";
 import { Upload, FileText, CheckCircle2, X, ArrowRight, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AppLayout } from "@/components/layout/app-layout";
-
-const UPLOAD_KEY = "sendlet-upload";
-
-function persistUploadDraft(value: string | null) {
-  try {
-    if (value === null) sessionStorage.removeItem(UPLOAD_KEY);
-    else sessionStorage.setItem(UPLOAD_KEY, value);
-  } catch { /* ignore */ }
-  try {
-    if (value === null) localStorage.removeItem(UPLOAD_KEY);
-    else localStorage.setItem(UPLOAD_KEY, value);
-  } catch { /* ignore */ }
-}
+import { saveUploadDraft } from "@/lib/upload-draft";
 
 function toTitle(filename: string): string {
   return filename
@@ -61,6 +49,7 @@ export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [fileTitle, setFileTitle] = useState("");
   const [dragging, setDragging] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   /* ── Link mode state ── */
@@ -70,6 +59,7 @@ export default function UploadPage() {
 
   /* ── File handlers ── */
   const acceptFile = (f: File) => {
+    setError(null);
     setFile(f);
     setFileTitle(toTitle(f.name));
   };
@@ -98,22 +88,27 @@ export default function UploadPage() {
 
   /* ── Actions ── */
   const proceed = async () => {
-    const payload =
-      mode === "file"
-        ? {
-            title: fileTitle.trim(),
-            fileName: file?.name ?? "",
-            fileSize: file?.size ?? 0,
-            fileType: file?.type ?? "application/octet-stream",
-            fileDataUrl: file ? await readFileDataUrl(file) : null,
-          }
-        : { title: linkTitle.trim(), fileName: "", fileSize: 0, linkUrl: linkUrl.trim() };
-    persistUploadDraft(JSON.stringify(payload));
-    setLocation("/lead-magnets/new");
+    setError(null);
+    try {
+      const payload =
+        mode === "file"
+          ? {
+              title: fileTitle.trim(),
+              fileName: file?.name ?? "",
+              fileSize: file?.size ?? 0,
+              fileType: file?.type ?? "application/octet-stream",
+              fileDataUrl: file ? await readFileDataUrl(file) : null,
+            }
+          : { title: linkTitle.trim(), fileName: "", fileSize: 0, linkUrl: linkUrl.trim() };
+      await saveUploadDraft(payload);
+      setLocation("/lead-magnets/new");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not prepare this resource. Please try again.");
+    }
   };
 
-  const skip = () => {
-    persistUploadDraft(null);
+  const skip = async () => {
+    await saveUploadDraft(null);
     setLocation("/lead-magnets/new");
   };
 
@@ -263,6 +258,11 @@ export default function UploadPage() {
 
           {/* Actions */}
           <div className="mt-8 flex flex-col items-center gap-4">
+            {error ? (
+              <div className="w-full rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                {error}
+              </div>
+            ) : null}
             <Button className="w-full gap-2" disabled={!canProceed} onClick={proceed}>
               Continue — design my page
               <ArrowRight className="h-4 w-4" />
