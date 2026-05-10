@@ -22,6 +22,11 @@ function SourcePill({ source }: { source: string }) {
   );
 }
 
+function csvCell(value: string | number | null | undefined) {
+  const text = String(value ?? "");
+  return `"${text.replaceAll('"', '""')}"`;
+}
+
 export default function Leads() {
   const [search, setSearch] = useState("");
 
@@ -32,6 +37,27 @@ export default function Leads() {
   );
 
   const liveCount = leadMagnets.filter((m) => m.status === "published").length;
+  const exportCsv = () => {
+    const rows = [
+      ["Email", "Resource", "Source", "Date captured"],
+      ...filteredLeads.map((lead) => [
+        lead.email,
+        lead.leadMagnet,
+        lead.source,
+        lead.createdAt,
+      ]),
+    ];
+    const csv = rows.map((row) => row.map(csvCell).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "sendlet-leads.csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <AppLayout>
@@ -46,7 +72,7 @@ export default function Leads() {
                 : "All contacts captured across your resources."}
             </p>
           </div>
-          <Button variant="outline" disabled={leads.length === 0} className="shrink-0">
+          <Button variant="outline" disabled={filteredLeads.length === 0} className="shrink-0" onClick={exportCsv}>
             <Download className="mr-2 h-4 w-4" />
             Export CSV
           </Button>

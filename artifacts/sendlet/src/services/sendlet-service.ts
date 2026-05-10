@@ -162,3 +162,65 @@ export async function unsubscribeLead(email: string, magnetId: string) {
   }
   return payload as { ok: boolean };
 }
+
+export type LeadWebhook = {
+  id: string;
+  url: string;
+  enabled: boolean;
+  last_status: number | null;
+  last_error: string | null;
+  last_sent_at: string | null;
+  updated_at: string | null;
+};
+
+export async function fetchLeadWebhook() {
+  const token = await getFirebaseIdToken();
+  const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/manage-webhook`, {
+    headers: {
+      apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error ?? "Could not load webhook settings");
+  }
+  return (payload.webhook ?? null) as LeadWebhook | null;
+}
+
+export async function saveLeadWebhook(url: string, enabled = true) {
+  const token = await getFirebaseIdToken();
+  const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/manage-webhook`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ url, enabled }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error ?? "Could not save webhook settings");
+  }
+  return payload.webhook as LeadWebhook;
+}
+
+export async function deleteLeadWebhook() {
+  const token = await getFirebaseIdToken();
+  const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/manage-webhook`, {
+    method: "DELETE",
+    headers: {
+      apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error ?? "Could not remove webhook settings");
+  }
+  return true;
+}

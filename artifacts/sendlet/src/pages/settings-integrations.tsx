@@ -1,320 +1,243 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "wouter";
-import { CheckCircle2, ChevronRight, X } from "lucide-react";
+import { ArrowRight, CheckCircle2, Code2, Download, PlugZap, Trash2 } from "lucide-react";
 import { AppLayout } from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
-  PROVIDERS,
-  DISPLAY_GROUPS,
-  integrationConnections,
-  saveConnection,
-  removeConnection,
-  type IntegrationProvider,
-  type IntegrationConnection,
-} from "@/data/integrations";
+  deleteLeadWebhook,
+  fetchLeadWebhook,
+  saveLeadWebhook,
+  type LeadWebhook,
+} from "@/services/sendlet-service";
 
-/* ── Brand icon ───────────────────────────────────────────── */
+function StatusBadge({ webhook }: { webhook: LeadWebhook | null }) {
+  if (!webhook) {
+    return (
+      <span className="inline-flex rounded-full border bg-muted px-2.5 py-1 text-xs text-muted-foreground">
+        Not connected
+      </span>
+    );
+  }
 
-function BrandIcon({
-  provider,
-  size = "md",
-}: {
-  provider: IntegrationProvider;
-  size?: "sm" | "md" | "lg";
-}) {
-  const cls =
-    size === "sm"
-      ? "w-8 h-8 text-[11px]"
-      : size === "lg"
-      ? "w-14 h-14 text-xl"
-      : "w-11 h-11 text-sm";
+  if (webhook.last_error) {
+    return (
+      <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs text-amber-800">
+        Last send failed
+      </span>
+    );
+  }
+
   return (
-    <div
-      className={`${cls} rounded-xl flex items-center justify-center font-bold shrink-0 select-none`}
-      style={{
-        backgroundColor: provider.brandColor,
-        color: provider.textColor === "dark" ? "#111" : "#fff",
-      }}
-    >
-      {provider.initials}
-    </div>
-  );
-}
-
-/* ── Connected badge ──────────────────────────────────────── */
-
-function ConnectedBadge() {
-  return (
-    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full whitespace-nowrap">
+    <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs text-emerald-800">
       <CheckCircle2 className="h-3 w-3" />
       Connected
     </span>
   );
 }
 
-/* ── Integration tile ─────────────────────────────────────── */
-
-function IntegrationTile({
-  provider,
-  connected,
-  onSetup,
-}: {
-  provider: IntegrationProvider;
-  connected: boolean;
-  onSetup: () => void;
-}) {
-  return (
-    <div className="bg-card border rounded-xl p-5 flex flex-col gap-4 hover:shadow-sm transition-shadow">
-      <div className="flex items-start justify-between gap-3">
-        <BrandIcon provider={provider} />
-        {connected && <ConnectedBadge />}
-      </div>
-      <div className="flex-1 min-h-0">
-        <p className="text-sm font-semibold text-foreground mb-0.5">{provider.name}</p>
-        <p className="text-xs text-muted-foreground leading-relaxed">{provider.tagline}</p>
-      </div>
-      <Button
-        variant={connected ? "outline" : "default"}
-        size="sm"
-        className="w-full text-xs h-8 justify-between"
-        onClick={onSetup}
-      >
-        <span>{connected ? "Manage" : "Set up"}</span>
-        <ChevronRight className="h-3.5 w-3.5 opacity-40" />
-      </Button>
-    </div>
-  );
-}
-
-/* ── Page ─────────────────────────────────────────────────── */
-
 export default function SettingsIntegrationsPage() {
-  const [connections, setConnections] = useState<Record<string, IntegrationConnection>>(
-    () => ({ ...integrationConnections })
-  );
-  const [selected, setSelected] = useState<string | null>(null);
-  const [formValues, setFormValues] = useState<Record<string, string>>({});
+  const [webhook, setWebhook] = useState<LeadWebhook | null>(null);
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const provider = selected ? PROVIDERS.find((p) => p.id === selected) ?? null : null;
-  const isAlreadyConnected = provider ? !!connections[provider.id] : false;
+  useEffect(() => {
+    let mounted = true;
+    fetchLeadWebhook()
+      .then((data) => {
+        if (!mounted) return;
+        setWebhook(data);
+        setWebhookUrl(data?.url ?? "");
+      })
+      .catch((err) => {
+        if (!mounted) return;
+        setError(err instanceof Error ? err.message : "Could not load integration settings.");
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
-  const openSetup = (p: IntegrationProvider) => {
-    setFormValues(connections[p.id]?.config ?? {});
-    setSelected(p.id);
-  };
-
-  const closeSetup = () => {
-    setSelected(null);
-    setFormValues({});
-    setSaving(false);
-  };
-
-  const handleSave = () => {
-    if (!provider) return;
-    const allRequiredFilled = provider.fields
-      .filter((f) => f.required)
-      .every((f) => formValues[f.key]?.trim());
-    if (!allRequiredFilled) return;
+  const handleSaveWebhook = async () => {
     setSaving(true);
-    setTimeout(() => {
-      saveConnection(provider.id, { ...formValues });
-      setConnections({ ...integrationConnections });
+    setError(null);
+    setMessage(null);
+    try {
+      const saved = await saveLeadWebhook(webhookUrl.trim(), true);
+      setWebhook(saved);
+      setWebhookUrl(saved.url);
+      setMessage("Webhook saved. New leads will be sent there automatically.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save webhook.");
+    } finally {
       setSaving(false);
-      closeSetup();
-    }, 600);
+    }
   };
 
-  const handleDisconnect = () => {
-    if (!provider) return;
-    removeConnection(provider.id);
-    setConnections({ ...integrationConnections });
-    closeSetup();
+  const handleRemoveWebhook = async () => {
+    setSaving(true);
+    setError(null);
+    setMessage(null);
+    try {
+      await deleteLeadWebhook();
+      setWebhook(null);
+      setWebhookUrl("");
+      setMessage("Webhook removed.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not remove webhook.");
+    } finally {
+      setSaving(false);
+    }
   };
-
-  const connectedCount = Object.keys(connections).length;
 
   return (
     <AppLayout>
-      <div className="container max-w-5xl mx-auto px-6 py-10">
-
-        {/* Header */}
-        <div className="mb-10">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-4">
+      <div className="container mx-auto max-w-4xl px-6 py-10">
+        <div className="mb-8">
+          <div className="mb-4 flex items-center gap-1.5 text-xs text-muted-foreground">
             <Link href="/dashboard" className="hover:text-foreground transition-colors">
               Dashboard
             </Link>
             <span>/</span>
             <span className="text-foreground">Integrations</span>
           </div>
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-semibold tracking-tight">Integrations</h1>
-              <p className="text-sm text-muted-foreground mt-1 max-w-lg leading-relaxed">
-                Connect the tools you already use. Every new lead is automatically sent to your
-                connected destinations — no code needed.
-              </p>
-            </div>
-            {connectedCount > 0 && (
-              <p className="text-sm text-muted-foreground shrink-0">
-                {connectedCount} integration{connectedCount !== 1 ? "s" : ""} connected
-              </p>
-            )}
-          </div>
+          <h1 className="text-2xl font-semibold tracking-tight">Integrations</h1>
+          <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            Keep Sendlet simple. Export leads when you need a file, or send every new lead to one webhook that works with Zapier, Make, n8n, Pipedream, and your own API.
+          </p>
         </div>
 
-        {/* Category groups */}
-        <div className="space-y-12">
-          {DISPLAY_GROUPS.map((group) => {
-            const groupProviders = group.ids
-              .map((id) => PROVIDERS.find((p) => p.id === id))
-              .filter(Boolean) as IntegrationProvider[];
-
-            return (
-              <section key={group.label}>
-                <div className="mb-5">
-                  <h2 className="text-base font-semibold">{group.label}</h2>
-                  <p className="text-sm text-muted-foreground mt-0.5">{group.description}</p>
+        <div className="space-y-4">
+          <section className="rounded-2xl border bg-card p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted">
+                  <Download className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {groupProviders.map((p) => (
-                    <IntegrationTile
-                      key={p.id}
-                      provider={p}
-                      connected={!!connections[p.id]}
-                      onSetup={() => openSetup(p)}
-                    />
-                  ))}
-                </div>
-              </section>
-            );
-          })}
-        </div>
-
-        {/* Zapier explainer banner */}
-        <div className="mt-12 bg-muted/50 border rounded-xl p-6 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm text-white shrink-0"
-            style={{ backgroundColor: "#FF4A00" }}
-          >
-            Z
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-semibold">Don't see your tool?</p>
-            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-              Connect Zapier to send leads to Gmail, Notion, Salesforce, Google Contacts, and
-              5,000+ other apps — no code required.
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="shrink-0"
-            onClick={() => openSetup(PROVIDERS.find((p) => p.id === "zapier")!)}
-          >
-            Set up Zapier
-          </Button>
-        </div>
-
-      </div>
-
-      {/* Setup / manage dialog */}
-      <Dialog open={!!selected} onOpenChange={(open) => { if (!open) closeSetup(); }}>
-        {provider && (
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <div className="flex items-center gap-3 mb-2">
-                <BrandIcon provider={provider} size="sm" />
                 <div>
-                  <DialogTitle className="text-base leading-tight">{provider.name}</DialogTitle>
-                  <p className="text-xs text-muted-foreground mt-0.5">{provider.tagline}</p>
+                  <h2 className="text-base font-semibold">CSV export</h2>
+                  <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted-foreground">
+                    Download your leads as a spreadsheet from the Leads page. This is the backup integration that works with every tool.
+                  </p>
                 </div>
-                {isAlreadyConnected && (
-                  <div className="ml-auto">
-                    <ConnectedBadge />
+              </div>
+              <Button asChild variant="outline" className="shrink-0">
+                <Link href="/leads">
+                  Open leads
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </section>
+
+          <section className="rounded-2xl border bg-card p-5">
+            <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                  <PlugZap className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-base font-semibold">Lead webhook</h2>
+                    <StatusBadge webhook={webhook} />
                   </div>
-                )}
-              </div>
-              <DialogDescription className="text-sm leading-relaxed">
-                {provider.description}
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 py-1">
-              {provider.fields.map((field) => (
-                <div key={field.key} className="space-y-1.5">
-                  <Label htmlFor={`field-${field.key}`} className="text-sm">
-                    {field.label}
-                    {field.required && (
-                      <span className="text-destructive ml-0.5">*</span>
-                    )}
-                  </Label>
-                  <Input
-                    id={`field-${field.key}`}
-                    type={
-                      field.type === "password"
-                        ? "password"
-                        : field.type === "email"
-                        ? "email"
-                        : "text"
-                    }
-                    placeholder={field.placeholder}
-                    value={formValues[field.key] ?? ""}
-                    onChange={(e) =>
-                      setFormValues((v) => ({ ...v, [field.key]: e.target.value }))
-                    }
-                    className={field.type === "password" || field.type === "url" ? "font-mono text-sm" : "text-sm"}
-                    autoComplete="off"
-                  />
-                  {field.hint && (
-                    <p className="text-xs text-muted-foreground leading-relaxed">{field.hint}</p>
-                  )}
+                  <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted-foreground">
+                    Send every new lead to one HTTPS endpoint. Use this with Zapier, Make, n8n, Pipedream, Airtable automations, or your own backend.
+                  </p>
                 </div>
-              ))}
-            </div>
-
-            <div className={`flex gap-2 pt-2 ${isAlreadyConnected ? "justify-between" : "justify-end"}`}>
-              {isAlreadyConnected && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5"
-                  onClick={handleDisconnect}
-                >
-                  <X className="h-3.5 w-3.5" />
-                  Disconnect
-                </Button>
-              )}
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={closeSetup}>
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleSave}
-                  disabled={
-                    saving ||
-                    provider.fields
-                      .filter((f) => f.required)
-                      .some((f) => !formValues[f.key]?.trim())
-                  }
-                >
-                  {saving ? "Saving…" : isAlreadyConnected ? "Update" : "Connect"}
-                </Button>
               </div>
             </div>
-          </DialogContent>
-        )}
-      </Dialog>
+
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="webhook-url">Webhook URL</Label>
+                <Input
+                  id="webhook-url"
+                  value={webhookUrl}
+                  onChange={(event) => setWebhookUrl(event.target.value)}
+                  placeholder="https://hooks.zapier.com/hooks/catch/..."
+                  className="font-mono text-sm"
+                  disabled={loading || saving}
+                />
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  Sendlet posts a <span className="font-mono">lead.created</span> JSON payload after the lead is captured.
+                </p>
+              </div>
+
+              <div className="rounded-xl border bg-muted/40 p-3">
+                <pre className="overflow-x-auto text-xs leading-relaxed text-muted-foreground">
+{`{
+  "event": "lead.created",
+  "lead": { "email": "lusa@example.com", "name": "Lusa" },
+  "lead_magnet": { "title": "Top 10 Study Tips", "slug": "top-10-study-tips" }
+}`}
+                </pre>
+              </div>
+
+              {webhook?.last_sent_at ? (
+                <p className="text-xs text-muted-foreground">
+                  Last attempt: {new Date(webhook.last_sent_at).toLocaleString()}
+                  {typeof webhook.last_status === "number" ? `, status ${webhook.last_status}` : ""}
+                </p>
+              ) : null}
+              {webhook?.last_error ? (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                  {webhook.last_error}
+                </p>
+              ) : null}
+              {message ? (
+                <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+                  {message}
+                </p>
+              ) : null}
+              {error ? (
+                <p className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                  {error}
+                </p>
+              ) : null}
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+                <Button
+                  onClick={handleSaveWebhook}
+                  disabled={loading || saving || !webhookUrl.trim()}
+                >
+                  {saving ? "Saving..." : webhook ? "Update webhook" : "Save webhook"}
+                </Button>
+                {webhook ? (
+                  <Button variant="ghost" className="text-destructive hover:text-destructive" onClick={handleRemoveWebhook} disabled={saving}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Remove webhook
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-2xl border bg-card p-5">
+            <div className="flex gap-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted">
+                <Code2 className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-base font-semibold">API access</h2>
+                  <span className="rounded-full border bg-muted px-2.5 py-1 text-xs text-muted-foreground">Coming later</span>
+                </div>
+                <p className="mt-1 max-w-xl text-sm leading-relaxed text-muted-foreground">
+                  A small API for fetching lead magnets, leads, and delivery events belongs here once real users ask for it. For now, CSV and webhook cover the useful cases.
+                </p>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
     </AppLayout>
   );
 }

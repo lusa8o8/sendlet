@@ -79,6 +79,82 @@ function deliveryHtml(title: string, description: string, accessUrl: string, uns
   `;
 }
 
+async function sendLeadWebhook({
+  supabase,
+  magnet,
+  lead,
+  name,
+  accessUrl,
+}: {
+  supabase: ReturnType<typeof createClient>;
+  magnet: Record<string, unknown>;
+  lead: Record<string, unknown>;
+  name: string | null;
+  accessUrl: string | null;
+}) {
+  const { data: webhook } = await supabase
+    .from("lead_webhooks")
+    .select("id,url,enabled")
+    .eq("workspace_id", magnet.workspace_id)
+    .eq("enabled", true)
+    .maybeSingle();
+
+  if (!webhook?.url) return;
+
+  const payload = {
+    event: "lead.created",
+    created_at: new Date().toISOString(),
+    lead: {
+      id: lead.id,
+      email: lead.email,
+      name,
+      source: lead.source,
+      referrer: lead.referrer,
+      has_resource_url: !!accessUrl,
+    },
+    lead_magnet: {
+      id: magnet.id,
+      title: magnet.title,
+      slug: magnet.slug,
+      url: `${(Deno.env.get("SENDLET_APP_URL") ?? "https://sendlet.trymyapp.uk").replace(/\/$/, "")}/p/${magnet.slug}`,
+    },
+  };
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000);
+    const response = await fetch(webhook.url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "Sendlet-Webhooks/1.0",
+        "X-Sendlet-Event": "lead.created",
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    await supabase
+      .from("lead_webhooks")
+      .update({
+        last_status: response.status,
+        last_error: response.ok ? null : (await response.text()).slice(0, 500),
+        last_sent_at: new Date().toISOString(),
+      })
+      .eq("id", webhook.id);
+  } catch (error) {
+    await supabase
+      .from("lead_webhooks")
+      .update({
+        last_status: null,
+        last_error: error instanceof Error ? error.message.slice(0, 500) : "Webhook request failed",
+        last_sent_at: new Date().toISOString(),
+      })
+      .eq("id", webhook.id);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -246,6 +322,8 @@ Deno.serve(async (req) => {
     summary: `Lead captured for ${magnet.title}`,
     payload: { lead_magnet_id: magnet.id, email },
   });
+
+  await sendLeadWebhook({ supabase, magnet, lead, name, accessUrl });
 
   return jsonResponse({
     ok: true,
