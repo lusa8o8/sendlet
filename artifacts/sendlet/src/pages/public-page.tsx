@@ -71,6 +71,7 @@ function remoteToLeadMagnet(remote: any): LeadMagnet {
     fileName: remote.file_name ?? undefined,
     resourceType: remote.resource_type ?? "none",
     tagline: config.tagline ?? "",
+    nameFieldMode: config.nameFieldMode ?? "off",
   };
 }
 
@@ -79,20 +80,45 @@ function OptInForm({
   isLoading,
   email,
   setEmail,
+  name,
+  setName,
   accentColor,
   ctaLabel,
+  nameFieldMode = "off",
   dark = false,
 }: {
   onSubmit: (e: React.FormEvent) => void;
   isLoading: boolean;
   email: string;
   setEmail: (v: string) => void;
+  name: string;
+  setName: (v: string) => void;
   accentColor: string;
   ctaLabel?: string;
+  nameFieldMode?: "off" | "optional" | "required";
   dark?: boolean;
 }) {
+  const showName = nameFieldMode !== "off";
+
   return (
     <form onSubmit={onSubmit} className={`space-y-4 pt-4 border-t ${dark ? "border-white/20" : "border-border"}`}>
+      {showName && (
+        <div className="space-y-2">
+          <Label htmlFor="name" className={`text-sm font-medium ${dark ? "text-white/80" : ""}`}>
+            Name {nameFieldMode === "optional" ? <span className="font-normal opacity-60">(optional)</span> : null}
+          </Label>
+          <Input
+            id="name"
+            type="text"
+            placeholder="Enter your name"
+            className={`h-11 ${dark ? "bg-white/10 border-white/30 text-white placeholder:text-white/40 focus-visible:ring-white/30" : ""}`}
+            required={nameFieldMode === "required"}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            data-testid="input-name-optin"
+          />
+        </div>
+      )}
       <div className="space-y-2">
         <Label htmlFor="email" className={`text-sm font-medium ${dark ? "text-white/80" : ""}`}>
           Where should we send it?
@@ -153,6 +179,8 @@ function SimpleLayout({
   isLoading,
   email,
   setEmail,
+  name,
+  setName,
 }: {
   magnet: (typeof leadMagnets)[0];
   creatorName: string;
@@ -163,6 +191,8 @@ function SimpleLayout({
   isLoading: boolean;
   email: string;
   setEmail: (v: string) => void;
+  name: string;
+  setName: (v: string) => void;
 }) {
   return (
     <div
@@ -203,8 +233,11 @@ function SimpleLayout({
                 isLoading={isLoading}
                 email={email}
                 setEmail={setEmail}
+                name={name}
+                setName={setName}
                 accentColor={magnet.accentColor}
                 ctaLabel={magnet.ctaLabel}
+                nameFieldMode={magnet.nameFieldMode}
               />
             )}
           </div>
@@ -224,6 +257,8 @@ function SplitLayout({
   isLoading,
   email,
   setEmail,
+  name,
+  setName,
 }: {
   magnet: (typeof leadMagnets)[0];
   creatorName: string;
@@ -233,6 +268,8 @@ function SplitLayout({
   isLoading: boolean;
   email: string;
   setEmail: (v: string) => void;
+  name: string;
+  setName: (v: string) => void;
 }) {
   const panelWidth = magnet.leftPanelWidth ?? 50;
   const imgPos = magnet.imagePosition ?? { x: 50, y: 50 };
@@ -313,8 +350,11 @@ function SplitLayout({
               isLoading={isLoading}
               email={email}
               setEmail={setEmail}
+              name={name}
+              setName={setName}
               accentColor={magnet.accentColor}
               ctaLabel={magnet.ctaLabel}
+              nameFieldMode={magnet.nameFieldMode}
             />
           )}
         </div>
@@ -333,6 +373,8 @@ function StackedLayout({
   isLoading,
   email,
   setEmail,
+  name,
+  setName,
 }: {
   magnet: (typeof leadMagnets)[0];
   creatorName: string;
@@ -342,6 +384,8 @@ function StackedLayout({
   isLoading: boolean;
   email: string;
   setEmail: (v: string) => void;
+  name: string;
+  setName: (v: string) => void;
 }) {
   const bannerPct = magnet.bannerHeight ?? 44;
   const imgPos = magnet.imagePosition ?? { x: 50, y: 50 };
@@ -409,8 +453,11 @@ function StackedLayout({
               isLoading={isLoading}
               email={email}
               setEmail={setEmail}
+              name={name}
+              setName={setName}
               accentColor={magnet.accentColor}
               ctaLabel={magnet.ctaLabel}
+              nameFieldMode={magnet.nameFieldMode}
             />
           )}
         </div>
@@ -454,6 +501,8 @@ function FullImageLayout({
   isLoading,
   email,
   setEmail,
+  name,
+  setName,
 }: {
   magnet: (typeof leadMagnets)[0];
   creatorName: string;
@@ -463,6 +512,8 @@ function FullImageLayout({
   isLoading: boolean;
   email: string;
   setEmail: (v: string) => void;
+  name: string;
+  setName: (v: string) => void;
 }) {
   const imgPos = magnet.imagePosition ?? { x: 50, y: 50 };
   const accent = magnet.accentColor ?? "#0F766E";
@@ -586,8 +637,11 @@ function FullImageLayout({
             isLoading={isLoading}
             email={email}
             setEmail={setEmail}
+            name={name}
+            setName={setName}
             accentColor={accent}
             ctaLabel={magnet.ctaLabel}
+            nameFieldMode={magnet.nameFieldMode}
             dark
           />
         </div>
@@ -601,6 +655,7 @@ export default function PublicPage() {
   const { slug } = useParams();
   const [, setLocation] = useLocation();
   const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [remoteMagnet, setRemoteMagnet] = useState<LeadMagnet | null>(null);
   const [checkedRemote, setCheckedRemote] = useState(false);
@@ -648,7 +703,10 @@ export default function PublicPage() {
     setIsLoading(true);
 
     try {
-      const result = await captureLead(magnet.slug, email);
+      if (magnet.nameFieldMode === "required" && !name.trim()) {
+        throw new Error("Enter your name to get the resource.");
+      }
+      const result = await captureLead(magnet.slug, email, name);
       try {
         const accessPayload = JSON.stringify(result);
         sessionStorage.setItem(`sendlet_access_${magnet.slug}`, accessPayload);
@@ -703,6 +761,8 @@ export default function PublicPage() {
     isLoading,
     email,
     setEmail,
+    name,
+    setName,
   };
 
   if (magnet.layout === "split") return <SplitLayout {...sharedProps} />;

@@ -4,6 +4,7 @@ import { corsHeaders, jsonResponse } from "../_shared/cors.ts";
 type CaptureBody = {
   slug?: string;
   email?: string;
+  name?: string;
   source?: string;
   referrer?: string;
 };
@@ -33,7 +34,11 @@ function linkHtml(accessUrl: string) {
   return `<a href="${accessUrl}" style="display:inline-block;background:#0A8CFF;color:#fff;text-decoration:none;padding:13px 18px;border-radius:12px;font-weight:600">Open resource</a>`;
 }
 
-function customDeliveryHtml(body: string, accessUrl: string) {
+function footerHtml(unsubscribeUrl: string) {
+  return `<p style="font-size:12px;color:#94a3b8;margin:28px 0 0">You received this because you requested this resource. <a href="${unsubscribeUrl}" style="color:#64748b">Unsubscribe</a></p>`;
+}
+
+function customDeliveryHtml(body: string, accessUrl: string, unsubscribeUrl: string) {
   const escapedLink = escapeHtml(accessUrl);
   const rendered = escapeHtml(body)
     .replaceAll("{{resource_link}}", linkHtml(accessUrl))
@@ -53,14 +58,14 @@ function customDeliveryHtml(body: string, accessUrl: string) {
     <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:40px 20px;color:#0f172a">
       ${rendered}
       ${hasLinkToken ? "" : `<div style="margin-top:24px">${linkHtml(accessUrl)}</div>`}
-      <p style="font-size:12px;color:#94a3b8;margin:28px 0 0">You received this because you requested this resource.</p>
+      ${footerHtml(unsubscribeUrl)}
     </div>
   `;
 }
 
-function deliveryHtml(title: string, description: string, accessUrl: string, customBody?: string | null) {
+function deliveryHtml(title: string, description: string, accessUrl: string, unsubscribeUrl: string, customBody?: string | null) {
   if (customBody?.trim()) {
-    return customDeliveryHtml(customBody.trim(), accessUrl);
+    return customDeliveryHtml(customBody.trim(), accessUrl, unsubscribeUrl);
   }
 
   return `
@@ -69,7 +74,7 @@ function deliveryHtml(title: string, description: string, accessUrl: string, cus
       <h1 style="font-size:24px;line-height:1.2;margin:0 0 12px">${escapeHtml(title)}</h1>
       ${description ? `<p style="font-size:15px;line-height:1.6;color:#475569;margin:0 0 28px">${escapeHtml(description)}</p>` : ""}
       ${linkHtml(accessUrl)}
-      <p style="font-size:12px;color:#94a3b8;margin:28px 0 0">You received this because you requested this resource.</p>
+      ${footerHtml(unsubscribeUrl)}
     </div>
   `;
 }
@@ -86,6 +91,7 @@ Deno.serve(async (req) => {
   const body = (await req.json().catch(() => ({}))) as CaptureBody;
   const slug = body.slug?.trim();
   const email = normalizeEmail(body.email ?? "");
+  const name = body.name?.trim() || null;
 
   if (!slug || !email || !validEmail(email)) {
     return jsonResponse({ error: "Enter a valid email address." }, { status: 400 });
@@ -129,6 +135,7 @@ Deno.serve(async (req) => {
       referrer: body.referrer ?? null,
       user_agent: userAgent,
       ip_hash: ipHash,
+      metadata: name ? { name } : {},
     }, { onConflict: "lead_magnet_id,email" })
     .select()
     .single();
@@ -167,8 +174,22 @@ Deno.serve(async (req) => {
 
   const resendApiKey = Deno.env.get("RESEND_API_KEY");
   const fromEmail = Deno.env.get("SENDLET_FROM_EMAIL");
+  const appUrl = (Deno.env.get("SENDLET_APP_URL") ?? "https://sendlet.trymyapp.uk").replace(/\/$/, "");
+  const unsubscribeUrl = `${appUrl}/unsubscribe?email=${encodeURIComponent(email)}&magnet=${encodeURIComponent(magnet.id)}`;
 
-  if (magnet.delivery_email_enabled && resendApiKey && fromEmail && accessUrl) {
+  const { data: unsubscribe } = await supabase
+    .from("unsubscribes")
+    .select("id")
+    .eq("lead_magnet_id", magnet.id)
+    .eq("email", email)
+    .maybeSingle();
+
+  if (unsubscribe?.id) {
+    await supabase
+      .from("delivery_events")
+      .update({ status: "skipped", metadata: { access_url_present: !!accessUrl, skipped_reason: "unsubscribed" } })
+      .eq("id", delivery?.id);
+  } else if (magnet.delivery_email_enabled && resendApiKey && fromEmail && accessUrl) {
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -179,7 +200,7 @@ Deno.serve(async (req) => {
         from: fromEmail,
         to: email,
         subject,
-        html: deliveryHtml(magnet.title, magnet.description ?? "", accessUrl, magnet.delivery_email_body),
+        html: deliveryHtml(magnet.title, magnet.description ?? "", accessUrl, unsubscribeUrl, magnet.delivery_email_body),
       }),
     });
 

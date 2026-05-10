@@ -331,6 +331,7 @@ interface Form {
   bannerHeight:   number;
   hiddenBlocks:   TextElKey[];
   tagline?:       string;
+  nameFieldMode:  "off" | "optional" | "required";
 }
 
 const defaultForm: Form = {
@@ -349,6 +350,7 @@ const defaultForm: Form = {
   bannerHeight:   44,
   hiddenBlocks:   [],
   tagline:        "",
+  nameFieldMode:  "off",
   textElements: {
     headline:    { x: 4, y: 5,  w: 92, size: 14, color: "#0f172a", backdrop: "none" },
     description: { x: 4, y: 27, w: 92, size: 11, color: "#64748b", backdrop: "none" },
@@ -2006,6 +2008,26 @@ function FloatingBar({
         <label className="text-[11px] font-medium text-muted-foreground">Button label</label>
         <Input value={form.ctaLabel} onChange={(e) => setForm({ ...form, ctaLabel: e.target.value })} placeholder="Get the resource" className="h-8 text-sm" />
       </div>
+      <div className="space-y-1.5">
+        <label className="text-[11px] font-medium text-muted-foreground">Name field</label>
+        <div className="grid grid-cols-3 gap-1 rounded-lg bg-muted/50 p-1">
+          {(["off", "optional", "required"] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setForm({ ...form, nameFieldMode: mode })}
+              className={`rounded-md px-2 py-1.5 text-[11px] font-medium capitalize transition ${
+                form.nameFieldMode === mode ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {mode}
+            </button>
+          ))}
+        </div>
+        <p className="text-[10px] leading-relaxed text-muted-foreground">
+          Keep it off for the fastest opt-in. Use optional or required when personalization matters.
+        </p>
+      </div>
       {restorableKeys.length > 0 && (
         <div className="border-t pt-2 space-y-0.5">
           <p className="text-[11px] font-medium text-muted-foreground mb-1">Hidden blocks</p>
@@ -2369,6 +2391,7 @@ function magnetToForm(m: LeadMagnet): Form {
     textElements:   (m.textElements as Record<TextElKey, TextEl>) ?? defaultForm.textElements,
     hiddenBlocks:   (m.hiddenBlocks as TextElKey[]) ?? [],
     tagline:        m.tagline ?? "",
+    nameFieldMode:  m.nameFieldMode ?? "off",
   };
 }
 
@@ -2652,6 +2675,7 @@ export default function TemplatePicker() {
       textElements:   form.textElements,
       hiddenBlocks:   form.hiddenBlocks,
       tagline:        form.tagline,
+      nameFieldMode:  form.nameFieldMode,
     };
 
     if (editingMagnet) {

@@ -92,6 +92,7 @@ export async function updateLeadMagnetInSupabase(magnet: LeadMagnet) {
         textElements: magnet.textElements ?? {},
         hiddenBlocks: magnet.hiddenBlocks ?? [],
         tagline: magnet.tagline ?? "",
+        nameFieldMode: magnet.nameFieldMode ?? "off",
       },
     })
     .eq("id", magnet.id);
@@ -112,7 +113,7 @@ export async function fetchPublicMagnet(slug: string) {
   return payload.magnet;
 }
 
-export async function captureLead(slug: string, email: string) {
+export async function captureLead(slug: string, email: string, name?: string) {
   const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/capture-lead`, {
     method: "POST",
     headers: {
@@ -123,6 +124,7 @@ export async function captureLead(slug: string, email: string) {
     body: JSON.stringify({
       slug,
       email,
+      name: name?.trim() || undefined,
       referrer: document.referrer || "direct",
       source: new URLSearchParams(window.location.search).get("utm_source") ?? undefined,
     }),
@@ -141,4 +143,22 @@ export async function captureLead(slug: string, email: string) {
     deliveryError?: string | null;
     hasResource?: boolean;
   };
+}
+
+export async function unsubscribeLead(email: string, magnetId: string) {
+  const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/unsubscribe`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify({ email, magnetId }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error ?? "Could not unsubscribe this email.");
+  }
+  return payload as { ok: boolean };
 }

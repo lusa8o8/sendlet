@@ -13,6 +13,7 @@ import UploadPage from "@/pages/upload";
 import Leads from "@/pages/leads";
 import PublicPage from "@/pages/public-page";
 import SuccessPage from "@/pages/success-page";
+import UnsubscribePage from "@/pages/unsubscribe";
 import LandingPage from "@/pages/landing";
 import SettingsIntegrationsPage from "@/pages/settings-integrations";
 
@@ -50,6 +51,7 @@ function Router() {
       </Route>
       <Route path="/p/:slug" component={PublicPage} />
       <Route path="/p/:slug/success" component={SuccessPage} />
+      <Route path="/unsubscribe" component={UnsubscribePage} />
       <Route component={NotFound} />
     </Switch>
   );

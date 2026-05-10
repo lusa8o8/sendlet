@@ -23,6 +23,7 @@ type PublishBody = {
     textElements?: Record<string, unknown>;
     hiddenBlocks?: string[];
     tagline?: string;
+    nameFieldMode?: "off" | "optional" | "required";
   };
   upload?: {
     fileName?: string;
@@ -167,6 +168,7 @@ Deno.serve(async (req) => {
         textElements: magnet.textElements ?? {},
         hiddenBlocks: magnet.hiddenBlocks ?? [],
         tagline: magnet.tagline ?? "",
+        nameFieldMode: magnet.nameFieldMode ?? "off",
       },
     };
 
