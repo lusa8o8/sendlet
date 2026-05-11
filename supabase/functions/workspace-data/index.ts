@@ -57,9 +57,9 @@ Deno.serve(async (req) => {
       return jsonResponse({ ok: true, workspace: null, magnets: [], leads: [] });
     }
 
-    const { data: magnets, error: magnetsError } = await supabase
-      .from("lead_magnets")
-      .select(`
+    const magnetSelect = view === "leads"
+      ? "id,status"
+      : `
         id,
         title,
         slug,
@@ -83,25 +83,31 @@ Deno.serve(async (req) => {
         created_at,
         updated_at,
         published_at
-      `)
+      `;
+
+    const { data: magnets, error: magnetsError } = await supabase
+      .from("lead_magnets")
+      .select(magnetSelect)
       .eq("workspace_id", workspace.id)
       .order("created_at", { ascending: false });
 
     if (magnetsError) throw magnetsError;
 
-    const weekStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-    const { data: recentVisits, error: visitsError } = await supabase
-      .from("lead_magnet_visits")
-      .select("lead_magnet_id")
-      .eq("workspace_id", workspace.id)
-      .gte("created_at", weekStart);
-
-    if (visitsError) throw visitsError;
-
     const weeklyVisitsByMagnet = new Map<string, number>();
-    for (const visit of recentVisits ?? []) {
-      const magnetId = visit.lead_magnet_id as string;
-      weeklyVisitsByMagnet.set(magnetId, (weeklyVisitsByMagnet.get(magnetId) ?? 0) + 1);
+    if (view !== "leads") {
+      const weekStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: recentVisits, error: visitsError } = await supabase
+        .from("lead_magnet_visits")
+        .select("lead_magnet_id")
+        .eq("workspace_id", workspace.id)
+        .gte("created_at", weekStart);
+
+      if (visitsError) throw visitsError;
+
+      for (const visit of recentVisits ?? []) {
+        const magnetId = visit.lead_magnet_id as string;
+        weeklyVisitsByMagnet.set(magnetId, (weeklyVisitsByMagnet.get(magnetId) ?? 0) + 1);
+      }
     }
 
     const shapedMagnets = (magnets ?? []).map((magnet) => ({

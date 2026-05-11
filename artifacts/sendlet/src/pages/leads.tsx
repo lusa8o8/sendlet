@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Download, RefreshCw, Search, Send } from "lucide-react";
 import { Link } from "wouter";
-import { fetchWorkspaceData, type WorkspaceLead } from "@/services/sendlet-service";
+import { fetchLeadsData, type WorkspaceLead } from "@/services/sendlet-service";
 import {
   Table,
   TableBody,
@@ -13,6 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
+const LEADS_CACHE_KEY = "sendlet_leads_data";
 
 function SourcePill({ source }: { source: string }) {
   return (
@@ -34,13 +36,14 @@ export default function Leads() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadData = async () => {
-    setIsLoading(true);
+  const loadData = async (showLoading = true) => {
+    if (showLoading) setIsLoading(true);
     setError(null);
     try {
-      const data = await fetchWorkspaceData();
+      const data = await fetchLeadsData();
       setLeads(data.leads);
-      setPublishedCount(data.magnets.filter((m) => m.status === "published").length);
+      setPublishedCount(data.publishedCount);
+      sessionStorage.setItem(LEADS_CACHE_KEY, JSON.stringify(data));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load leads");
     } finally {
@@ -49,7 +52,18 @@ export default function Leads() {
   };
 
   useEffect(() => {
-    void loadData();
+    let hasCachedLeads = false;
+    try {
+      const cached = sessionStorage.getItem(LEADS_CACHE_KEY);
+      if (cached) {
+        const data = JSON.parse(cached) as { leads: WorkspaceLead[]; publishedCount: number };
+        setLeads(data.leads);
+        setPublishedCount(data.publishedCount);
+        setIsLoading(false);
+        hasCachedLeads = true;
+      }
+    } catch {}
+    void loadData(!hasCachedLeads);
   }, []);
 
   const filteredLeads = useMemo(
@@ -106,7 +120,7 @@ export default function Leads() {
           </div>
           <div className="flex gap-2">
             {error && (
-              <Button variant="outline" className="shrink-0" onClick={loadData}>
+              <Button variant="outline" className="shrink-0" onClick={() => loadData()}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Retry
               </Button>

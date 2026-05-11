@@ -303,6 +303,11 @@ export type WorkspaceData = {
   leads: WorkspaceLead[];
 };
 
+export type LeadsData = {
+  leads: WorkspaceLead[];
+  publishedCount: number;
+};
+
 function daysAgo(value: string | null | undefined) {
   if (!value) return null;
   const date = new Date(value);
@@ -376,7 +381,7 @@ function toWorkspaceLead(raw: RawLead): WorkspaceLead {
   };
 }
 
-async function fetchWorkspaceDataView(view?: "dashboard"): Promise<WorkspaceData> {
+async function fetchWorkspaceDataView(view?: "dashboard" | "leads"): Promise<WorkspaceData> {
   const token = await getFirebaseIdToken();
   const query = view ? `?view=${encodeURIComponent(view)}` : "";
   const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/workspace-data${query}`, {
@@ -404,4 +409,25 @@ export async function fetchWorkspaceData(): Promise<WorkspaceData> {
 export async function fetchDashboardData(): Promise<Pick<WorkspaceData, "magnets">> {
   const data = await fetchWorkspaceDataView("dashboard");
   return { magnets: data.magnets };
+}
+
+export async function fetchLeadsData(): Promise<LeadsData> {
+  const token = await getFirebaseIdToken();
+  const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/workspace-data?view=leads`, {
+    headers: {
+      apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error ?? "Could not load leads");
+  }
+
+  const magnets = (payload.magnets ?? []) as Array<{ status?: string }>;
+  return {
+    leads: ((payload.leads ?? []) as RawLead[]).map(toWorkspaceLead),
+    publishedCount: magnets.filter((magnet) => magnet.status === "published").length,
+  };
 }
