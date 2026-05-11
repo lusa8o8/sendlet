@@ -46,6 +46,8 @@ export type LeadMagnet = {
   deliveryEmailBody?: string | null;
   nameFieldMode?: "off" | "optional" | "required";
   tagline?: string;
+  creatorName?: string;
+  creatorAvatar?: string;
   activeIntegrations?: string[];
 };
 

@@ -93,6 +93,8 @@ export async function updateLeadMagnetInSupabase(magnet: LeadMagnet) {
         hiddenBlocks: magnet.hiddenBlocks ?? [],
         tagline: magnet.tagline ?? "",
         nameFieldMode: magnet.nameFieldMode ?? "off",
+        creatorName: magnet.creatorName ?? "Sendlet creator",
+        creatorAvatar: magnet.creatorAvatar ?? "",
       },
     })
     .eq("id", magnet.id);
@@ -359,6 +361,8 @@ function toLeadMagnet(raw: RawLeadMagnet): LeadMagnet {
     deliveryEmailBody: raw.delivery_email_body,
     nameFieldMode: config.nameFieldMode ?? "off",
     tagline: config.tagline ?? "",
+    creatorName: config.creatorName ?? "Sendlet creator",
+    creatorAvatar: config.creatorAvatar ?? "",
   };
 }
 

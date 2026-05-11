@@ -24,6 +24,8 @@ type PublishBody = {
     hiddenBlocks?: string[];
     tagline?: string;
     nameFieldMode?: "off" | "optional" | "required";
+    creatorName?: string;
+    creatorAvatar?: string;
   };
   upload?: {
     fileName?: string;
@@ -169,6 +171,8 @@ Deno.serve(async (req) => {
         hiddenBlocks: magnet.hiddenBlocks ?? [],
         tagline: magnet.tagline ?? "",
         nameFieldMode: magnet.nameFieldMode ?? "off",
+        creatorName: magnet.creatorName ?? "Sendlet creator",
+        creatorAvatar: magnet.creatorAvatar ?? "",
       },
     };
 

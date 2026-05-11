@@ -72,6 +72,8 @@ function remoteToLeadMagnet(remote: any): LeadMagnet {
     resourceType: remote.resource_type ?? "none",
     tagline: config.tagline ?? "",
     nameFieldMode: config.nameFieldMode ?? "off",
+    creatorName: config.creatorName ?? "Sendlet creator",
+    creatorAvatar: config.creatorAvatar ?? "",
   };
 }
 
@@ -695,13 +697,8 @@ export default function PublicPage() {
     return <NotFound />;
   }
 
-  const { name: creatorName, avatar: creatorAvatar } = (() => {
-    try {
-      const raw = localStorage.getItem("sendlet_profile");
-      if (raw) return JSON.parse(raw) as { name: string; avatar: string };
-    } catch {}
-    return { name: "Sendlet creator", avatar: "" };
-  })();
+  const creatorName = magnet.creatorName || "Sendlet creator";
+  const creatorAvatar = magnet.creatorAvatar || "";
   const gradient = GRADIENT_PRESETS[magnet.backgroundPreset ?? "none"] ?? null;
   const bullets = magnet.bulletsEnabled !== false
     ? (magnet.bullets?.filter(Boolean) ?? FALLBACK_BULLETS)

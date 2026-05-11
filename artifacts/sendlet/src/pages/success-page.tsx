@@ -7,14 +7,6 @@ import { Check, Download } from "lucide-react";
 import NotFound from "./not-found";
 import { fetchPublicMagnet } from "@/services/sendlet-service";
 
-function getProfile() {
-  try {
-    const raw = localStorage.getItem("sendlet_profile");
-    if (raw) return JSON.parse(raw) as { name: string; avatar: string };
-  } catch {}
-  return { name: "Sendlet creator", avatar: "" };
-}
-
 function remoteToLeadMagnet(remote: any): LeadMagnet {
   const config = remote.page_config ?? {};
   return {
@@ -47,6 +39,8 @@ function remoteToLeadMagnet(remote: any): LeadMagnet {
     resourceType: remote.resource_type ?? "none",
     resourceUrl: remote.resource_url ?? null,
     tagline: config.tagline ?? "",
+    creatorName: config.creatorName ?? "Sendlet creator",
+    creatorAvatar: config.creatorAvatar ?? "",
   };
 }
 
@@ -316,7 +310,8 @@ export default function SuccessPage() {
 
   const accent = magnet.accentColor ?? "#0F766E";
   const imgPos = magnet.imagePosition ?? { x: 50, y: 50 };
-  const { name: creatorName, avatar: creatorAvatar } = getProfile();
+  const creatorName = magnet.creatorName || "Sendlet creator";
+  const creatorAvatar = magnet.creatorAvatar || "";
 
   const showImage =
     !!magnet.imageDataUrl &&

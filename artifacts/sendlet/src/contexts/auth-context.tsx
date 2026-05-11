@@ -20,6 +20,10 @@ function loadProfile(): { name: string; avatar: string } {
   return { name: "Sendlet creator", avatar: "" };
 }
 
+function shouldUseProviderProfile(currentName: string, currentAvatar: string) {
+  return (!currentName || currentName === "Sendlet creator") && !currentAvatar;
+}
+
 interface AuthContextType {
   isSignedIn: boolean;
   isAuthReady: boolean;
@@ -97,6 +101,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const nextUser = await signInWithGooglePopup();
     setUser(nextUser);
     setEmail(nextUser.email ?? null);
+    if (shouldUseProviderProfile(name, avatar)) {
+      const nextName = nextUser.displayName || nextUser.email?.split("@")[0] || "Sendlet creator";
+      const nextAvatar = nextUser.photoURL || "";
+      updateProfile(nextName, nextAvatar);
+    }
   };
 
   const signOut = async () => {

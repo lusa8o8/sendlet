@@ -17,7 +17,6 @@ import {
   Layers2,
   Link,
   Lock,
-  Mail,
   Palette,
   PanelBottom,
   PanelRight,
@@ -2143,6 +2142,12 @@ function FloatingBar({
   const settingsPanel = (
     <PopoverContent side={popSide} align="center" sideOffset={10} className="w-64 p-4 space-y-3">
       <p className="text-xs font-semibold text-foreground">Settings</p>
+      <div className="rounded-lg border border-primary/15 bg-primary/5 p-3">
+        <p className="text-[11px] font-semibold text-foreground">Public identity</p>
+        <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+          Your profile name and avatar are visible on the published page. Update them from the avatar menu before publishing.
+        </p>
+      </div>
       <div className="space-y-1">
         <label className="text-[11px] font-medium text-muted-foreground">Page URL</label>
         <div className="flex items-center">
@@ -2421,7 +2426,7 @@ export default function TemplatePicker() {
   const [, setLocation] = useLocation();
   const { id } = useParams<{ id?: string }>();
   const editingMagnet = id ? leadMagnets.find((m) => m.id === id) : undefined;
-  const { isSignedIn, signIn, signInWithGoogle } = useAuth();
+  const { isSignedIn, name: creatorName, avatar: creatorAvatar, signInWithGoogle } = useAuth();
 
   const [mode, setMode] = useState<"pick" | "edit">(() => {
     if (editingMagnet) return "edit";
@@ -2443,10 +2448,8 @@ export default function TemplatePicker() {
   const [locked, setLocked] = useState(false);
   const [activePreset, setActivePreset] = useState<string | null>(null);
   const [authGateOpen, setAuthGateOpen] = useState(false);
-  const [gateEmail, setGateEmail] = useState("");
   const [gateSubmitting, setGateSubmitting] = useState(false);
   const [gateError, setGateError] = useState<string | null>(null);
-  const [gateLinkSent, setGateLinkSent] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   // ─── Undo / redo ────────────────────────────────────────────
@@ -2663,6 +2666,8 @@ export default function TemplatePicker() {
       hiddenBlocks:   form.hiddenBlocks,
       tagline:        form.tagline,
       nameFieldMode:  form.nameFieldMode,
+      creatorName,
+      creatorAvatar,
     };
 
     if (editingMagnet) {
@@ -2936,128 +2941,52 @@ export default function TemplatePicker() {
             {/* Body */}
             <div className="px-6 py-6">
               <h2 className="text-lg font-bold tracking-tight text-foreground mb-1">
-                {gateLinkSent ? "Check your inbox" : "Your page is ready to go live"}
+                Your page is ready to go live
               </h2>
               <p className="text-sm text-muted-foreground leading-relaxed mb-5">
-                {gateLinkSent ? (
-                  <>
-                    We sent a sign-in link to{" "}
-                    <span className="font-medium text-foreground">{gateEmail}</span>.
-                    Click it to publish this page.
-                  </>
-                ) : (
-                  "Create your free Sendlet account to publish it and start collecting leads."
-                )}
+                Sign in with Google to publish it and start collecting leads. Your Google name and avatar can appear on the public page.
               </p>
 
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (!gateEmail || gateSubmitting) return;
-                  setGateError(null);
-                  setGateLinkSent(false);
-                  setGateSubmitting(true);
-                  writeBrowserStorage(PENDING_PUBLISH_KEY, "true");
-                  void signIn(gateEmail, `${window.location.origin}/lead-magnets/new`)
-                    .then(() => {
-                      setGateLinkSent(true);
-                    })
-                    .catch((error) => {
-                      const message = error instanceof Error && error.message.toLowerCase().includes("rate limit")
-                        ? "Too many magic links were requested. Wait a few minutes, then try again."
-                        : error instanceof Error
-                        ? error.message
-                        : "Could not send a magic link.";
-                      setGateError(message);
-                    })
-                    .finally(() => {
-                      setGateSubmitting(false);
-                    });
-                }}
-                className="space-y-3"
-              >
-                {!gateLinkSent ? (
-                  <>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full h-11 text-sm font-semibold"
-                      disabled={gateSubmitting}
-                      onClick={() => {
-                        setGateError(null);
-                        setGateSubmitting(true);
-                        writeBrowserStorage(PENDING_PUBLISH_KEY, "true");
-                        void signInWithGoogle()
-                          .then(() => {
-                            setAuthGateOpen(false);
-                          })
-                          .catch((error) => {
-                            setGateError(error instanceof Error ? error.message : "Could not sign in with Google.");
-                          })
-                          .finally(() => {
-                            setGateSubmitting(false);
-                          });
-                      }}
-                    >
-                      Continue with Google
-                    </Button>
-
-                    <div className="relative py-1">
-                      <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t" />
-                      </div>
-                      <div className="relative flex justify-center text-[10px] uppercase">
-                        <span className="bg-card px-2 text-muted-foreground">or email link</span>
-                      </div>
-                    </div>
-
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-                      <input
-                        type="email"
-                        required
-                        value={gateEmail}
-                        onChange={(e) => setGateEmail(e.target.value)}
-                        placeholder="name@example.com"
-                        autoFocus
-                        className="w-full pl-9 pr-3 h-10 text-sm bg-muted/50 border border-border rounded-lg outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      className="w-full h-11 text-sm font-semibold gap-2"
-                      disabled={gateSubmitting || !gateEmail}
-                    >
-                      {gateSubmitting ? (
-                        <>Sending link...</>
-                      ) : (
-                        <>Send magic link <ArrowRight className="h-4 w-4" /></>
-                      )}
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full h-11 text-sm font-semibold"
-                    onClick={() => setGateLinkSent(false)}
-                  >
-                    Use a different email
-                  </Button>
-                )}
+              <div className="space-y-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-11 gap-2 border-border bg-card text-sm font-semibold hover:bg-muted/60"
+                  disabled={gateSubmitting}
+                  onClick={() => {
+                    setGateError(null);
+                    setGateSubmitting(true);
+                    writeBrowserStorage(PENDING_PUBLISH_KEY, "true");
+                    void signInWithGoogle()
+                      .then(() => {
+                        setAuthGateOpen(false);
+                      })
+                      .catch((error) => {
+                        setGateError(error instanceof Error ? error.message : "Could not sign in with Google.");
+                      })
+                      .finally(() => {
+                        setGateSubmitting(false);
+                      });
+                  }}
+                >
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full border border-border bg-white text-[12px] font-semibold text-foreground">
+                    G
+                  </span>
+                  {gateSubmitting ? "Opening Google..." : "Continue with Google"}
+                </Button>
                 {gateError ? (
                   <p className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">
                     {gateError}
                   </p>
                 ) : null}
-              </form>
+              </div>
 
               <p className="text-[11px] text-muted-foreground/70 text-center mt-4">
-                No password needed. Your draft stays here after sign-in.
+                Your draft stays here after sign-in.
               </p>
               <div className="text-center mt-2">
                 <button
-                  onClick={() => { setAuthGateOpen(false); setGateEmail(""); setGateLinkSent(false); }}
+                  onClick={() => { setAuthGateOpen(false); setGateError(null); }}
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Cancel and keep editing
