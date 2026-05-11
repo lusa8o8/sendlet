@@ -24,9 +24,10 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import type { LeadMagnet } from "@/data/mock";
-import { fetchWorkspaceData } from "@/services/sendlet-service";
+import { fetchDashboardData } from "@/services/sendlet-service";
 
 const BROADCAST_PROVIDER_IDS = ["resend", "kit", "mailchimp", "beehiiv"];
+const DASHBOARD_CACHE_KEY = "sendlet_dashboard_magnets";
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -310,12 +311,13 @@ export default function Dashboard() {
 
   const firstName = name.split(" ")[0];
 
-  const loadData = async () => {
-    setIsLoading(true);
+  const loadData = async (showLoading = true) => {
+    if (showLoading) setIsLoading(true);
     setError(null);
     try {
-      const data = await fetchWorkspaceData();
+      const data = await fetchDashboardData();
       setMagnets(data.magnets);
+      sessionStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify(data.magnets));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load dashboard");
     } finally {
@@ -324,7 +326,16 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    void loadData();
+    let hasCachedDashboard = false;
+    try {
+      const cached = sessionStorage.getItem(DASHBOARD_CACHE_KEY);
+      if (cached) {
+        setMagnets(JSON.parse(cached) as LeadMagnet[]);
+        setIsLoading(false);
+        hasCachedDashboard = true;
+      }
+    } catch {}
+    void loadData(!hasCachedDashboard);
   }, []);
 
   const totalLeads = magnets.reduce((a, m) => a + m.leads, 0);
@@ -396,7 +407,7 @@ export default function Dashboard() {
         {error && (
           <div className="mb-6 flex items-center justify-between gap-3 rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3">
             <p className="text-sm text-destructive">{error}</p>
-            <Button size="sm" variant="outline" onClick={loadData}>
+            <Button size="sm" variant="outline" onClick={() => loadData()}>
               <RefreshCw className="mr-2 h-4 w-4" />
               Retry
             </Button>

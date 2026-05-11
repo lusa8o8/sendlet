@@ -376,9 +376,10 @@ function toWorkspaceLead(raw: RawLead): WorkspaceLead {
   };
 }
 
-export async function fetchWorkspaceData(): Promise<WorkspaceData> {
+async function fetchWorkspaceDataView(view?: "dashboard"): Promise<WorkspaceData> {
   const token = await getFirebaseIdToken();
-  const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/workspace-data`, {
+  const query = view ? `?view=${encodeURIComponent(view)}` : "";
+  const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/workspace-data${query}`, {
     headers: {
       apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
       Authorization: `Bearer ${token}`,
@@ -394,4 +395,13 @@ export async function fetchWorkspaceData(): Promise<WorkspaceData> {
     magnets: ((payload.magnets ?? []) as RawLeadMagnet[]).map(toLeadMagnet),
     leads: ((payload.leads ?? []) as RawLead[]).map(toWorkspaceLead),
   };
+}
+
+export async function fetchWorkspaceData(): Promise<WorkspaceData> {
+  return fetchWorkspaceDataView();
+}
+
+export async function fetchDashboardData(): Promise<Pick<WorkspaceData, "magnets">> {
+  const data = await fetchWorkspaceDataView("dashboard");
+  return { magnets: data.magnets };
 }

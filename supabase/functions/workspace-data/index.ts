@@ -35,6 +35,8 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const url = new URL(req.url);
+    const view = url.searchParams.get("view") ?? "full";
     const identity = await verifyFirebaseToken(req);
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -102,6 +104,20 @@ Deno.serve(async (req) => {
       weeklyVisitsByMagnet.set(magnetId, (weeklyVisitsByMagnet.get(magnetId) ?? 0) + 1);
     }
 
+    const shapedMagnets = (magnets ?? []).map((magnet) => ({
+        ...magnet,
+        weekly_visits_count: weeklyVisitsByMagnet.get(magnet.id) ?? 0,
+      }));
+
+    if (view === "dashboard") {
+      return jsonResponse({
+        ok: true,
+        workspace,
+        magnets: shapedMagnets,
+        leads: [],
+      });
+    }
+
     const { data: leads, error: leadsError } = await supabase
       .from("leads")
       .select(`
@@ -128,10 +144,7 @@ Deno.serve(async (req) => {
     return jsonResponse({
       ok: true,
       workspace,
-      magnets: (magnets ?? []).map((magnet) => ({
-        ...magnet,
-        weekly_visits_count: weeklyVisitsByMagnet.get(magnet.id) ?? 0,
-      })),
+      magnets: shapedMagnets,
       leads: leads ?? [],
     });
   } catch (error) {
