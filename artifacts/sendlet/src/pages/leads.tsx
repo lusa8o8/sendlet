@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppLayout } from "@/components/layout/app-layout";
-import { leads, leadMagnets } from "@/data/mock";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Download, Search, Send } from "lucide-react";
+import { Download, RefreshCw, Search, Send } from "lucide-react";
 import { Link } from "wouter";
+import { fetchWorkspaceData, type WorkspaceLead } from "@/services/sendlet-service";
 import {
   Table,
   TableBody,
@@ -29,21 +29,51 @@ function csvCell(value: string | number | null | undefined) {
 
 export default function Leads() {
   const [search, setSearch] = useState("");
+  const [leads, setLeads] = useState<WorkspaceLead[]>([]);
+  const [publishedCount, setPublishedCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filteredLeads = leads.filter(
-    (lead) =>
-      lead.email.toLowerCase().includes(search.toLowerCase()) ||
-      lead.leadMagnet.toLowerCase().includes(search.toLowerCase())
+  const loadData = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await fetchWorkspaceData();
+      setLeads(data.leads);
+      setPublishedCount(data.magnets.filter((m) => m.status === "published").length);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load leads");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadData();
+  }, []);
+
+  const filteredLeads = useMemo(
+    () =>
+      leads.filter((lead) => {
+        const query = search.toLowerCase();
+        return (
+          lead.email.toLowerCase().includes(query) ||
+          lead.name?.toLowerCase().includes(query) ||
+          lead.leadMagnet.toLowerCase().includes(query)
+        );
+      }),
+    [leads, search],
   );
 
-  const liveCount = leadMagnets.filter((m) => m.status === "published").length;
   const exportCsv = () => {
     const rows = [
-      ["Email", "Resource", "Source", "Date captured"],
+      ["Email", "Name", "Resource", "Source", "Delivered at", "Date captured"],
       ...filteredLeads.map((lead) => [
         lead.email,
+        lead.name ?? "",
         lead.leadMagnet,
         lead.source,
+        lead.deliveredAt ?? "",
         lead.createdAt,
       ]),
     ];
@@ -67,18 +97,37 @@ export default function Leads() {
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Leads</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {leads.length > 0
-                ? `${leads.length} leads captured across ${liveCount} published ${liveCount === 1 ? "page" : "pages"}.`
+              {isLoading
+                ? "Loading captured contacts..."
+                : leads.length > 0
+                ? `${leads.length} leads captured across ${publishedCount} published ${publishedCount === 1 ? "page" : "pages"}.`
                 : "All contacts captured across your resources."}
             </p>
           </div>
-          <Button variant="outline" disabled={filteredLeads.length === 0} className="shrink-0" onClick={exportCsv}>
-            <Download className="mr-2 h-4 w-4" />
-            Export CSV
-          </Button>
+          <div className="flex gap-2">
+            {error && (
+              <Button variant="outline" className="shrink-0" onClick={loadData}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Retry
+              </Button>
+            )}
+            <Button variant="outline" disabled={filteredLeads.length === 0} className="shrink-0" onClick={exportCsv}>
+              <Download className="mr-2 h-4 w-4" />
+              Export CSV
+            </Button>
+          </div>
         </div>
 
-        {leads.length === 0 ? (
+        {error ? (
+          <div className="border rounded-lg p-10 bg-card text-center">
+            <h3 className="text-base font-medium">Could not load leads</h3>
+            <p className="text-sm text-muted-foreground mt-1">{error}</p>
+          </div>
+        ) : isLoading ? (
+          <div className="border rounded-lg p-10 bg-card text-center text-sm text-muted-foreground">
+            Loading leads...
+          </div>
+        ) : leads.length === 0 ? (
           <div className="border border-dashed rounded-lg p-16 text-center bg-card flex flex-col items-center justify-center gap-4">
             <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
               <Send className="h-5 w-5 text-muted-foreground" />
@@ -110,6 +159,7 @@ export default function Leads() {
                 <TableHeader>
                   <TableRow className="hover:bg-transparent border-b">
                     <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Email</TableHead>
+                    <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Name</TableHead>
                     <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Resource</TableHead>
                     <TableHead className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Source</TableHead>
                     <TableHead className="text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">Date captured</TableHead>
@@ -118,7 +168,7 @@ export default function Leads() {
                 <TableBody>
                   {filteredLeads.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-10 text-sm text-muted-foreground">
+                      <TableCell colSpan={5} className="text-center py-10 text-sm text-muted-foreground">
                         No leads match your search.
                       </TableCell>
                     </TableRow>
@@ -126,12 +176,13 @@ export default function Leads() {
                     filteredLeads.map((lead) => (
                       <TableRow key={lead.id} className="hover:bg-muted/30 transition-colors">
                         <TableCell className="py-4 font-medium text-sm">{lead.email}</TableCell>
+                        <TableCell className="py-4 text-sm text-muted-foreground">{lead.name ?? "—"}</TableCell>
                         <TableCell className="py-4 text-sm text-muted-foreground">{lead.leadMagnet}</TableCell>
                         <TableCell className="py-4">
                           <SourcePill source={lead.source} />
                         </TableCell>
                         <TableCell className="py-4 text-right text-sm text-muted-foreground tabular-nums">
-                          {lead.createdAt}
+                          {new Date(lead.createdAt).toLocaleDateString()}
                         </TableCell>
                       </TableRow>
                     ))

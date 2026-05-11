@@ -380,6 +380,9 @@ verify_jwt = false
 [functions.manage-webhook]
 verify_jwt = false
 
+[functions.workspace-data]
+verify_jwt = false
+
 [functions.public-magnet]
 verify_jwt = false
 

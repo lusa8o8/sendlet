@@ -224,3 +224,152 @@ export async function deleteLeadWebhook() {
   }
   return true;
 }
+
+type RawLeadMagnet = {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  status: "published" | "draft" | "paused";
+  resource_type: "file" | "external_url" | "none" | null;
+  resource_url: string | null;
+  file_name: string | null;
+  file_size: number | null;
+  cta_label: string | null;
+  accent_color: string | null;
+  background_preset: string | null;
+  layout: string | null;
+  page_config: Record<string, any> | null;
+  delivery_email_enabled: boolean | null;
+  delivery_email_subject: string | null;
+  delivery_email_body: string | null;
+  visits_count: number | null;
+  leads_count: number | null;
+  last_lead_at: string | null;
+  created_at: string;
+};
+
+type RawLead = {
+  id: string;
+  email: string;
+  source: string | null;
+  referrer: string | null;
+  metadata: Record<string, any> | null;
+  delivered_at: string | null;
+  created_at: string;
+  lead_magnet_id: string;
+  lead_magnets: {
+    id: string;
+    title: string;
+    slug: string;
+  } | null;
+};
+
+export type WorkspaceLead = {
+  id: string;
+  email: string;
+  name: string | null;
+  leadMagnet: string;
+  leadMagnetSlug: string;
+  source: string;
+  deliveredAt: string | null;
+  createdAt: string;
+};
+
+export type WorkspaceData = {
+  magnets: LeadMagnet[];
+  leads: WorkspaceLead[];
+};
+
+function daysAgo(value: string | null | undefined) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  const diff = Date.now() - date.getTime();
+  const days = Math.max(0, Math.floor(diff / 86_400_000));
+  if (days === 0) return "Today";
+  if (days === 1) return "Yesterday";
+  return `${days} days ago`;
+}
+
+function toLeadMagnet(raw: RawLeadMagnet): LeadMagnet {
+  const config = raw.page_config ?? {};
+  const visits = raw.visits_count ?? 0;
+  const leadCount = raw.leads_count ?? 0;
+
+  return {
+    id: raw.id,
+    title: raw.title,
+    slug: raw.slug,
+    description: raw.description ?? "",
+    status: raw.status,
+    visits,
+    weeklyVisits: 0,
+    leads: leadCount,
+    weeklyLeads: 0,
+    conversionRate: visits > 0 ? Math.round((leadCount / visits) * 100) : 0,
+    lastLead: daysAgo(raw.last_lead_at),
+    accentColor: raw.accent_color ?? "#0F766E",
+    backgroundPreset: raw.background_preset ?? "dusk",
+    layout: raw.layout ?? "simple",
+    createdAt: raw.created_at,
+    bullets: Array.isArray(config.bullets) ? config.bullets : [],
+    bulletsEnabled: config.bulletsEnabled ?? true,
+    ctaLabel: raw.cta_label ?? "Get the resource",
+    imageDataUrl: config.imageDataUrl ?? null,
+    leftType: config.leftType ?? "image",
+    leftPanelWidth: config.leftPanelWidth ?? 48,
+    imagePosition: config.imagePosition ?? { x: 50, y: 50 },
+    bannerHeight: config.bannerHeight ?? 44,
+    textElements: config.textElements ?? {},
+    hiddenBlocks: config.hiddenBlocks ?? [],
+    fileName: raw.file_name ?? undefined,
+    fileSize: raw.file_size ?? undefined,
+    resourceUrl: raw.resource_url,
+    resourceType: raw.resource_type ?? "none",
+    deliveryEmailEnabled: raw.delivery_email_enabled ?? true,
+    deliveryEmailSubject: raw.delivery_email_subject,
+    deliveryEmailBody: raw.delivery_email_body,
+    nameFieldMode: config.nameFieldMode ?? "off",
+    tagline: config.tagline ?? "",
+  };
+}
+
+function toWorkspaceLead(raw: RawLead): WorkspaceLead {
+  const referrer = raw.referrer && raw.referrer !== "direct" ? raw.referrer : null;
+  let source = raw.source || referrer || "direct";
+  try {
+    if (source.startsWith("http")) source = new URL(source).hostname;
+  } catch {}
+
+  return {
+    id: raw.id,
+    email: raw.email,
+    name: typeof raw.metadata?.name === "string" ? raw.metadata.name : null,
+    leadMagnet: raw.lead_magnets?.title ?? "Untitled",
+    leadMagnetSlug: raw.lead_magnets?.slug ?? "",
+    source,
+    deliveredAt: raw.delivered_at,
+    createdAt: raw.created_at,
+  };
+}
+
+export async function fetchWorkspaceData(): Promise<WorkspaceData> {
+  const token = await getFirebaseIdToken();
+  const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/workspace-data`, {
+    headers: {
+      apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error ?? "Could not load workspace data");
+  }
+
+  return {
+    magnets: ((payload.magnets ?? []) as RawLeadMagnet[]).map(toLeadMagnet),
+    leads: ((payload.leads ?? []) as RawLead[]).map(toWorkspaceLead),
+  };
+}

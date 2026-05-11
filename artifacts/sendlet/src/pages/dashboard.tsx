@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { leadMagnets, broadcasts } from "@/data/mock";
+import { broadcasts } from "@/data/mock";
 import { PROVIDERS, integrationConnections } from "@/data/integrations";
 import { AppLayout } from "@/components/layout/app-layout";
-import { Plus, Copy, Eye, Edit2, Send, TrendingUp, ChevronRight, Radio } from "lucide-react";
+import { Plus, Copy, Eye, Edit2, Send, TrendingUp, ChevronRight, Radio, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -24,6 +24,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import type { LeadMagnet } from "@/data/mock";
+import { fetchWorkspaceData } from "@/services/sendlet-service";
 
 const BROADCAST_PROVIDER_IDS = ["resend", "kit", "mailchimp", "beehiiv"];
 
@@ -161,10 +162,12 @@ function BroadcastsSheet({
   open,
   onClose,
   sendTarget,
+  magnets,
 }: {
   open: boolean;
   onClose: () => void;
   sendTarget?: LeadMagnet;
+  magnets: LeadMagnet[];
 }) {
   const hasEmailProvider = BROADCAST_PROVIDER_IDS.some((id) => !!integrationConnections[id]);
   const recentBroadcasts = broadcasts.slice(0, 10);
@@ -201,7 +204,7 @@ function BroadcastsSheet({
           <div className="divide-y">
             {recentBroadcasts.map((bc) => {
               const provider = PROVIDERS.find((p) => p.id === bc.provider);
-              const magnet = leadMagnets.find((m) => m.id === bc.magnetId);
+              const magnet = magnets.find((m) => m.id === bc.magnetId);
               return (
                 <div key={bc.id} className="flex items-center py-3.5 gap-3">
                   {provider && (
@@ -231,9 +234,9 @@ function BroadcastsSheet({
 
 /* ── Floating action button ──────────────────────────────────── */
 
-function FAB({ onBroadcasts }: { onBroadcasts: () => void }) {
+function FAB({ magnets, onBroadcasts }: { magnets: LeadMagnet[]; onBroadcasts: () => void }) {
   const [open, setOpen] = useState(false);
-  const publishedMagnets = leadMagnets.filter((m) => m.status === "published");
+  const publishedMagnets = magnets.filter((m) => m.status === "published");
   const sendTarget = publishedMagnets[0];
 
   const items: { label: string; Icon: React.ElementType; href?: string; onClick?: () => void }[] = [
@@ -301,22 +304,42 @@ export default function Dashboard() {
   const { toast } = useToast();
   const { name } = useAuth();
   const [broadcastsOpen, setBroadcastsOpen] = useState(false);
+  const [magnets, setMagnets] = useState<LeadMagnet[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const firstName = name.split(" ")[0];
 
-  const totalLeads = leadMagnets.reduce((a, m) => a + m.leads, 0);
-  const weeklyLeads = leadMagnets.reduce((a, m) => a + m.weeklyLeads, 0);
-  const liveCount = leadMagnets.filter((m) => m.status === "published").length;
-  const draftCount = leadMagnets.filter((m) => m.status !== "published").length;
+  const loadData = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await fetchWorkspaceData();
+      setMagnets(data.magnets);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load dashboard");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadData();
+  }, []);
+
+  const totalLeads = magnets.reduce((a, m) => a + m.leads, 0);
+  const weeklyLeads = magnets.reduce((a, m) => a + m.weeklyLeads, 0);
+  const liveCount = magnets.filter((m) => m.status === "published").length;
+  const draftCount = magnets.filter((m) => m.status !== "published").length;
   const avgConv =
-    leadMagnets.filter((m) => m.visits > 0).length > 0
+    magnets.filter((m) => m.visits > 0).length > 0
       ? Math.round(
-          leadMagnets.filter((m) => m.visits > 0).reduce((a, m) => a + m.conversionRate, 0) /
-            leadMagnets.filter((m) => m.visits > 0).length
+          magnets.filter((m) => m.visits > 0).reduce((a, m) => a + m.conversionRate, 0) /
+            magnets.filter((m) => m.visits > 0).length
         )
       : 0;
 
-  const publishedMagnets = leadMagnets.filter((m) => m.status === "published");
+  const publishedMagnets = magnets.filter((m) => m.status === "published");
   const sendTarget = publishedMagnets[0];
 
   const copyLink = (slug: string) => {
@@ -370,30 +393,43 @@ export default function Dashboard() {
           </Button>
         </div>
 
-        {/* Stat cards */}
-        <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-7">
+        {error && (
+          <div className="mb-6 flex items-center justify-between gap-3 rounded-lg border border-destructive/20 bg-destructive/5 px-4 py-3">
+            <p className="text-sm text-destructive">{error}</p>
+            <Button size="sm" variant="outline" onClick={loadData}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Retry
+            </Button>
+          </div>
+        )}
+
+        {!error && <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-7">
           <StatCard
             label="Total leads"
-            value={totalLeads}
+            value={isLoading ? "..." : totalLeads}
             context={weeklyLeads > 0 ? `+${weeklyLeads} this week` : "None this week"}
             contextPositive={weeklyLeads > 0}
           />
           <StatCard
             label="Pages live"
-            value={liveCount}
+            value={isLoading ? "..." : liveCount}
             context={draftCount > 0 ? `${draftCount} not published` : "All pages live"}
             contextPositive={draftCount === 0}
           />
           <StatCard
             label="Avg. conv."
-            value={avgConv > 0 ? `${avgConv}%` : "—"}
-            context="Industry ~20%"
+            value={isLoading ? "..." : avgConv > 0 ? `${avgConv}%` : "—"}
+            context="Visits next"
             contextPositive={avgConv >= 20}
           />
-        </div>
+        </div>}
 
         {/* Lead magnets */}
-        {leadMagnets.length === 0 ? (
+        {isLoading ? (
+          <div className="border rounded-xl p-10 bg-card text-center text-sm text-muted-foreground">
+            Loading dashboard...
+          </div>
+        ) : error ? null : magnets.length === 0 ? (
           emptyState
         ) : (
           <>
@@ -404,7 +440,7 @@ export default function Dashboard() {
               transition={{ duration: 0.25 }}
               className="flex flex-col gap-3 sm:hidden"
             >
-              {leadMagnets.map((magnet) => (
+              {magnets.map((magnet) => (
                 <MagnetCard key={magnet.id} magnet={magnet} onCopy={copyLink} />
               ))}
             </motion.div>
@@ -428,7 +464,7 @@ export default function Dashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {leadMagnets.map((magnet) => (
+                  {magnets.map((magnet) => (
                     <TableRow key={magnet.id} className="hover:bg-muted/30 transition-colors">
                       <TableCell className="py-4">
                         <Link
@@ -486,12 +522,13 @@ export default function Dashboard() {
         )}
       </div>
 
-      <FAB onBroadcasts={() => setBroadcastsOpen(true)} />
+      <FAB magnets={magnets} onBroadcasts={() => setBroadcastsOpen(true)} />
 
       <BroadcastsSheet
         open={broadcastsOpen}
         onClose={() => setBroadcastsOpen(false)}
         sendTarget={sendTarget}
+        magnets={magnets}
       />
     </AppLayout>
   );
