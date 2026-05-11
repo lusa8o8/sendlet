@@ -145,6 +145,27 @@ export async function captureLead(slug: string, email: string, name?: string) {
   };
 }
 
+export async function trackPublicVisit(slug: string) {
+  const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/track-visit`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify({
+      slug,
+      referrer: document.referrer || "direct",
+      source: new URLSearchParams(window.location.search).get("utm_source") ?? undefined,
+    }),
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.error ?? "Could not track visit");
+  }
+}
+
 export async function unsubscribeLead(email: string, magnetId: string) {
   const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/unsubscribe`, {
     method: "POST",
@@ -244,6 +265,7 @@ type RawLeadMagnet = {
   delivery_email_subject: string | null;
   delivery_email_body: string | null;
   visits_count: number | null;
+  weekly_visits_count?: number | null;
   leads_count: number | null;
   last_lead_at: string | null;
   created_at: string;
@@ -304,7 +326,7 @@ function toLeadMagnet(raw: RawLeadMagnet): LeadMagnet {
     description: raw.description ?? "",
     status: raw.status,
     visits,
-    weeklyVisits: 0,
+    weeklyVisits: raw.weekly_visits_count ?? 0,
     leads: leadCount,
     weeklyLeads: 0,
     conversionRate: visits > 0 ? Math.round((leadCount / visits) * 100) : 0,

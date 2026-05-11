@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 import NotFound from "./not-found";
-import { captureLead, fetchPublicMagnet } from "@/services/sendlet-service";
+import { captureLead, fetchPublicMagnet, trackPublicVisit } from "@/services/sendlet-service";
 
 function renderRichText(text: string): React.ReactNode {
   const regex = /\[#([0-9a-fA-F]{3,6})\]([\s\S]*?)\[\/\]/g;
@@ -665,7 +665,17 @@ export default function PublicPage() {
     let cancelled = false;
     void fetchPublicMagnet(slug)
       .then((remote) => {
-        if (!cancelled && remote) setRemoteMagnet(remoteToLeadMagnet(remote));
+        if (!cancelled && remote) {
+          setRemoteMagnet(remoteToLeadMagnet(remote));
+          const visitKey = `sendlet_visit_${remote.slug}`;
+          const alreadyTracked = sessionStorage.getItem(visitKey);
+          if (!alreadyTracked) {
+            sessionStorage.setItem(visitKey, "1");
+            void trackPublicVisit(remote.slug).catch(() => {
+              sessionStorage.removeItem(visitKey);
+            });
+          }
+        }
       })
       .finally(() => {
         if (!cancelled) setCheckedRemote(true);

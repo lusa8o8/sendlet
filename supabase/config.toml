@@ -383,6 +383,9 @@ verify_jwt = false
 [functions.workspace-data]
 verify_jwt = false
 
+[functions.track-visit]
+verify_jwt = false
+
 [functions.public-magnet]
 verify_jwt = false
 

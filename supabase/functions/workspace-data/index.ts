@@ -87,6 +87,21 @@ Deno.serve(async (req) => {
 
     if (magnetsError) throw magnetsError;
 
+    const weekStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { data: recentVisits, error: visitsError } = await supabase
+      .from("lead_magnet_visits")
+      .select("lead_magnet_id")
+      .eq("workspace_id", workspace.id)
+      .gte("created_at", weekStart);
+
+    if (visitsError) throw visitsError;
+
+    const weeklyVisitsByMagnet = new Map<string, number>();
+    for (const visit of recentVisits ?? []) {
+      const magnetId = visit.lead_magnet_id as string;
+      weeklyVisitsByMagnet.set(magnetId, (weeklyVisitsByMagnet.get(magnetId) ?? 0) + 1);
+    }
+
     const { data: leads, error: leadsError } = await supabase
       .from("leads")
       .select(`
@@ -113,7 +128,10 @@ Deno.serve(async (req) => {
     return jsonResponse({
       ok: true,
       workspace,
-      magnets: magnets ?? [],
+      magnets: (magnets ?? []).map((magnet) => ({
+        ...magnet,
+        weekly_visits_count: weeklyVisitsByMagnet.get(magnet.id) ?? 0,
+      })),
       leads: leads ?? [],
     });
   } catch (error) {

@@ -51,7 +51,5 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Not found" }, { status: 404 });
   }
 
-  await supabase.rpc("increment_lead_magnet_visits", { magnet_id: data.id });
-
   return jsonResponse({ magnet: data });
 });
