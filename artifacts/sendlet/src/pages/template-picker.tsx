@@ -439,7 +439,7 @@ function SimplePreview({
   };
   const makeSnapMove = (dragKey: TextElKey) => (rawX: number, rawY: number, w: number) => {
     const others = (Object.entries(textElements) as [TextElKey, TextEl][])
-      .filter(([k]) => k !== dragKey && !(form.hiddenBlocks ?? []).includes(k) && !(k === "bullets" && !form.bulletsEnabled))
+      .filter(([k]) => k !== dragKey && k !== "bullets" && !(form.hiddenBlocks ?? []).includes(k))
       .map(([, o]) => ({ x: o.x, y: o.y, w: o.w }));
     const result = computeSnap(rawX, rawY, w, others);
     setGuides(result.guides);
@@ -471,7 +471,7 @@ function SimplePreview({
                 {renderRichText(form.description || "A short description of what they'll get and why it helps.")}
               </DraggableTextBlock>
             )}
-            {form.bulletsEnabled && (
+            {false && form.bulletsEnabled && (
               <DraggableTextBlock el={textElements.bullets} onUpdate={(u) => onUpdateTextEl?.("bullets", u)} label="Benefits" onSnapMove={makeSnapMove("bullets")} onDragEnd={() => setGuides([])} onDelete={() => onUpdate?.({ bulletsEnabled: false })} locked={locked}>
                 <div className="space-y-1.5">
                   {displayBullets.slice(0, 3).map((b, i) => (
@@ -504,7 +504,7 @@ function SimplePreview({
             <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
               {renderRichText(form.description || "A short description of what they'll get and why it helps.")}
             </p>
-            {form.bulletsEnabled && (
+            {false && form.bulletsEnabled && (
               <div className="space-y-1.5 mb-3">
                 {displayBullets.slice(0, 4).map((b, i) => (
                   <div key={i} className="flex items-center gap-2">
@@ -942,7 +942,7 @@ function SplitPreview({
   };
   const makeSnapMove = (dragKey: TextElKey) => (rawX: number, rawY: number, w: number) => {
     const others = (Object.entries(textElements) as [TextElKey, TextEl][])
-      .filter(([k]) => k !== dragKey && !(form.hiddenBlocks ?? []).includes(k) && !(k === "bullets" && !form.bulletsEnabled))
+      .filter(([k]) => k !== dragKey && k !== "bullets" && !(form.hiddenBlocks ?? []).includes(k))
       .map(([, o]) => ({ x: o.x, y: o.y, w: o.w }));
     const result = computeSnap(rawX, rawY, w, others);
     setGuides(result.guides);
@@ -1120,7 +1120,7 @@ function SplitPreview({
           )}
 
           {/* Benefits / bullets */}
-          {form.bulletsEnabled && (
+          {false && form.bulletsEnabled && (
             <DraggableTextBlock
               el={textElements.bullets}
               onUpdate={(u) => onUpdateTextEl?.("bullets", u)}
@@ -1184,7 +1184,7 @@ function SplitPreview({
             <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
               {renderRichText(form.description || "A short description of what they'll get and why it helps.")}
             </p>
-            {form.bulletsEnabled && (
+            {false && form.bulletsEnabled && (
               <div className="space-y-1.5 mb-3">
                 {displayBullets.slice(0, 3).map((b, i) => (
                   <div key={i} className="flex items-center gap-2">
@@ -1256,7 +1256,7 @@ function StackedPreview({
   };
   const makeSnapMove = (dragKey: TextElKey) => (rawX: number, rawY: number, w: number) => {
     const others = (Object.entries(textElements) as [TextElKey, TextEl][])
-      .filter(([k]) => k !== dragKey && !(form.hiddenBlocks ?? []).includes(k) && !(k === "bullets" && !form.bulletsEnabled))
+      .filter(([k]) => k !== dragKey && k !== "bullets" && !(form.hiddenBlocks ?? []).includes(k))
       .map(([, o]) => ({ x: o.x, y: o.y, w: o.w }));
     const result = computeSnap(rawX, rawY, w, others);
     setGuides(result.guides);
@@ -1410,7 +1410,7 @@ function StackedPreview({
               {renderRichText(form.description || "A short description of what they'll get and why it helps.")}
             </DraggableTextBlock>
           )}
-          {form.bulletsEnabled && (
+          {false && form.bulletsEnabled && (
             <DraggableTextBlock el={textElements.bullets} onUpdate={(u) => onUpdateTextEl?.("bullets", u)} label="Benefits" onSnapMove={makeSnapMove("bullets")} onDragEnd={() => setGuides([])} editType="bullets" bulletValues={displayBullets} onBulletsChange={(bs) => onUpdate?.({ bullets: bs })} accentColor={accent} onDelete={() => onUpdate?.({ bulletsEnabled: false })} locked={locked}>
               <div className="space-y-1.5">
                 {displayBullets.slice(0, 3).map((b, i) => (
@@ -1443,7 +1443,7 @@ function StackedPreview({
           <p className="text-[11px] text-muted-foreground mb-2.5 leading-relaxed">
             {renderRichText(form.description || "A short description of what they'll get and why it helps.")}
           </p>
-          {form.bulletsEnabled && (
+          {false && form.bulletsEnabled && (
             <div className="space-y-1.5 mb-3">
               {displayBullets.slice(0, 3).map((b, i) => (
                 <div key={i} className="flex items-center gap-2">
@@ -1493,7 +1493,7 @@ function FullImagePreview({
   };
   const makeSnapMove = (dragKey: TextElKey) => (rawX: number, rawY: number, w: number) => {
     const others = (Object.entries(textElements) as [TextElKey, TextEl][])
-      .filter(([k]) => k !== dragKey && !(form.hiddenBlocks ?? []).includes(k) && !(k === "bullets" && !form.bulletsEnabled))
+      .filter(([k]) => k !== dragKey && k !== "bullets" && !(form.hiddenBlocks ?? []).includes(k))
       .map(([, o]) => ({ x: o.x, y: o.y, w: o.w }));
     const result = computeSnap(rawX, rawY, w, others);
     setGuides(result.guides);
@@ -1586,7 +1586,7 @@ function FullImagePreview({
             </DraggableTextBlock>
           )}
 
-          {form.bulletsEnabled && (
+          {false && form.bulletsEnabled && (
             <DraggableTextBlock
               el={textElements.bullets}
               onUpdate={(u) => onUpdateTextEl?.("bullets", u)}
@@ -1655,7 +1655,7 @@ function FullImagePreview({
             </div>
           </div>
 
-          {form.bulletsEnabled && (
+          {false && form.bulletsEnabled && (
             <div className="absolute" style={{ left: "5%", top: "44%", width: "90%" }}>
               <div style={glassPanel}>
                 <div className="space-y-1.5">
@@ -1672,7 +1672,7 @@ function FullImagePreview({
             </div>
           )}
 
-          <div className="absolute" style={{ left: "5%", top: form.bulletsEnabled ? "67%" : "50%", width: "90%" }}>
+          <div className="absolute" style={{ left: "5%", top: "50%", width: "90%" }}>
             <div style={{ ...glassPanel, padding: "8px 12px" }} className="space-y-1.5">
               <PreviewNameField form={form} dark />
               <div className="h-5 rounded-md border border-white/30 text-[9px] text-white/70 flex items-center px-2 bg-white/10">
@@ -1915,7 +1915,6 @@ function FloatingBar({
 
   const hiddenKeys = form.hiddenBlocks ?? [];
   const restorableKeys: TextElKey[] = (["headline", "description", "form"] as TextElKey[]).filter((k) => hiddenKeys.includes(k));
-  if (!form.bulletsEnabled) restorableKeys.push("bullets" as TextElKey);
   if ((layout === "split" || layout === "stacked") && hiddenKeys.includes("tagline")) restorableKeys.push("tagline" as TextElKey);
 
   const isSide = barPosition === "side";
@@ -1994,33 +1993,6 @@ function FloatingBar({
       <div className="space-y-1">
         <label className="text-[11px] font-medium text-muted-foreground">Description</label>
         <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="A short description..." className="text-sm resize-none h-16" />
-      </div>
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <label className="text-[11px] font-medium text-muted-foreground">Benefits</label>
-          <button onClick={() => setForm({ ...form, bulletsEnabled: !form.bulletsEnabled })} className={`relative w-8 h-4 rounded-full transition-colors shrink-0 ${form.bulletsEnabled ? "bg-primary" : "bg-muted-foreground/30"}`}>
-            <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-transform ${form.bulletsEnabled ? "translate-x-4" : "translate-x-0.5"}`} />
-          </button>
-        </div>
-        {form.bulletsEnabled && (
-          <div className="space-y-1.5">
-            {form.bullets.map((b, i) => (
-              <div key={i} className="flex items-center gap-1.5">
-                <Input value={b} onChange={(e) => setBullet(i, e.target.value)} placeholder={`Benefit ${i + 1}`} className="h-7 text-xs flex-1" />
-                {form.bullets.length > 1 && (
-                  <button onClick={() => removeBullet(i)} className="shrink-0 w-6 h-6 rounded flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
-                    <X className="h-3 w-3" />
-                  </button>
-                )}
-              </div>
-            ))}
-            {form.bullets.length < 5 && (
-              <button onClick={addBullet} className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-primary transition-colors">
-                <Plus className="h-3 w-3" /> Add benefit
-              </button>
-            )}
-          </div>
-        )}
       </div>
       <div className="space-y-1">
         <label className="text-[11px] font-medium text-muted-foreground">Button label</label>

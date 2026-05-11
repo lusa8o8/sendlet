@@ -168,7 +168,15 @@ export default function SignIn() {
                 </div>
               </div>
 
-              <Button type="button" variant="outline" className="w-full h-10" onClick={onGoogleSignIn}>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-10 gap-2 border-border bg-card hover:bg-muted/60"
+                onClick={onGoogleSignIn}
+              >
+                <span className="flex h-5 w-5 items-center justify-center rounded-full border border-border bg-white text-[12px] font-semibold text-foreground">
+                  G
+                </span>
                 Continue with Google
               </Button>
 

@@ -224,7 +224,7 @@ function SimpleLayout({
                 {renderRichText(magnet.description)}
               </p>
             )}
-            {magnet.bulletsEnabled !== false && !magnet.hiddenBlocks?.includes("bullets") && bullets.length > 0 && (
+            {false && magnet.bulletsEnabled !== false && !magnet.hiddenBlocks?.includes("bullets") && bullets.length > 0 && (
               <BulletList bullets={bullets} accentColor={magnet.accentColor} />
             )}
             {!magnet.hiddenBlocks?.includes("form") && (
@@ -341,7 +341,7 @@ function SplitLayout({
               {renderRichText(magnet.description)}
             </p>
           )}
-          {magnet.bulletsEnabled !== false && !magnet.hiddenBlocks?.includes("bullets") && bullets.length > 0 && (
+          {false && magnet.bulletsEnabled !== false && !magnet.hiddenBlocks?.includes("bullets") && bullets.length > 0 && (
             <BulletList bullets={bullets} accentColor={magnet.accentColor} />
           )}
           {!magnet.hiddenBlocks?.includes("form") && (
@@ -444,7 +444,7 @@ function StackedLayout({
               {renderRichText(magnet.description)}
             </p>
           )}
-          {magnet.bulletsEnabled !== false && !magnet.hiddenBlocks?.includes("bullets") && bullets.length > 0 && (
+          {false && magnet.bulletsEnabled !== false && !magnet.hiddenBlocks?.includes("bullets") && bullets.length > 0 && (
             <BulletList bullets={bullets} accentColor={magnet.accentColor} />
           )}
           {!magnet.hiddenBlocks?.includes("form") && (
@@ -594,7 +594,7 @@ function FullImageLayout({
       )}
 
       {/* Bullets */}
-      {magnet.bulletsEnabled !== false && !magnet.hiddenBlocks?.includes("bullets") && bullets.length > 0 && (
+      {false && magnet.bulletsEnabled !== false && !magnet.hiddenBlocks?.includes("bullets") && bullets.length > 0 && (
         <div
           className="absolute z-10"
           style={{
