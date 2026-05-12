@@ -29,6 +29,19 @@ function csvCell(value: string | number | null | undefined) {
   return `"${text.replaceAll('"', '""')}"`;
 }
 
+function downloadCsv(filename: string, rows: Array<Array<string | number | null | undefined>>) {
+  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
 export default function Leads() {
   const [search, setSearch] = useState("");
   const [leads, setLeads] = useState<WorkspaceLead[]>([]);
@@ -79,28 +92,21 @@ export default function Leads() {
     [leads, search],
   );
 
-  const exportCsv = () => {
+  const exportCsv = (rowsToExport: WorkspaceLead[], scope: "all" | "filtered") => {
     const rows = [
-      ["Email", "Name", "Resource", "Source", "Delivered at", "Date captured"],
-      ...filteredLeads.map((lead) => [
+      ["Email", "Name", "Resource", "Resource slug", "Source", "Referrer", "Delivered at", "Date captured"],
+      ...rowsToExport.map((lead) => [
         lead.email,
         lead.name ?? "",
         lead.leadMagnet,
+        lead.leadMagnetSlug,
         lead.source,
+        lead.referrer ?? "",
         lead.deliveredAt ?? "",
         lead.createdAt,
       ]),
     ];
-    const csv = rows.map((row) => row.map(csvCell).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "sendlet-leads.csv";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+    downloadCsv(`sendlet-leads-${scope}.csv`, rows);
   };
 
   return (
@@ -118,16 +124,30 @@ export default function Leads() {
                 : "All contacts captured across your resources."}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {error && (
               <Button variant="outline" className="shrink-0" onClick={() => loadData()}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Retry
               </Button>
             )}
-            <Button variant="outline" disabled={filteredLeads.length === 0} className="shrink-0" onClick={exportCsv}>
+            <Button
+              variant="outline"
+              disabled={filteredLeads.length === 0}
+              className="shrink-0"
+              onClick={() => exportCsv(filteredLeads, "filtered")}
+            >
               <Download className="mr-2 h-4 w-4" />
-              Export CSV
+              Export filtered
+            </Button>
+            <Button
+              variant="outline"
+              disabled={leads.length === 0}
+              className="shrink-0"
+              onClick={() => exportCsv(leads, "all")}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export all
             </Button>
           </div>
         </div>

@@ -297,6 +297,7 @@ export type WorkspaceLead = {
   leadMagnet: string;
   leadMagnetSlug: string;
   source: string;
+  referrer: string | null;
   deliveredAt: string | null;
   createdAt: string;
 };
@@ -381,6 +382,7 @@ function toWorkspaceLead(raw: RawLead): WorkspaceLead {
     leadMagnet: raw.lead_magnets?.title ?? "Untitled",
     leadMagnetSlug: raw.lead_magnets?.slug ?? "",
     source,
+    referrer: referrer ?? raw.referrer ?? null,
     deliveredAt: raw.delivered_at,
     createdAt: raw.created_at,
   };

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "wouter";
+import { useParams } from "wouter";
 import { leadMagnets, type LeadMagnet } from "@/data/mock";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
@@ -44,17 +44,14 @@ function remoteToLeadMagnet(remote: any): LeadMagnet {
   };
 }
 
-/* ── Shared success card content ─────────────────────────── */
 function SuccessCard({
   title,
-  slug,
   accent,
   accessUrl,
   deliveryStatus,
   align = "center",
 }: {
   title: string;
-  slug: string;
   accent: string;
   accessUrl?: string | null;
   deliveryStatus?: string | null;
@@ -69,7 +66,6 @@ function SuccessCard({
       transition={{ duration: 0.4, delay: 0.25 }}
       className={`w-full max-w-sm ${align === "center" ? "text-center mx-auto" : "text-left"}`}
     >
-      {/* Check circle */}
       <motion.div
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -92,7 +88,7 @@ function SuccessCard({
       {accessUrl ? (
         <Button
           asChild
-          className="w-full h-12 text-[15px] font-semibold shadow-sm gap-2 mb-4"
+          className="w-full h-12 text-[15px] font-semibold shadow-sm gap-2"
           style={{ backgroundColor: accent, color: "#fff" }}
         >
           <a href={accessUrl} target="_blank" rel="noopener noreferrer">
@@ -101,24 +97,14 @@ function SuccessCard({
           </a>
         </Button>
       ) : (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 mb-4">
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           This page is collecting leads, but no resource file or URL is attached yet.
         </div>
       )}
-
-      <div className="pt-5 border-t border-border">
-        <Link
-          href={`/p/${slug}`}
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          ← Back to page
-        </Link>
-      </div>
     </motion.div>
   );
 }
 
-/* ── Brand panel (reused in both layouts) ────────────────── */
 function BrandPanel({
   accent,
   imageDataUrl,
@@ -170,7 +156,6 @@ function BrandPanel({
         <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/10 to-black/40" />
       )}
 
-      {/* Creator identity */}
       <div className="relative z-10 p-6 lg:p-8 flex items-center gap-2.5">
         <div
           className="w-8 h-8 rounded-full bg-white/90 shadow flex items-center justify-center font-semibold text-xs overflow-hidden shrink-0"
@@ -190,7 +175,6 @@ function BrandPanel({
   );
 }
 
-/* ── Split success (vertical side-by-side) ───────────────── */
 function SplitSuccess({
   magnet,
   accent,
@@ -198,7 +182,6 @@ function SplitSuccess({
   imgPos,
   creatorName,
   creatorAvatar,
-  slug,
   accessUrl,
   deliveryStatus,
 }: {
@@ -208,7 +191,6 @@ function SplitSuccess({
   imgPos: { x: number; y: number };
   creatorName: string;
   creatorAvatar: string;
-  slug: string;
   accessUrl?: string | null;
   deliveryStatus?: string | null;
 }) {
@@ -216,7 +198,6 @@ function SplitSuccess({
 
   return (
     <div className="min-h-[100dvh] flex flex-col lg:flex-row">
-      {/* Left brand panel */}
       <BrandPanel
         accent={accent}
         imageDataUrl={magnet.imageDataUrl}
@@ -228,20 +209,18 @@ function SplitSuccess({
         style={{ flexBasis: `${panelWidth}%`, flexShrink: 0 }}
       />
 
-      {/* Right success content */}
       <motion.div
         initial={{ opacity: 0, x: 16 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.45 }}
         className="flex-1 bg-background flex items-center justify-center px-8 py-14 lg:py-0"
       >
-        <SuccessCard title={magnet.title} slug={slug} accent={accent} accessUrl={accessUrl} deliveryStatus={deliveryStatus} align="left" />
+        <SuccessCard title={magnet.title} accent={accent} accessUrl={accessUrl} deliveryStatus={deliveryStatus} align="left" />
       </motion.div>
     </div>
   );
 }
 
-/* ── Stacked success (band on top, content below) ────────── */
 function StackedSuccess({
   magnet,
   accent,
@@ -249,7 +228,6 @@ function StackedSuccess({
   imgPos,
   creatorName,
   creatorAvatar,
-  slug,
   accessUrl,
   deliveryStatus,
 }: {
@@ -259,7 +237,6 @@ function StackedSuccess({
   imgPos: { x: number; y: number };
   creatorName: string;
   creatorAvatar: string;
-  slug: string;
   accessUrl?: string | null;
   deliveryStatus?: string | null;
 }) {
@@ -275,13 +252,12 @@ function StackedSuccess({
         style={{ height: "38vh", minHeight: 200 }}
       />
       <div className="flex-1 flex flex-col items-center justify-center bg-background px-5 py-10">
-        <SuccessCard title={magnet.title} slug={slug} accent={accent} accessUrl={accessUrl} deliveryStatus={deliveryStatus} />
+        <SuccessCard title={magnet.title} accent={accent} accessUrl={accessUrl} deliveryStatus={deliveryStatus} />
       </div>
     </div>
   );
 }
 
-/* ── Page ────────────────────────────────────────────────── */
 export default function SuccessPage() {
   const { slug } = useParams();
   const [remoteMagnet, setRemoteMagnet] = useState<LeadMagnet | null>(null);
@@ -305,7 +281,6 @@ export default function SuccessPage() {
   const magnet = remoteMagnet ?? leadMagnets.find((m) => m.slug === slug);
 
   if (!magnet && !checkedRemote) return null;
-
   if (!magnet) return <NotFound />;
 
   const accent = magnet.accentColor ?? "#0F766E";
@@ -329,6 +304,7 @@ export default function SuccessPage() {
       return null;
     }
   })();
+
   const deliveryStatus = (() => {
     try {
       const raw = sessionStorage.getItem(`sendlet_access_${slug}`) ?? localStorage.getItem(`sendlet_access_${slug}`);
@@ -339,7 +315,7 @@ export default function SuccessPage() {
     }
   })();
 
-  const shared = { magnet, accent, showImage, imgPos, creatorName, creatorAvatar, slug: slug!, accessUrl, deliveryStatus };
+  const shared = { magnet, accent, showImage, imgPos, creatorName, creatorAvatar, accessUrl, deliveryStatus };
 
   if (magnet.layout === "split") return <SplitSuccess {...shared} />;
   return <StackedSuccess {...shared} />;
