@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/auth-context";
-import { Button } from "@/components/ui/button";
+import { GoogleButton } from "@/components/google-button";
 import { motion } from "framer-motion";
 import { Send, Check } from "lucide-react";
 
@@ -86,16 +86,7 @@ export default function SignIn() {
               </p>
             </div>
 
-            <Button
-              type="button"
-              className="w-full h-10 gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
-              onClick={onGoogleSignIn}
-            >
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-[12px] font-semibold text-foreground">
-                G
-              </span>
-              Continue with Google
-            </Button>
+            <GoogleButton label="Continue with Google" onClick={onGoogleSignIn} />
 
             {authError ? (
               <p className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">

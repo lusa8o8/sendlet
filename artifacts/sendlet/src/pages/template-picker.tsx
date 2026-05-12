@@ -4,6 +4,7 @@ import { useLocation, useParams } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { AppLayout } from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
+import { GoogleButton } from "@/components/google-button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -2948,10 +2949,9 @@ export default function TemplatePicker() {
               </p>
 
               <div className="space-y-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full h-11 gap-2 border-border bg-card text-sm font-semibold hover:bg-muted/60"
+                <GoogleButton
+                  label={gateSubmitting ? "Opening Google..." : "Continue with Google"}
+                  className="text-sm font-semibold"
                   disabled={gateSubmitting}
                   onClick={() => {
                     setGateError(null);
@@ -2968,12 +2968,7 @@ export default function TemplatePicker() {
                         setGateSubmitting(false);
                       });
                   }}
-                >
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full border border-border bg-white text-[12px] font-semibold text-foreground">
-                    G
-                  </span>
-                  {gateSubmitting ? "Opening Google..." : "Continue with Google"}
-                </Button>
+                />
                 {gateError ? (
                   <p className="rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs text-destructive">
                     {gateError}
