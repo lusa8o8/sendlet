@@ -70,6 +70,7 @@ function remoteToLeadMagnet(remote: any): LeadMagnet {
     hiddenBlocks: config.hiddenBlocks ?? [],
     fileName: remote.file_name ?? undefined,
     resourceType: remote.resource_type ?? "none",
+    deliveryEmailEnabled: remote.delivery_email_enabled ?? true,
     tagline: config.tagline ?? "",
     nameFieldMode: config.nameFieldMode ?? "off",
     creatorName: config.creatorName ?? "Sendlet creator",
@@ -87,6 +88,7 @@ function OptInForm({
   accentColor,
   ctaLabel,
   nameFieldMode = "off",
+  deliveryEmailEnabled = true,
   dark = false,
 }: {
   onSubmit: (e: React.FormEvent) => void;
@@ -98,9 +100,11 @@ function OptInForm({
   accentColor: string;
   ctaLabel?: string;
   nameFieldMode?: "off" | "optional" | "required";
+  deliveryEmailEnabled?: boolean;
   dark?: boolean;
 }) {
   const showName = nameFieldMode !== "off";
+  const willEmailResource = deliveryEmailEnabled !== false;
 
   return (
     <form onSubmit={onSubmit} className={`space-y-4 pt-4 border-t ${dark ? "border-white/20" : "border-border"}`}>
@@ -123,7 +127,7 @@ function OptInForm({
       )}
       <div className="space-y-2">
         <Label htmlFor="email" className={`text-sm font-medium ${dark ? "text-white/80" : ""}`}>
-          Where should we send it?
+          {willEmailResource ? "Where should we send it?" : "Enter your email to unlock it"}
         </Label>
         <Input
           id="email"
@@ -146,7 +150,7 @@ function OptInForm({
         {isLoading ? "Sending…" : (ctaLabel || "Get the resource")}
       </Button>
       <p className={`text-center text-xs pt-2 ${dark ? "text-white/50" : "text-muted-foreground"}`}>
-        No spam. Unsubscribe anytime.
+        {willEmailResource ? "No spam. Unsubscribe anytime." : "No spam. Your email unlocks this resource."}
       </p>
     </form>
   );
@@ -240,6 +244,7 @@ function SimpleLayout({
                 accentColor={magnet.accentColor}
                 ctaLabel={magnet.ctaLabel}
                 nameFieldMode={magnet.nameFieldMode}
+                deliveryEmailEnabled={magnet.deliveryEmailEnabled}
               />
             )}
           </div>
@@ -357,6 +362,7 @@ function SplitLayout({
               accentColor={magnet.accentColor}
               ctaLabel={magnet.ctaLabel}
               nameFieldMode={magnet.nameFieldMode}
+              deliveryEmailEnabled={magnet.deliveryEmailEnabled}
             />
           )}
         </div>
@@ -460,6 +466,7 @@ function StackedLayout({
               accentColor={magnet.accentColor}
               ctaLabel={magnet.ctaLabel}
               nameFieldMode={magnet.nameFieldMode}
+              deliveryEmailEnabled={magnet.deliveryEmailEnabled}
             />
           )}
         </div>
@@ -644,6 +651,7 @@ function FullImageLayout({
             accentColor={accent}
             ctaLabel={magnet.ctaLabel}
             nameFieldMode={magnet.nameFieldMode}
+            deliveryEmailEnabled={magnet.deliveryEmailEnabled}
             dark
           />
         </div>

@@ -103,7 +103,8 @@ export async function updateLeadMagnetInSupabase(magnet: LeadMagnet) {
 }
 
 export async function fetchPublicMagnet(slug: string) {
-  const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/public-magnet?slug=${encodeURIComponent(slug)}`, {
+  const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/public-magnet?slug=${encodeURIComponent(slug)}&ts=${Date.now()}`, {
+    cache: "no-store",
     headers: {
       apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
       Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,

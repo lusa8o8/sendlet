@@ -37,6 +37,7 @@ Deno.serve(async (req) => {
       page_config,
       file_name,
       resource_type,
+      delivery_email_enabled,
       status
     `)
     .eq("slug", slug)
@@ -51,5 +52,8 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Not found" }, { status: 404 });
   }
 
-  return jsonResponse({ magnet: data });
+  return jsonResponse(
+    { magnet: data },
+    { headers: { "Cache-Control": "no-store, max-age=0" } },
+  );
 });
