@@ -105,6 +105,11 @@ function OptInForm({
 }) {
   const showName = nameFieldMode !== "off";
   const willEmailResource = deliveryEmailEnabled !== false;
+  const submitLabel = isLoading
+    ? willEmailResource
+      ? "Sending..."
+      : "Unlocking..."
+    : (ctaLabel || "Get the resource");
 
   return (
     <form onSubmit={onSubmit} className={`space-y-4 pt-4 border-t ${dark ? "border-white/20" : "border-border"}`}>
@@ -147,7 +152,7 @@ function OptInForm({
         disabled={isLoading}
         data-testid="button-submit-optin"
       >
-        {isLoading ? "Sending…" : (ctaLabel || "Get the resource")}
+        {submitLabel}
       </Button>
       <p className={`text-center text-xs pt-2 ${dark ? "text-white/50" : "text-muted-foreground"}`}>
         {willEmailResource ? "No spam. Unsubscribe anytime." : "No spam. Your email unlocks this resource."}
