@@ -6,6 +6,17 @@
   "framework": null,
   "rewrites": [
     {
+      "source": "/p/:slug",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(WhatsApp|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|Slackbot|TelegramBot|Discordbot|Discord|SkypeUriPreview|Pinterestbot|Google-Structured-Data-Testing-Tool).*"
+        }
+      ],
+      "destination": "/api/link-preview?slug=:slug"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
