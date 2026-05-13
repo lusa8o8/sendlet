@@ -31,6 +31,7 @@ function titleFromUrl(url: string): string {
 }
 
 type Mode = "file" | "link";
+const BETA_FILE_SIZE_LIMIT = 10 * 1024 * 1024;
 
 function readFileDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -60,6 +61,12 @@ export default function UploadPage() {
   /* ── File handlers ── */
   const acceptFile = (f: File) => {
     setError(null);
+    if (f.size > BETA_FILE_SIZE_LIMIT) {
+      setFile(null);
+      setFileTitle("");
+      setError("Files are limited to 10 MB during beta. Paste a hosted link for larger resources.");
+      return;
+    }
     setFile(f);
     setFileTitle(toTitle(f.name));
   };

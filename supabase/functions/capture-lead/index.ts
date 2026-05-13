@@ -17,6 +17,23 @@ function validEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+function monthStartIso() {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+}
+
+function betaLimitResponse(message: string, details?: Record<string, unknown>) {
+  return jsonResponse(
+    {
+      error: message,
+      code: "BETA_LIMIT_REACHED",
+      upgradeUrl: "mailto:hello@sendlet.app?subject=Upgrade%20Sendlet%20beta%20access",
+      ...details,
+    },
+    { status: 402 },
+  );
+}
+
 function deliverySubject(title: string, custom?: string | null) {
   return custom?.trim() || `Your copy of ${title}`;
 }
@@ -193,6 +210,50 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: "Resource not found" }, { status: 404 });
   }
 
+  const { data: workspace, error: workspaceError } = await supabase
+    .from("workspaces")
+    .select("id,beta_status,monthly_lead_limit,monthly_email_limit")
+    .eq("id", magnet.workspace_id)
+    .maybeSingle();
+
+  if (workspaceError) {
+    return jsonResponse({ error: workspaceError.message }, { status: 500 });
+  }
+
+  if (workspace?.beta_status === "blocked" || workspace?.beta_status === "waitlist") {
+    return betaLimitResponse("This resource is not accepting new leads right now.", {
+      betaStatus: workspace.beta_status,
+    });
+  }
+
+  const { data: existingLead } = await supabase
+    .from("leads")
+    .select("id")
+    .eq("lead_magnet_id", magnet.id)
+    .eq("email", email)
+    .maybeSingle();
+
+  const isNewLead = !existingLead?.id;
+  const monthStart = monthStartIso();
+  if (isNewLead) {
+    const { count: monthlyLeadCount, error: monthlyLeadCountError } = await supabase
+      .from("leads")
+      .select("id", { count: "exact", head: true })
+      .eq("workspace_id", magnet.workspace_id)
+      .gte("created_at", monthStart);
+
+    if (monthlyLeadCountError) {
+      return jsonResponse({ error: monthlyLeadCountError.message }, { status: 500 });
+    }
+
+    const monthlyLeadLimit = workspace?.monthly_lead_limit ?? 250;
+    if ((monthlyLeadCount ?? 0) >= monthlyLeadLimit) {
+      return betaLimitResponse("This workspace has reached the beta lead limit for this month.", {
+        limit: monthlyLeadLimit,
+      });
+    }
+  }
+
   const userAgent = req.headers.get("user-agent") ?? "";
   const forwardedFor = req.headers.get("x-forwarded-for") ?? "";
   const ipHash = forwardedFor
@@ -220,7 +281,9 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: leadError.message }, { status: 500 });
   }
 
-  await supabase.rpc("increment_lead_magnet_leads", { magnet_id: magnet.id });
+  if (isNewLead) {
+    await supabase.rpc("increment_lead_magnet_leads", { magnet_id: magnet.id });
+  }
 
   let accessUrl = magnet.resource_url as string | null;
 
@@ -260,10 +323,32 @@ Deno.serve(async (req) => {
     .eq("email", email)
     .maybeSingle();
 
+  let emailLimitReached = false;
+  if (magnet.delivery_email_enabled && accessUrl) {
+    const { count: monthlyEmailCount, error: monthlyEmailCountError } = await supabase
+      .from("delivery_events")
+      .select("id", { count: "exact", head: true })
+      .eq("workspace_id", magnet.workspace_id)
+      .eq("status", "sent")
+      .gte("created_at", monthStart);
+
+    if (monthlyEmailCountError) {
+      return jsonResponse({ error: monthlyEmailCountError.message }, { status: 500 });
+    }
+
+    const monthlyEmailLimit = workspace?.monthly_email_limit ?? 250;
+    emailLimitReached = (monthlyEmailCount ?? 0) >= monthlyEmailLimit;
+  }
+
   if (unsubscribe?.id) {
     await supabase
       .from("delivery_events")
       .update({ status: "skipped", metadata: { access_url_present: !!accessUrl, skipped_reason: "unsubscribed" } })
+      .eq("id", delivery?.id);
+  } else if (emailLimitReached) {
+    await supabase
+      .from("delivery_events")
+      .update({ status: "skipped", metadata: { access_url_present: !!accessUrl, skipped_reason: "beta_email_limit" } })
       .eq("id", delivery?.id);
   } else if (magnet.delivery_email_enabled && resendApiKey && fromEmail && accessUrl) {
     const response = await fetch("https://api.resend.com/emails", {

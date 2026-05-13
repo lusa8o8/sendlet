@@ -4,7 +4,7 @@ import { ChevronRight, ExternalLink, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { leadMagnets, updateMagnet } from "@/data/mock";
 import { AppLayout } from "@/components/layout/app-layout";
-import { updateLeadMagnetStatusInSupabase } from "@/services/sendlet-service";
+import { SendletApiError, updateLeadMagnetStatusInSupabase } from "@/services/sendlet-service";
 
 type DeliveryMode = "default" | "custom";
 
@@ -36,6 +36,8 @@ export default function EmailDraftPage() {
   const [subject, setSubject] = useState(() => magnet ? (magnet.deliveryEmailSubject || defaultSubject(magnet.title)) : "");
   const [body, setBody] = useState(() => magnet ? (magnet.deliveryEmailBody || defaultCustomBody(magnet.title, magnet.description)) : "");
   const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
+  const [upgradeUrl, setUpgradeUrl] = useState<string | null>(null);
 
   if (!magnet) {
     setLocation("/dashboard");
@@ -47,6 +49,8 @@ export default function EmailDraftPage() {
 
   const publish = async () => {
     setPublishing(true);
+    setPublishError(null);
+    setUpgradeUrl(null);
     const delivery = {
       deliveryEmailEnabled: deliveryEnabled,
       deliveryEmailSubject: usingCustom ? subject : null,
@@ -65,7 +69,8 @@ export default function EmailDraftPage() {
       setLocation("/dashboard");
     } catch (error) {
       setPublishing(false);
-      alert(error instanceof Error ? error.message : "Could not publish lead magnet");
+      setPublishError(error instanceof Error ? error.message : "Could not publish lead magnet");
+      setUpgradeUrl(error instanceof SendletApiError ? error.upgradeUrl ?? null : null);
     }
   };
 
@@ -207,6 +212,17 @@ export default function EmailDraftPage() {
             </a>
           </div>
         </div>
+
+        {publishError ? (
+          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <p>{publishError}</p>
+            {upgradeUrl ? (
+              <a href={upgradeUrl} className="mt-2 inline-flex font-semibold underline">
+                Upgrade beta access
+              </a>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className="flex items-center justify-end gap-2">
           <Button variant="outline" onClick={() => setLocation("/dashboard")} disabled={publishing}>

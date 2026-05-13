@@ -36,6 +36,13 @@ type PublishBody = {
   } | null;
 };
 
+type WorkspaceLimits = {
+  id: string;
+  beta_status?: string | null;
+  lead_magnet_limit?: number | null;
+  file_size_limit?: number | null;
+};
+
 function requiredEnv(name: string) {
   const value = Deno.env.get(name);
   if (!value) throw new Error(`Missing ${name}`);
@@ -74,6 +81,18 @@ async function verifyFirebaseToken(req: Request) {
   };
 }
 
+function betaLimitError(message: string, details?: Record<string, unknown>) {
+  return jsonResponse(
+    {
+      error: message,
+      code: "BETA_LIMIT_REACHED",
+      upgradeUrl: "mailto:hello@sendlet.app?subject=Upgrade%20Sendlet%20beta%20access",
+      ...details,
+    },
+    { status: 402 },
+  );
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -100,31 +119,64 @@ Deno.serve(async (req) => {
     const workspaceName = identity.email ? `${identity.email}'s workspace` : "Sendlet workspace";
     const { data: existingWorkspace } = await supabase
       .from("workspaces")
-      .select("id")
+      .select("id,beta_status,lead_magnet_limit,file_size_limit")
       .eq("owner_external_id", identity.uid)
       .order("created_at", { ascending: true })
       .limit(1)
       .maybeSingle();
 
-    let workspaceId = existingWorkspace?.id as string | undefined;
+    let workspace = existingWorkspace as WorkspaceLimits | null;
+    let workspaceId = workspace?.id;
 
     if (!workspaceId) {
-      const { data: workspace, error: workspaceError } = await supabase
+      const { data: createdWorkspace, error: workspaceError } = await supabase
         .from("workspaces")
         .insert({
           name: workspaceName,
           owner_external_id: identity.uid,
           owner_email: identity.email,
         })
-        .select("id")
+        .select("id,beta_status,lead_magnet_limit,file_size_limit")
         .single();
 
       if (workspaceError) throw workspaceError;
+      workspace = createdWorkspace as WorkspaceLimits;
       workspaceId = workspace.id;
+    }
 
+    if (workspace?.beta_status === "blocked" || workspace?.beta_status === "waitlist") {
+      return betaLimitError("This workspace is not active yet. Email us to unlock beta access.", {
+        betaStatus: workspace.beta_status,
+      });
     }
 
     const upload = body.upload ?? null;
+    const uploadSize = upload?.fileSize ?? 0;
+    const fileSizeLimit = workspace?.file_size_limit ?? 10_485_760;
+    if (upload?.fileDataUrl && uploadSize > fileSizeLimit) {
+      return betaLimitError("This file is over the beta upload limit. Use a link for now or upgrade beta access.", {
+        limit: fileSizeLimit,
+        actual: uploadSize,
+      });
+    }
+
+    if ((magnet.status ?? "draft") === "published") {
+      const { count: publishedCount, error: publishedCountError } = await supabase
+        .from("lead_magnets")
+        .select("id", { count: "exact", head: true })
+        .eq("workspace_id", workspaceId)
+        .eq("status", "published")
+        .neq("id", magnet.id);
+
+      if (publishedCountError) throw publishedCountError;
+      const publishedLimit = workspace?.lead_magnet_limit ?? 3;
+      if ((publishedCount ?? 0) >= publishedLimit) {
+        return betaLimitError("You have reached the beta limit for live lead magnets. Upgrade beta access to publish more.", {
+          limit: publishedLimit,
+        });
+      }
+    }
+
     const resourceUrl = upload?.linkUrl?.trim() || null;
     const resourceType = resourceUrl ? "external_url" : upload?.fileDataUrl ? "file" : "none";
     let resourceFilePath: string | null = null;

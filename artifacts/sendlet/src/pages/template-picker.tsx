@@ -33,7 +33,7 @@ import {
 } from "lucide-react";
 import { leadMagnets, saveMagnet, updateMagnet, type LeadMagnet } from "@/data/mock";
 import { useAuth } from "@/contexts/auth-context";
-import { saveLeadMagnetToSupabase, updateLeadMagnetInSupabase } from "@/services/sendlet-service";
+import { SendletApiError, saveLeadMagnetToSupabase, updateLeadMagnetInSupabase } from "@/services/sendlet-service";
 import { clearUploadDraft, readUploadDraft, readUploadDraftMetadata } from "@/lib/upload-draft";
 
 /* ─── Image compression util ───────────────────────────────── */
@@ -2452,6 +2452,7 @@ export default function TemplatePicker() {
   const [gateSubmitting, setGateSubmitting] = useState(false);
   const [gateError, setGateError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveErrorUpgradeUrl, setSaveErrorUpgradeUrl] = useState<string | null>(null);
 
   // ─── Undo / redo ────────────────────────────────────────────
   type FormSnapshot = {
@@ -2649,6 +2650,7 @@ export default function TemplatePicker() {
 
   const doSave = async () => {
     setSaveError(null);
+    setSaveErrorUpgradeUrl(null);
     const slug = form.slug || `resource-${Date.now()}`;
     const upload = await readUploadDraft();
     if (upload?.fileName && (upload.fileSize ?? 0) > 0 && !upload.fileDataUrl && !upload.linkUrl) {
@@ -2727,6 +2729,7 @@ export default function TemplatePicker() {
     }
     void doSave().catch((error) => {
       setSaveError(error instanceof Error ? error.message : "Could not publish this lead magnet.");
+      setSaveErrorUpgradeUrl(error instanceof SendletApiError ? error.upgradeUrl ?? null : null);
     });
   };
 
@@ -2741,6 +2744,7 @@ export default function TemplatePicker() {
     if (shouldPublish) {
       void doSave().catch((error) => {
         setSaveError(error instanceof Error ? error.message : "Could not publish this lead magnet.");
+        setSaveErrorUpgradeUrl(error instanceof SendletApiError ? error.upgradeUrl ?? null : null);
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2877,7 +2881,12 @@ export default function TemplatePicker() {
                 <p className="text-center text-xs text-muted-foreground mt-4">{previewCaption}</p>
                 {saveError ? (
                   <div className="mx-auto mt-3 max-w-xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm">
-                    {saveError}
+                    <p>{saveError}</p>
+                    {saveErrorUpgradeUrl ? (
+                      <a href={saveErrorUpgradeUrl} className="mt-2 inline-flex font-semibold underline">
+                        Upgrade beta access
+                      </a>
+                    ) : null}
                   </div>
                 ) : null}
               </motion.div>

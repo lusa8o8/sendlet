@@ -2,6 +2,26 @@ import { supabase, SUPABASE_FUNCTIONS_URL } from "@/lib/supabase";
 import { getFirebaseIdToken } from "@/lib/firebase";
 import type { LeadMagnet } from "@/data/mock";
 
+export class SendletApiError extends Error {
+  code?: string;
+  upgradeUrl?: string;
+
+  constructor(message: string, code?: string, upgradeUrl?: string) {
+    super(message);
+    this.name = "SendletApiError";
+    this.code = code;
+    this.upgradeUrl = upgradeUrl;
+  }
+}
+
+function throwApiError(payload: Record<string, any>, fallback: string): never {
+  throw new SendletApiError(
+    typeof payload.error === "string" ? payload.error : fallback,
+    typeof payload.code === "string" ? payload.code : undefined,
+    typeof payload.upgradeUrl === "string" ? payload.upgradeUrl : undefined,
+  );
+}
+
 type UploadDraft = {
   title?: string;
   fileName?: string;
@@ -32,7 +52,7 @@ export async function saveLeadMagnetToSupabase(
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(payload.error ?? "Could not publish lead magnet");
+    throwApiError(payload, "Could not publish lead magnet");
   }
   return payload.magnet;
 }
@@ -63,7 +83,7 @@ export async function updateLeadMagnetStatusInSupabase(
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(payload.error ?? "Could not update lead magnet status");
+    throwApiError(payload, "Could not update lead magnet status");
   }
   return payload.magnet;
 }
@@ -135,7 +155,7 @@ export async function captureLead(slug: string, email: string, name?: string) {
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(payload.error ?? "Could not capture lead");
+    throwApiError(payload, "Could not capture lead");
   }
   return payload as {
     ok: boolean;

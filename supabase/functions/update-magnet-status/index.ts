@@ -26,6 +26,18 @@ async function verifyFirebaseToken(req: Request) {
   return { uid: payload.sub };
 }
 
+function betaLimitError(message: string, details?: Record<string, unknown>) {
+  return jsonResponse(
+    {
+      error: message,
+      code: "BETA_LIMIT_REACHED",
+      upgradeUrl: "mailto:hello@sendlet.app?subject=Upgrade%20Sendlet%20beta%20access",
+      ...details,
+    },
+    { status: 402 },
+  );
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -55,6 +67,47 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
+
+    const { data: currentMagnet, error: currentMagnetError } = await supabase
+      .from("lead_magnets")
+      .select("id,workspace_id,status")
+      .eq("id", body.id)
+      .eq("owner_external_id", identity.uid)
+      .maybeSingle();
+
+    if (currentMagnetError) throw currentMagnetError;
+    if (!currentMagnet) {
+      return jsonResponse({ error: "Lead magnet not found" }, { status: 404 });
+    }
+
+    const { data: workspace, error: workspaceError } = await supabase
+      .from("workspaces")
+      .select("id,beta_status,lead_magnet_limit")
+      .eq("id", currentMagnet.workspace_id)
+      .maybeSingle();
+
+    if (workspaceError) throw workspaceError;
+    if (workspace?.beta_status === "blocked" || workspace?.beta_status === "waitlist") {
+      return betaLimitError("This workspace is not active yet. Email us to unlock beta access.", {
+        betaStatus: workspace.beta_status,
+      });
+    }
+
+    if (body.status === "published" && currentMagnet.status !== "published") {
+      const { count: publishedCount, error: publishedCountError } = await supabase
+        .from("lead_magnets")
+        .select("id", { count: "exact", head: true })
+        .eq("workspace_id", currentMagnet.workspace_id)
+        .eq("status", "published");
+
+      if (publishedCountError) throw publishedCountError;
+      const publishedLimit = workspace?.lead_magnet_limit ?? 3;
+      if ((publishedCount ?? 0) >= publishedLimit) {
+        return betaLimitError("You have reached the beta limit for live lead magnets. Upgrade beta access to publish more.", {
+          limit: publishedLimit,
+        });
+      }
+    }
 
     const delivery = body.delivery ?? {};
     const updatePayload: Record<string, unknown> = {
