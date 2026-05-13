@@ -1,5 +1,7 @@
 import { asString, escapeHtml, fetchPublicMagnet, getPreviewText } from "./_preview";
 
+declare const Buffer: any;
+
 function sendDataUrlImage(dataUrl: string, res: any) {
   const match = dataUrl.match(/^data:(image\/(?:png|jpe?g|webp));base64,([a-zA-Z0-9+/=]+)$/);
   if (!match) return false;

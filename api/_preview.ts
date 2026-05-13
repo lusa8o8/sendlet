@@ -1,3 +1,9 @@
+declare const process: {
+  env: Record<string, string | undefined>;
+};
+
+declare const fetch: any;
+
 export type PublicMagnet = {
   title?: string | null;
   description?: string | null;
