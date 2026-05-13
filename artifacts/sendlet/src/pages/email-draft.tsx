@@ -12,13 +12,11 @@ function defaultSubject(title: string) {
   return `Your copy of ${title}`;
 }
 
-function defaultCustomBody(title: string, description: string) {
+function defaultCustomBody(title: string) {
   return [
     "Hi,",
     "",
     `Thanks for signing up. Your copy of ${title} is ready.`,
-    "",
-    description,
     "",
     "{{resource_link}}",
     "",
@@ -34,7 +32,7 @@ export default function EmailDraftPage() {
   const [deliveryEnabled, setDeliveryEnabled] = useState(magnet?.deliveryEmailEnabled ?? true);
   const [mode, setMode] = useState<DeliveryMode>(magnet?.deliveryEmailBody ? "custom" : "default");
   const [subject, setSubject] = useState(() => magnet ? (magnet.deliveryEmailSubject || defaultSubject(magnet.title)) : "");
-  const [body, setBody] = useState(() => magnet ? (magnet.deliveryEmailBody || defaultCustomBody(magnet.title, magnet.description)) : "");
+  const [body, setBody] = useState(() => magnet ? (magnet.deliveryEmailBody || defaultCustomBody(magnet.title)) : "");
   const [publishing, setPublishing] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
   const [upgradeUrl, setUpgradeUrl] = useState<string | null>(null);

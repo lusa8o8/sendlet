@@ -2440,8 +2440,11 @@ export default function TemplatePicker() {
   const [form, setForm] = useState<Form>(() => {
     if (editingMagnet) return magnetToForm(editingMagnet);
     const draft = readNewDraft();
-    if (draft) return draft.form;
     const upload = readUploadDraftMetadata();
+    if (draft) {
+      if (draft.mode === "pick" && upload?.title) return { ...draft.form, title: upload.title };
+      return draft.form;
+    }
     if (upload?.title) return { ...defaultForm, title: upload.title };
     return defaultForm;
   });

@@ -138,6 +138,10 @@ export default function UploadPage() {
             </p>
           </div>
 
+          <p className="-mt-5 mb-6 text-center text-xs text-muted-foreground">
+            Beta upload limit: 10 MB. Paste a hosted link for larger resources.
+          </p>
+
           {/* Mode tabs */}
           <div className="flex rounded-xl border bg-muted/40 p-1 gap-1 mb-6">
             {(["file", "link"] as const).map((m) => (
@@ -180,7 +184,7 @@ export default function UploadPage() {
                   <p className="text-sm font-medium text-foreground mb-1">
                     {dragging ? "Drop it here" : "Drop your file here"}
                   </p>
-                  <p className="text-xs text-muted-foreground">PDF, EPUB, DOCX, ZIP — or any format</p>
+                  <p className="text-xs text-muted-foreground">PDF, EPUB, DOCX, ZIP — up to 10 MB</p>
                 </div>
                 <span className="text-xs text-muted-foreground/60">or click to browse</span>
                 <input ref={inputRef} type="file" className="sr-only" onChange={onFileChange} />
