@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { broadcasts } from "@/data/mock";
-import { PROVIDERS, integrationConnections } from "@/data/integrations";
 import { AppLayout } from "@/components/layout/app-layout";
-import { Plus, Copy, Eye, Edit2, Send, TrendingUp, ChevronRight, Radio, RefreshCw } from "lucide-react";
+import { Plus, Copy, Eye, Edit2, Send, TrendingUp, ChevronRight, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -15,25 +13,24 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import type { LeadMagnet } from "@/data/mock";
-import { fetchDashboardData } from "@/services/sendlet-service";
+import { fetchDashboardData, type WorkspaceSummary } from "@/services/sendlet-service";
 
-const BROADCAST_PROVIDER_IDS = ["resend", "kit", "mailchimp", "beehiiv"];
 const DASHBOARD_CACHE_KEY = "sendlet_dashboard_magnets";
+const DASHBOARD_WORKSPACE_CACHE_KEY = "sendlet_dashboard_workspace";
+const UPGRADE_URL = "mailto:hello@sendlet.app?subject=Upgrade%20Sendlet%20beta%20access";
 
 function getGreeting() {
   const hour = new Date().getHours();
   if (hour < 12) return "Good morning";
   if (hour < 17) return "Good afternoon";
   return "Good evening";
+}
+
+function formatLimit(value: number | undefined, fallback: number) {
+  return (value ?? fallback).toLocaleString();
 }
 
 function StatCard({
@@ -60,6 +57,42 @@ function StatCard({
   );
 }
 
+function BetaAccessCard({ workspace, liveCount }: { workspace: WorkspaceSummary | null; liveCount: number }) {
+  const pageLimit = workspace?.leadMagnetLimit ?? 3;
+  const leadLimit = workspace?.monthlyLeadLimit ?? 250;
+  const emailLimit = workspace?.monthlyEmailLimit ?? 250;
+  const fileLimitMb = Math.round((workspace?.fileSizeLimit ?? 10_485_760) / 1_048_576);
+  const planLabel = (workspace?.plan ?? "beta_free").replace(/_/g, " ");
+  const nearPageLimit = liveCount >= Math.max(1, pageLimit - 1);
+
+  return (
+    <div className="mb-7 rounded-xl border bg-card p-4 sm:p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-semibold capitalize">{planLabel}</p>
+            <Badge variant="outline" className="rounded-full font-normal">
+              {workspace?.betaStatus ?? "active"}
+            </Badge>
+            {nearPageLimit ? (
+              <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs text-amber-800">
+                Near page limit
+              </span>
+            ) : null}
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {formatLimit(pageLimit, 3)} live pages, {formatLimit(leadLimit, 250)} leads/month,
+            {" "}{formatLimit(emailLimit, 250)} delivery emails/month, {fileLimitMb} MB uploads.
+          </p>
+        </div>
+        <Button asChild variant="outline" size="sm" className="shrink-0">
+          <a href={UPGRADE_URL}>Upgrade beta access</a>
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function StatusBadge({ status }: { status: string }) {
   if (status === "published") {
     return (
@@ -82,6 +115,10 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function BlankValue() {
+  return <span className="text-muted-foreground">-</span>;
+}
+
 function MagnetCard({ magnet, onCopy }: { magnet: LeadMagnet; onCopy: (slug: string) => void }) {
   return (
     <div className="bg-card border rounded-xl p-4 space-y-3">
@@ -102,7 +139,7 @@ function MagnetCard({ magnet, onCopy }: { magnet: LeadMagnet; onCopy: (slug: str
         <div className="flex flex-col">
           <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Visits</span>
           <span className="font-medium tabular-nums">
-            {magnet.visits > 0 ? magnet.visits.toLocaleString() : <span className="text-muted-foreground">—</span>}
+            {magnet.visits > 0 ? magnet.visits.toLocaleString() : <BlankValue />}
           </span>
         </div>
         <div className="flex flex-col">
@@ -114,7 +151,7 @@ function MagnetCard({ magnet, onCopy }: { magnet: LeadMagnet; onCopy: (slug: str
                 {magnet.weeklyLeads > 0 && <TrendingUp className="h-3 w-3 text-primary" />}
               </>
             ) : (
-              <span className="text-muted-foreground">—</span>
+              <BlankValue />
             )}
           </span>
         </div>
@@ -157,154 +194,10 @@ function MagnetCard({ magnet, onCopy }: { magnet: LeadMagnet; onCopy: (slug: str
   );
 }
 
-/* ── Broadcasts sheet ────────────────────────────────────────── */
-
-function BroadcastsSheet({
-  open,
-  onClose,
-  sendTarget,
-  magnets,
-}: {
-  open: boolean;
-  onClose: () => void;
-  sendTarget?: LeadMagnet;
-  magnets: LeadMagnet[];
-}) {
-  const hasEmailProvider = BROADCAST_PROVIDER_IDS.some((id) => !!integrationConnections[id]);
-  const recentBroadcasts = broadcasts.slice(0, 10);
-
-  return (
-    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] overflow-y-auto">
-        <SheetHeader className="flex flex-row items-center justify-between pb-4 border-b mb-1">
-          <SheetTitle className="text-base">Broadcasts</SheetTitle>
-          {sendTarget && (
-            <Button size="sm" variant="outline" asChild onClick={onClose}>
-              <Link href={`/lead-magnets/${sendTarget.id}/email`}>
-                <Send className="mr-1.5 h-3.5 w-3.5" />
-                New email
-              </Link>
-            </Button>
-          )}
-        </SheetHeader>
-
-        {recentBroadcasts.length === 0 ? (
-          <div className="py-10 text-center">
-            <p className="text-sm text-muted-foreground mb-4">No emails sent yet.</p>
-            {!hasEmailProvider ? (
-              <Button variant="outline" size="sm" asChild onClick={onClose}>
-                <Link href="/settings/integrations">Connect an email tool to start →</Link>
-              </Button>
-            ) : sendTarget ? (
-              <Button size="sm" asChild onClick={onClose}>
-                <Link href={`/lead-magnets/${sendTarget.id}/email`}>Send your first email →</Link>
-              </Button>
-            ) : null}
-          </div>
-        ) : (
-          <div className="divide-y">
-            {recentBroadcasts.map((bc) => {
-              const provider = PROVIDERS.find((p) => p.id === bc.provider);
-              const magnet = magnets.find((m) => m.id === bc.magnetId);
-              return (
-                <div key={bc.id} className="flex items-center py-3.5 gap-3">
-                  {provider && (
-                    <div
-                      className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0"
-                      style={{ backgroundColor: provider.brandColor, color: "#fff" }}
-                    >
-                      {provider.initials}
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{bc.subject}</p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {bc.sentAt} · {bc.recipientCount} recipients
-                      {magnet && <> · {magnet.title}</>}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </SheetContent>
-    </Sheet>
-  );
-}
-
-/* ── Floating action button ──────────────────────────────────── */
-
-function FAB({ magnets, onBroadcasts }: { magnets: LeadMagnet[]; onBroadcasts: () => void }) {
-  const [open, setOpen] = useState(false);
-  const publishedMagnets = magnets.filter((m) => m.status === "published");
-  const sendTarget = publishedMagnets[0];
-
-  const items: { label: string; Icon: React.ElementType; href?: string; onClick?: () => void }[] = [
-    {
-      label: "Broadcasts",
-      Icon: Radio,
-      onClick: () => { setOpen(false); onBroadcasts(); },
-    },
-    ...(sendTarget
-      ? [{ label: "Send email", Icon: Send, href: `/lead-magnets/${sendTarget.id}/email` }]
-      : []),
-    { label: "New lead magnet", Icon: Plus, href: "/lead-magnets/upload" },
-  ];
-
-  return (
-    <div className="fixed bottom-6 right-4 sm:right-6 z-50 flex flex-col items-end gap-2.5">
-      <AnimatePresence>
-        {open &&
-          items.map((item, i) => (
-            <motion.div
-              key={item.label}
-              initial={{ opacity: 0, y: 10, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 6, scale: 0.95 }}
-              transition={{ delay: i * 0.04, duration: 0.15 }}
-            >
-              {item.href ? (
-                <Link href={item.href} onClick={() => setOpen(false)}>
-                  <div className="flex items-center gap-2 bg-card border shadow-lg rounded-full h-10 px-4 text-sm font-medium hover:bg-muted transition-colors whitespace-nowrap cursor-pointer">
-                    <item.Icon className="h-3.5 w-3.5 text-primary shrink-0" />
-                    {item.label}
-                  </div>
-                </Link>
-              ) : (
-                <button
-                  onClick={item.onClick}
-                  className="flex items-center gap-2 bg-card border shadow-lg rounded-full h-10 px-4 text-sm font-medium hover:bg-muted transition-colors whitespace-nowrap"
-                >
-                  <item.Icon className="h-3.5 w-3.5 text-primary shrink-0" />
-                  {item.label}
-                </button>
-              )}
-            </motion.div>
-          ))}
-      </AnimatePresence>
-
-      {open && <div className="fixed inset-0 -z-10" onClick={() => setOpen(false)} />}
-
-      <motion.button
-        className="w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
-        onClick={() => setOpen((o) => !o)}
-        whileTap={{ scale: 0.92 }}
-      >
-        <motion.div animate={{ rotate: open ? 45 : 0 }} transition={{ duration: 0.18 }}>
-          <Plus className="h-5 w-5" />
-        </motion.div>
-      </motion.button>
-    </div>
-  );
-}
-
-/* ── Page ─────────────────────────────────────────────────────── */
-
 export default function Dashboard() {
   const { toast } = useToast();
   const { name } = useAuth();
-  const [broadcastsOpen, setBroadcastsOpen] = useState(false);
+  const [workspace, setWorkspace] = useState<WorkspaceSummary | null>(null);
   const [magnets, setMagnets] = useState<LeadMagnet[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -316,8 +209,10 @@ export default function Dashboard() {
     setError(null);
     try {
       const data = await fetchDashboardData();
+      setWorkspace(data.workspace);
       setMagnets(data.magnets);
       sessionStorage.setItem(DASHBOARD_CACHE_KEY, JSON.stringify(data.magnets));
+      sessionStorage.setItem(DASHBOARD_WORKSPACE_CACHE_KEY, JSON.stringify(data.workspace));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not load dashboard");
     } finally {
@@ -328,9 +223,11 @@ export default function Dashboard() {
   useEffect(() => {
     let hasCachedDashboard = false;
     try {
-      const cached = sessionStorage.getItem(DASHBOARD_CACHE_KEY);
-      if (cached) {
-        setMagnets(JSON.parse(cached) as LeadMagnet[]);
+      const cachedMagnets = sessionStorage.getItem(DASHBOARD_CACHE_KEY);
+      const cachedWorkspace = sessionStorage.getItem(DASHBOARD_WORKSPACE_CACHE_KEY);
+      if (cachedMagnets) {
+        setMagnets(JSON.parse(cachedMagnets) as LeadMagnet[]);
+        setWorkspace(cachedWorkspace ? (JSON.parse(cachedWorkspace) as WorkspaceSummary | null) : null);
         setIsLoading(false);
         hasCachedDashboard = true;
       }
@@ -342,16 +239,11 @@ export default function Dashboard() {
   const weeklyLeads = magnets.reduce((a, m) => a + m.weeklyLeads, 0);
   const liveCount = magnets.filter((m) => m.status === "published").length;
   const draftCount = magnets.filter((m) => m.status !== "published").length;
+  const magnetsWithVisits = magnets.filter((m) => m.visits > 0);
   const avgConv =
-    magnets.filter((m) => m.visits > 0).length > 0
-      ? Math.round(
-          magnets.filter((m) => m.visits > 0).reduce((a, m) => a + m.conversionRate, 0) /
-            magnets.filter((m) => m.visits > 0).length
-        )
+    magnetsWithVisits.length > 0
+      ? Math.round(magnetsWithVisits.reduce((a, m) => a + m.conversionRate, 0) / magnetsWithVisits.length)
       : 0;
-
-  const publishedMagnets = magnets.filter((m) => m.status === "published");
-  const sendTarget = publishedMagnets[0];
 
   const copyLink = (slug: string) => {
     navigator.clipboard.writeText(`${window.location.origin}/p/${slug}`);
@@ -381,8 +273,6 @@ export default function Dashboard() {
   return (
     <AppLayout>
       <div className="container max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10 pb-24">
-
-        {/* Page header */}
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-7">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
@@ -414,28 +304,33 @@ export default function Dashboard() {
           </div>
         )}
 
-        {!error && <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-7">
-          <StatCard
-            label="Total leads"
-            value={isLoading ? "..." : totalLeads}
-            context={weeklyLeads > 0 ? `+${weeklyLeads} this week` : "None this week"}
-            contextPositive={weeklyLeads > 0}
-          />
-          <StatCard
-            label="Pages live"
-            value={isLoading ? "..." : liveCount}
-            context={draftCount > 0 ? `${draftCount} not published` : "All pages live"}
-            contextPositive={draftCount === 0}
-          />
-          <StatCard
-            label="Avg. conv."
-            value={isLoading ? "..." : avgConv > 0 ? `${avgConv}%` : "—"}
-            context="Visits next"
-            contextPositive={avgConv >= 20}
-          />
-        </div>}
+        {!error && (
+          <>
+            <BetaAccessCard workspace={workspace} liveCount={liveCount} />
 
-        {/* Lead magnets */}
+            <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-7">
+              <StatCard
+                label="Total leads"
+                value={isLoading ? "..." : totalLeads}
+                context={weeklyLeads > 0 ? `+${weeklyLeads} this week` : "None this week"}
+                contextPositive={weeklyLeads > 0}
+              />
+              <StatCard
+                label="Pages live"
+                value={isLoading ? "..." : liveCount}
+                context={draftCount > 0 ? `${draftCount} not published` : "All pages live"}
+                contextPositive={draftCount === 0}
+              />
+              <StatCard
+                label="Avg. conv."
+                value={isLoading ? "..." : avgConv > 0 ? `${avgConv}%` : "-"}
+                context="Visits next"
+                contextPositive={avgConv >= 20}
+              />
+            </div>
+          </>
+        )}
+
         {isLoading ? (
           <div className="border rounded-xl p-10 bg-card text-center text-sm text-muted-foreground">
             Loading dashboard...
@@ -444,7 +339,6 @@ export default function Dashboard() {
           emptyState
         ) : (
           <>
-            {/* Mobile card list */}
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -456,7 +350,6 @@ export default function Dashboard() {
               ))}
             </motion.div>
 
-            {/* Desktop table */}
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -492,7 +385,7 @@ export default function Dashboard() {
                         <StatusBadge status={magnet.status} />
                       </TableCell>
                       <TableCell className="text-right py-4 text-sm tabular-nums">
-                        {magnet.visits > 0 ? magnet.visits.toLocaleString() : <span className="text-muted-foreground">—</span>}
+                        {magnet.visits > 0 ? magnet.visits.toLocaleString() : <BlankValue />}
                       </TableCell>
                       <TableCell className="text-right py-4 text-sm tabular-nums">
                         {magnet.leads > 0 ? (
@@ -501,11 +394,11 @@ export default function Dashboard() {
                             {magnet.weeklyLeads > 0 && <TrendingUp className="h-3 w-3 text-primary" />}
                           </span>
                         ) : (
-                          <span className="text-muted-foreground">—</span>
+                          <BlankValue />
                         )}
                       </TableCell>
                       <TableCell className="text-right py-4 text-sm text-muted-foreground">
-                        {magnet.lastLead ?? <span>—</span>}
+                        {magnet.lastLead ?? <BlankValue />}
                       </TableCell>
                       <TableCell className="text-right py-4">
                         <div className="flex items-center justify-end gap-0.5">
@@ -532,15 +425,6 @@ export default function Dashboard() {
           </>
         )}
       </div>
-
-      <FAB magnets={magnets} onBroadcasts={() => setBroadcastsOpen(true)} />
-
-      <BroadcastsSheet
-        open={broadcastsOpen}
-        onClose={() => setBroadcastsOpen(false)}
-        sendTarget={sendTarget}
-        magnets={magnets}
-      />
     </AppLayout>
   );
 }

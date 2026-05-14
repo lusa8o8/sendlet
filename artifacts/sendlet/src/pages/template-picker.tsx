@@ -2456,6 +2456,8 @@ export default function TemplatePicker() {
   const [gateError, setGateError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveErrorUpgradeUrl, setSaveErrorUpgradeUrl] = useState<string | null>(null);
+  const hasFallbackPublicIdentity =
+    isSignedIn && (!creatorAvatar || creatorName.trim() === "" || creatorName === "Sendlet creator");
 
   // ─── Undo / redo ────────────────────────────────────────────
   type FormSnapshot = {
@@ -2890,6 +2892,14 @@ export default function TemplatePicker() {
                         Upgrade beta access
                       </a>
                     ) : null}
+                  </div>
+                ) : null}
+                {hasFallbackPublicIdentity ? (
+                  <div className="mx-auto mt-3 max-w-xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 shadow-sm">
+                    <p className="font-medium">Check your public identity before publishing.</p>
+                    <p className="mt-1 text-xs leading-relaxed text-amber-800">
+                      Your creator name or avatar is still using a fallback. Open the avatar menu in the top right to set the name or logo people will see on the public page.
+                    </p>
                   </div>
                 ) : null}
               </motion.div>

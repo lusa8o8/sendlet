@@ -323,8 +323,20 @@ export type WorkspaceLead = {
 };
 
 export type WorkspaceData = {
+  workspace: WorkspaceSummary | null;
   magnets: LeadMagnet[];
   leads: WorkspaceLead[];
+};
+
+export type WorkspaceSummary = {
+  id: string;
+  name: string;
+  plan: string;
+  betaStatus: string;
+  leadMagnetLimit: number;
+  monthlyLeadLimit: number;
+  monthlyEmailLimit: number;
+  fileSizeLimit: number;
 };
 
 export type LeadsData = {
@@ -408,6 +420,20 @@ function toWorkspaceLead(raw: RawLead): WorkspaceLead {
   };
 }
 
+function toWorkspaceSummary(raw: Record<string, any> | null | undefined): WorkspaceSummary | null {
+  if (!raw?.id) return null;
+  return {
+    id: raw.id,
+    name: raw.name ?? "Sendlet workspace",
+    plan: raw.plan ?? "beta_free",
+    betaStatus: raw.beta_status ?? "active",
+    leadMagnetLimit: raw.lead_magnet_limit ?? 3,
+    monthlyLeadLimit: raw.monthly_lead_limit ?? 250,
+    monthlyEmailLimit: raw.monthly_email_limit ?? 250,
+    fileSizeLimit: raw.file_size_limit ?? 10_485_760,
+  };
+}
+
 async function fetchWorkspaceDataView(view?: "dashboard" | "leads"): Promise<WorkspaceData> {
   const token = await getFirebaseIdToken();
   const query = view ? `?view=${encodeURIComponent(view)}` : "";
@@ -424,6 +450,7 @@ async function fetchWorkspaceDataView(view?: "dashboard" | "leads"): Promise<Wor
   }
 
   return {
+    workspace: toWorkspaceSummary(payload.workspace),
     magnets: ((payload.magnets ?? []) as RawLeadMagnet[]).map(toLeadMagnet),
     leads: ((payload.leads ?? []) as RawLead[]).map(toWorkspaceLead),
   };
@@ -433,9 +460,9 @@ export async function fetchWorkspaceData(): Promise<WorkspaceData> {
   return fetchWorkspaceDataView();
 }
 
-export async function fetchDashboardData(): Promise<Pick<WorkspaceData, "magnets">> {
+export async function fetchDashboardData(): Promise<Pick<WorkspaceData, "workspace" | "magnets">> {
   const data = await fetchWorkspaceDataView("dashboard");
-  return { magnets: data.magnets };
+  return { workspace: data.workspace, magnets: data.magnets };
 }
 
 export async function fetchLeadsData(): Promise<LeadsData> {

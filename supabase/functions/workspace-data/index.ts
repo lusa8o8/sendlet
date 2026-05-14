@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
 
     const { data: workspace, error: workspaceError } = await supabase
       .from("workspaces")
-      .select("id,name")
+      .select("id,name,plan,beta_status,lead_magnet_limit,monthly_lead_limit,monthly_email_limit,file_size_limit")
       .eq("owner_external_id", identity.uid)
       .order("created_at", { ascending: true })
       .limit(1)

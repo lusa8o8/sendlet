@@ -6,9 +6,9 @@ import { motion } from "framer-motion";
 import { Send, Check } from "lucide-react";
 
 const features = [
-  "Publish a gated resource page in minutes",
-  "Collect leads without a full email platform",
-  "Send the resource automatically on opt-in",
+  "Publish a lead magnet page in minutes",
+  "Collect leads without a funnel builder",
+  "Deliver the resource automatically",
 ];
 
 export default function SignIn() {
@@ -47,7 +47,7 @@ export default function SignIn() {
               What you get
             </p>
             <h2 className="text-2xl lg:text-3xl font-semibold leading-snug text-white">
-              Publish your resource.<br />Collect the lead.<br />That's it.
+              Publish your lead magnet.<br />Collect the lead.<br />Deliver the file.
             </h2>
           </div>
 
@@ -61,7 +61,7 @@ export default function SignIn() {
           </ul>
         </div>
 
-        <p className="text-xs text-white/30">No credit card. No complex setup.</p>
+        <p className="text-xs text-white/30">Beta limits apply. No complex setup.</p>
       </div>
 
       {/* Right — form */}
@@ -82,7 +82,7 @@ export default function SignIn() {
             <div className="space-y-1.5">
               <h1 className="text-2xl font-semibold tracking-tight">Welcome back.</h1>
               <p className="text-sm text-muted-foreground">
-                Continue with Google to manage your Sendlet pages.
+                Continue with Google to manage your lead magnet pages.
               </p>
             </div>
 

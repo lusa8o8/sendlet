@@ -9,20 +9,20 @@ const steps = [
   {
     num: "01",
     icon: Upload,
-    title: "Upload your resource",
-    desc: "Drop the PDF, ZIP, or video you're giving away — or paste a link to anything hosted online.",
+    title: "Add the resource",
+    desc: "Upload a file under 10 MB during beta, or paste a hosted link.",
   },
   {
     num: "02",
     icon: Palette,
-    title: "Customise the opt-in page",
-    desc: "Pick a layout, set your colours, add your copy. The page builds itself around your file.",
+    title: "Use a proven page",
+    desc: "Edit the headline, description, image, colors, and form. No blank canvas.",
   },
   {
     num: "03",
     icon: Zap,
-    title: "Publish and collect leads",
-    desc: "Go live in one click. Every signup gets your resource automatically.",
+    title: "Capture and deliver",
+    desc: "Every opt-in is saved, exportable, and can receive the resource automatically.",
   },
 ];
 
@@ -38,10 +38,7 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-[100dvh] flex flex-col font-sans">
-      {/* ── Hero ─────────────────────────────────────────────── */}
       <div className="bg-[#0C4A44] flex flex-col" style={{ minHeight: "62vh" }}>
-
-        {/* Nav */}
         <div className="flex items-center justify-between px-6 lg:px-12 h-16 shrink-0">
           <div className="flex items-center gap-2">
             <Send className="h-4 w-4 text-white/80" />
@@ -54,7 +51,6 @@ export default function LandingPage() {
           </Link>
         </div>
 
-        {/* Hero content */}
         <div className="flex-1 flex flex-col items-center justify-center text-center px-6 pb-16 pt-4">
           <motion.div
             initial={{ opacity: 0, y: 18 }}
@@ -63,16 +59,16 @@ export default function LandingPage() {
             className="max-w-2xl"
           >
             <p className="text-[10px] font-semibold tracking-widest uppercase text-white/35 mb-5">
-              Structured lead magnet launcher
+              Lead magnet pages without the builder
             </p>
             <h1 className="text-3xl sm:text-4xl lg:text-[52px] font-bold text-white leading-[1.12] tracking-tight mb-5">
-              Publish your resource.<br />
+              Publish your lead magnet.<br />
               Collect the lead.<br />
-              That's it.
+              Deliver the file.
             </h1>
             <p className="text-white/55 text-base sm:text-lg leading-relaxed mb-9 max-w-md mx-auto">
-              Upload what you're giving away, pick a layout, and get a gated opt-in page — in minutes.
-              No funnel builder. No bloat.
+              Upload a file or paste a link, choose a restrained page, and Sendlet handles the opt-in,
+              delivery email, and lead export.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -99,7 +95,6 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* ── Steps ────────────────────────────────────────────── */}
       <div className="bg-background flex-1 px-6 py-16 lg:py-20">
         <div className="max-w-3xl mx-auto">
           <div className="grid sm:grid-cols-3 gap-10 sm:gap-12">
@@ -128,14 +123,13 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* ── Footer ───────────────────────────────────────────── */}
       <div className="border-t">
-        <div className="max-w-3xl mx-auto px-6 py-5 flex items-center justify-between">
+        <div className="max-w-3xl mx-auto px-6 py-5 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <Send className="h-3.5 w-3.5 text-primary" />
             <span className="text-xs font-medium text-muted-foreground">Sendlet</span>
           </div>
-          <p className="text-xs text-muted-foreground">No credit card. No complex setup.</p>
+          <p className="text-xs text-muted-foreground">Beta limits apply. No complex setup.</p>
         </div>
       </div>
     </div>
