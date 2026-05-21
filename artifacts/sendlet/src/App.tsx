@@ -16,6 +16,7 @@ import SuccessPage from "@/pages/success-page";
 import UnsubscribePage from "@/pages/unsubscribe";
 import LandingPage from "@/pages/landing";
 import SettingsIntegrationsPage from "@/pages/settings-integrations";
+import { PricingPage, PrivacyPage, RefundPolicyPage, TermsPage } from "@/pages/legal";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,10 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={LandingPage} />
+      <Route path="/pricing" component={PricingPage} />
+      <Route path="/terms" component={TermsPage} />
+      <Route path="/privacy" component={PrivacyPage} />
+      <Route path="/refund-policy" component={RefundPolicyPage} />
       <Route path="/sign-in" component={SignIn} />
       <Route path="/dashboard">
         {() => <ProtectedRoute component={Dashboard} />}

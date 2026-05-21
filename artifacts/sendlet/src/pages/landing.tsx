@@ -129,7 +129,12 @@ export default function LandingPage() {
             <Send className="h-3.5 w-3.5 text-primary" />
             <span className="text-xs font-medium text-muted-foreground">Sendlet</span>
           </div>
-          <p className="text-xs text-muted-foreground">Beta limits apply. No complex setup.</p>
+          <div className="flex flex-wrap items-center justify-end gap-3 text-xs text-muted-foreground">
+            <Link href="/pricing" className="hover:text-foreground">Pricing</Link>
+            <Link href="/terms" className="hover:text-foreground">Terms</Link>
+            <Link href="/privacy" className="hover:text-foreground">Privacy</Link>
+            <Link href="/refund-policy" className="hover:text-foreground">Refunds</Link>
+          </div>
         </div>
       </div>
     </div>
