@@ -21,8 +21,9 @@ async function verifyFirebaseToken(req: Request) {
   });
 
   const uid = payload.sub;
+  const email = typeof payload.email === "string" ? payload.email.toLowerCase() : null;
   if (!uid) throw new Error("Invalid Firebase token");
-  return { uid };
+  return { uid, email };
 }
 
 Deno.serve(async (req) => {
@@ -45,7 +46,25 @@ Deno.serve(async (req) => {
 
     const { data: workspace, error: workspaceError } = await supabase
       .from("workspaces")
-      .select("id,name,plan,beta_status,lead_magnet_limit,monthly_lead_limit,monthly_email_limit,file_size_limit")
+      .select(`
+        id,
+        name,
+        plan,
+        beta_status,
+        billing_status,
+        paddle_customer_id,
+        paddle_subscription_id,
+        paddle_price_id,
+        paddle_transaction_id,
+        current_period_starts_at,
+        current_period_ends_at,
+        trial_ends_at,
+        canceled_at,
+        lead_magnet_limit,
+        monthly_lead_limit,
+        monthly_email_limit,
+        file_size_limit
+      `)
       .eq("owner_external_id", identity.uid)
       .order("created_at", { ascending: true })
       .limit(1)
@@ -110,7 +129,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const shapedMagnets = (magnets ?? []).map((magnet) => ({
+    const shapedMagnets = ((magnets ?? []) as unknown as Array<Record<string, unknown> & { id: string }>).map((magnet) => ({
         ...magnet,
         weekly_visits_count: weeklyVisitsByMagnet.get(magnet.id) ?? 0,
       }));

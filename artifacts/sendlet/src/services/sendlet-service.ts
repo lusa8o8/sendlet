@@ -333,6 +333,15 @@ export type WorkspaceSummary = {
   name: string;
   plan: string;
   betaStatus: string;
+  billingStatus: string;
+  paddleCustomerId: string | null;
+  paddleSubscriptionId: string | null;
+  paddlePriceId: string | null;
+  paddleTransactionId: string | null;
+  currentPeriodStartsAt: string | null;
+  currentPeriodEndsAt: string | null;
+  trialEndsAt: string | null;
+  canceledAt: string | null;
   leadMagnetLimit: number;
   monthlyLeadLimit: number;
   monthlyEmailLimit: number;
@@ -427,6 +436,15 @@ function toWorkspaceSummary(raw: Record<string, any> | null | undefined): Worksp
     name: raw.name ?? "Sendlet workspace",
     plan: raw.plan ?? "beta_free",
     betaStatus: raw.beta_status ?? "active",
+    billingStatus: raw.billing_status ?? "free",
+    paddleCustomerId: raw.paddle_customer_id ?? null,
+    paddleSubscriptionId: raw.paddle_subscription_id ?? null,
+    paddlePriceId: raw.paddle_price_id ?? null,
+    paddleTransactionId: raw.paddle_transaction_id ?? null,
+    currentPeriodStartsAt: raw.current_period_starts_at ?? null,
+    currentPeriodEndsAt: raw.current_period_ends_at ?? null,
+    trialEndsAt: raw.trial_ends_at ?? null,
+    canceledAt: raw.canceled_at ?? null,
     leadMagnetLimit: raw.lead_magnet_limit ?? 3,
     monthlyLeadLimit: raw.monthly_lead_limit ?? 250,
     monthlyEmailLimit: raw.monthly_email_limit ?? 250,
@@ -483,5 +501,87 @@ export async function fetchLeadsData(): Promise<LeadsData> {
   return {
     leads: ((payload.leads ?? []) as RawLead[]).map(toWorkspaceLead),
     publishedCount: magnets.filter((magnet) => magnet.status === "published").length,
+  };
+}
+
+export type AdminWorkspace = WorkspaceSummary & {
+  ownerEmail: string | null;
+  createdAt: string;
+};
+
+export type AdminBillingEvent = {
+  id: string;
+  workspaceId: string | null;
+  eventType: string;
+  paddleEventId: string | null;
+  paddleCustomerId: string | null;
+  paddleSubscriptionId: string | null;
+  paddleTransactionId: string | null;
+  paddlePriceId: string | null;
+  processedAt: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+};
+
+export type AdminFailedDelivery = {
+  id: string;
+  workspaceId: string | null;
+  leadMagnetId: string | null;
+  toEmail: string;
+  subject: string | null;
+  status: string;
+  errorMessage: string | null;
+  createdAt: string;
+};
+
+export type AdminData = {
+  workspaces: AdminWorkspace[];
+  billingEvents: AdminBillingEvent[];
+  failedDeliveries: AdminFailedDelivery[];
+};
+
+export async function fetchAdminData(): Promise<AdminData> {
+  const token = await getFirebaseIdToken();
+  const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/admin-data`, {
+    headers: {
+      apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error ?? "Could not load admin data");
+  }
+
+  return {
+    workspaces: ((payload.workspaces ?? []) as Record<string, any>[]).map((workspace) => ({
+      ...(toWorkspaceSummary(workspace) as WorkspaceSummary),
+      ownerEmail: workspace.owner_email ?? null,
+      createdAt: workspace.created_at,
+    })),
+    billingEvents: ((payload.billingEvents ?? []) as Record<string, any>[]).map((event) => ({
+      id: event.id,
+      workspaceId: event.workspace_id ?? null,
+      eventType: event.event_type,
+      paddleEventId: event.paddle_event_id ?? null,
+      paddleCustomerId: event.paddle_customer_id ?? null,
+      paddleSubscriptionId: event.paddle_subscription_id ?? null,
+      paddleTransactionId: event.paddle_transaction_id ?? null,
+      paddlePriceId: event.paddle_price_id ?? null,
+      processedAt: event.processed_at ?? null,
+      errorMessage: event.error_message ?? null,
+      createdAt: event.created_at,
+    })),
+    failedDeliveries: ((payload.failedDeliveries ?? []) as Record<string, any>[]).map((delivery) => ({
+      id: delivery.id,
+      workspaceId: delivery.workspace_id ?? null,
+      leadMagnetId: delivery.lead_magnet_id ?? null,
+      toEmail: delivery.to_email,
+      subject: delivery.subject ?? null,
+      status: delivery.status,
+      errorMessage: delivery.error_message ?? null,
+      createdAt: delivery.created_at,
+    })),
   };
 }

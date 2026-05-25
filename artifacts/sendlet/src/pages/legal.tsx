@@ -74,6 +74,12 @@ export function PricingPage() {
           <p className="mt-4 text-sm text-muted-foreground">
             For creators publishing a few focused lead magnets.
           </p>
+          <Link
+            href="/billing?plan=starter"
+            className="mt-5 inline-flex h-10 w-full items-center justify-center rounded-md border px-4 text-sm font-medium hover:bg-muted"
+          >
+            Choose Starter
+          </Link>
         </div>
         <div className="rounded-xl border border-primary bg-card p-5 shadow-sm">
           <h3 className="text-base font-semibold">Pro</h3>
@@ -82,6 +88,12 @@ export function PricingPage() {
           <p className="mt-4 text-sm text-muted-foreground">
             For operators who publish regularly and need more room.
           </p>
+          <Link
+            href="/billing?plan=pro"
+            className="mt-5 inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            Choose Pro
+          </Link>
         </div>
         <div className="rounded-xl border bg-card p-5">
           <h3 className="text-base font-semibold">Agency</h3>
@@ -90,6 +102,12 @@ export function PricingPage() {
           <p className="mt-4 text-sm text-muted-foreground">
             For teams managing lead magnets across multiple clients or campaigns.
           </p>
+          <Link
+            href="/billing?plan=agency"
+            className="mt-5 inline-flex h-10 w-full items-center justify-center rounded-md border px-4 text-sm font-medium hover:bg-muted"
+          >
+            Choose Agency
+          </Link>
         </div>
       </div>
 

@@ -20,7 +20,6 @@ import { fetchDashboardData, type WorkspaceSummary } from "@/services/sendlet-se
 
 const DASHBOARD_CACHE_KEY = "sendlet_dashboard_magnets";
 const DASHBOARD_WORKSPACE_CACHE_KEY = "sendlet_dashboard_workspace";
-const UPGRADE_URL = "mailto:hello@sendlet.app?subject=Upgrade%20Sendlet%20beta%20access";
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -86,7 +85,7 @@ function BetaAccessCard({ workspace, liveCount }: { workspace: WorkspaceSummary 
           </p>
         </div>
         <Button asChild variant="outline" size="sm" className="shrink-0">
-          <a href={UPGRADE_URL}>Upgrade beta access</a>
+          <Link href="/billing">Manage plan</Link>
         </Button>
       </div>
     </div>

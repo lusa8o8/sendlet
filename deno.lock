@@ -1,0 +1,18 @@
+{
+  "version": "5",
+  "remote": {
+    "https://esm.sh/@supabase/supabase-js@2.75.0": "2560166a94e3385c37b1c4fa943ee9c729a44e92fc9c61c03037852dc494853e",
+    "https://esm.sh/jose@5.10.0": "43705c1f40e5191081bcac2851ad8265f03c23bf751f9b84260ac2874f8ce209"
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@rollup/rollup-win32-x64-msvc@4.59.0",
+        "npm:@tailwindcss/oxide-win32-x64-msvc@4.2.1",
+        "npm:lightningcss-win32-x64-msvc@1.31.1",
+        "npm:prettier@^3.8.1",
+        "npm:typescript@~5.9.2"
+      ]
+    }
+  }
+}

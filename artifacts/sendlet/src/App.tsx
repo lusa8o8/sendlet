@@ -16,6 +16,8 @@ import SuccessPage from "@/pages/success-page";
 import UnsubscribePage from "@/pages/unsubscribe";
 import LandingPage from "@/pages/landing";
 import SettingsIntegrationsPage from "@/pages/settings-integrations";
+import BillingPage from "@/pages/billing";
+import AdminPage from "@/pages/admin";
 import { PricingPage, PrivacyPage, RefundPolicyPage, TermsPage } from "@/pages/legal";
 
 const queryClient = new QueryClient();
@@ -50,6 +52,12 @@ function Router() {
       <Route path="/lead-magnets/:id" component={LeadMagnetDetail} />
       <Route path="/leads">
         {() => <ProtectedRoute component={Leads} />}
+      </Route>
+      <Route path="/billing">
+        {() => <ProtectedRoute component={BillingPage} />}
+      </Route>
+      <Route path="/admin">
+        {() => <ProtectedRoute component={AdminPage} />}
       </Route>
       <Route path="/settings/integrations">
         {() => <ProtectedRoute component={SettingsIntegrationsPage} />}

@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { Link, useLocation } from "wouter";
-import { Send, LogOut, User, Upload, Plug } from "lucide-react";
+import { Send, LogOut, User, Upload, Plug, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -190,6 +190,16 @@ export function TopNav() {
                 >
                   Leads
                 </Link>
+                <Link
+                  href="/billing"
+                  className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
+                    isActive("/billing")
+                      ? "text-foreground font-medium bg-muted"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                  }`}
+                >
+                  Billing
+                </Link>
               </>
             )}
           </nav>
@@ -222,6 +232,12 @@ export function TopNav() {
                   <Link href="/settings/integrations">
                     <Plug className="mr-2 h-4 w-4" />
                     Integrations
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild className="cursor-pointer">
+                  <Link href="/billing">
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    Billing
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
