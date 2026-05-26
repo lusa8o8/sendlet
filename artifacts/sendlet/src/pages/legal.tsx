@@ -2,7 +2,7 @@ import { Link } from "wouter";
 import { Send } from "lucide-react";
 
 const supportEmail = import.meta.env.VITE_SENDLET_SUPPORT_EMAIL ?? "support@sendlet.trymyapp.uk";
-const lastUpdated = "May 21, 2026";
+const lastUpdated = "May 26, 2026";
 
 function PublicHeader() {
   return (
@@ -25,7 +25,7 @@ function PublicFooter() {
   return (
     <footer className="border-t">
       <div className="mx-auto flex max-w-4xl flex-col gap-3 px-6 py-6 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-        <p>Sendlet is operated by Eight Zero Eight Digital Systems.</p>
+        <p>Sendlet is a product of Eight Zero Eight Digital Systems.</p>
         <div className="flex flex-wrap gap-4">
           <Link href="/terms" className="hover:text-foreground">Terms</Link>
           <Link href="/privacy" className="hover:text-foreground">Privacy</Link>
@@ -150,15 +150,15 @@ export function TermsPage() {
     <PageShell title="Terms of Service">
       <p><strong>Last updated:</strong> {lastUpdated}</p>
       <p>
-        These Terms of Service govern your access to and use of Sendlet. Sendlet is a product owned
-        and operated by <strong>Eight Zero Eight Digital Systems</strong>. Sendlet is a product and
-        brand, not a separate registered company.
+        These Terms of Service are between you and <strong>Eight Zero Eight Digital Systems</strong>,
+        the legal operator of the Sendlet product. Sendlet is a product and brand, not a separate
+        registered company.
       </p>
 
       <h2>1. Who we are</h2>
       <p>
-        Operator: Eight Zero Eight Digital Systems. Product: Sendlet. Location: Lusaka, Zambia.
-        Contact: <a href={`mailto:${supportEmail}`}>{supportEmail}</a>.
+        Legal operator: Eight Zero Eight Digital Systems. Product/brand: Sendlet. Location: Lusaka,
+        Zambia. Contact: <a href={`mailto:${supportEmail}`}>{supportEmail}</a>.
       </p>
 
       <h2>2. What Sendlet does</h2>
@@ -223,15 +223,17 @@ export function TermsPage() {
       <p>
         Sendlet may rely on third-party services for hosting, storage, authentication, analytics,
         payments, email delivery, or integrations. Third-party services may have their own terms and
-        privacy policies.
+        privacy policies. Payments, billing, taxes, invoices, and refund processing may be handled
+        by Paddle.com Market Ltd, our Merchant of Record.
       </p>
 
       <h2>10. Payments, cancellations, and refunds</h2>
       <p>
         Paid plans are billed according to the plan you select at checkout. Subscriptions renew
-        automatically until cancelled unless stated otherwise. Cancellation stops future renewal
-        charges. It does not automatically refund previous charges unless our Refund Policy says a
-        refund applies.
+        automatically until cancelled unless stated otherwise. Paddle.com Market Ltd is our Merchant
+        of Record and may handle payments, billing, taxes, invoices, and refund processing for paid
+        Sendlet subscriptions. Cancellation stops future renewal charges. It does not automatically
+        refund previous charges unless our Refund Policy says a refund applies.
       </p>
 
       <h2>11. Availability and changes</h2>
@@ -283,7 +285,7 @@ export function PrivacyPage() {
       <p><strong>Last updated:</strong> {lastUpdated}</p>
       <p>
         This Privacy Policy explains how Sendlet collects, uses, stores, and shares information.
-        Sendlet is a product owned and operated by <strong>Eight Zero Eight Digital Systems</strong>.
+        Sendlet is a product of <strong>Eight Zero Eight Digital Systems</strong>.
       </p>
 
       <h2>1. Who this policy applies to</h2>
@@ -394,65 +396,54 @@ export function RefundPolicyPage() {
     <PageShell title="Refund Policy">
       <p><strong>Last updated:</strong> {lastUpdated}</p>
       <p>
-        This Refund Policy explains how refunds work for Sendlet. Sendlet is a product owned and
-        operated by <strong>Eight Zero Eight Digital Systems</strong>.
+        This Refund Policy explains how refunds work for Sendlet. Sendlet is a product of{" "}
+        <strong>Eight Zero Eight Digital Systems</strong>. Payments, billing, taxes, invoices, and
+        refund processing are handled by Paddle.com Market Ltd, our Merchant of Record.
       </p>
 
       <h2>1. General approach</h2>
       <p>
-        Sendlet is an early-stage SaaS product. Before subscribing, please review the product
-        description, current feature limitations, file upload limits, integration availability, and
-        whether Sendlet fits your lead magnet workflow.
+        Sendlet is an early-stage SaaS product for publishing lead magnet pages, collecting leads,
+        and delivering requested resources. Before subscribing, please review the product
+        description, current feature limits, and whether Sendlet fits your lead magnet workflow.
       </p>
 
       <h2>2. Subscription billing</h2>
       <p>
         If you subscribe to a paid plan, your subscription renews until cancelled. You may cancel
-        before your next billing date to avoid future charges. Cancellation stops future renewals. It
-        does not automatically refund past charges.
+        before your next billing date to avoid future charges. Cancellation stops future renewals.
+        Refund requests are handled under this Refund Policy and Paddle's refund process.
       </p>
 
       <h2>3. Refund window</h2>
       <p>
-        You may request a refund within <strong>7 days of your first paid subscription</strong> if
-        Sendlet does not work for your intended use.
+        You may request a refund within <strong>14 days of purchase</strong>.
       </p>
       <p>
-        To request a refund, contact us at <a href={`mailto:${supportEmail}`}>{supportEmail}</a>{" "}
-        with the email used for purchase, date of purchase, reason for the request, and any issue
-        you experienced.
+        Refunds are returned to the original payment method, subject to Paddle's refund process,
+        payment network timelines, and applicable law.
       </p>
 
-      <h2>4. When refunds may be declined</h2>
+      <h2>4. How to request a refund</h2>
       <p>
-        We may decline a refund if the request is made after the refund window, the account has
-        already received substantial use, the issue is caused by unsupported use or third-party
-        tools, the user violated our Terms, the account was used for spam or unlawful content, the
-        payment processor does not permit the refund, or the request appears fraudulent or abusive.
+        You can request a refund through Paddle where that option is available, or by contacting us
+        at <a href={`mailto:${supportEmail}`}>{supportEmail}</a>. Please include the email used for
+        purchase and any relevant payment or receipt details.
       </p>
 
-      <h2>5. No refunds for disclosed limitations</h2>
+      <h2>5. Payment processor</h2>
       <p>
-        Refunds are generally not provided because of features that Sendlet clearly did not offer at
-        the time of purchase. Unless stated otherwise, Sendlet is not sold as a full email marketing
-        platform, funnel builder, CRM, payment processor, marketplace, legal service, or guaranteed
-        lead-generation service.
+        Paddle.com Market Ltd is the seller of record for Sendlet purchases. Paddle may appear on
+        your receipt, invoice, card statement, or payment record, and Paddle may process approved
+        refunds on our behalf.
       </p>
 
-      <h2>6. Service issues</h2>
+      <h2>6. Your legal rights</h2>
       <p>
-        If Sendlet has a major service failure that prevents core use of the product, contact us. We
-        may, at our discretion, offer a refund, partial refund, credit, extra access time, or support
-        to resolve the issue.
+        This policy does not limit any consumer rights you may have under applicable law.
       </p>
 
-      <h2>7. Payment processor rules</h2>
-      <p>
-        Refunds may be processed through a third-party payment provider and may be subject to that
-        provider's rules, timelines, fees, fraud controls, and regional limitations.
-      </p>
-
-      <h2>8. Contact</h2>
+      <h2>7. Contact</h2>
       <p>Refund requests can be sent to <a href={`mailto:${supportEmail}`}>{supportEmail}</a>.</p>
     </PageShell>
   );
