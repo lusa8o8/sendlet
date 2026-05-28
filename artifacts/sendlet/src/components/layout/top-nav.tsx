@@ -190,16 +190,6 @@ export function TopNav() {
                 >
                   Leads
                 </Link>
-                <Link
-                  href="/billing"
-                  className={`px-3 py-1.5 rounded-md text-sm transition-colors ${
-                    isActive("/billing")
-                      ? "text-foreground font-medium bg-muted"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                  }`}
-                >
-                  Billing
-                </Link>
               </>
             )}
           </nav>
